@@ -116,3 +116,49 @@
 ### Archivos modificados
 
 - `src/router/AppRouter.tsx` lineas 1-40 -- reemplazado: eliminados PlaceholderPage y AppShell temporales; importa AppShell real de components/layout; importa las 10 paginas reales de pages/comprador y pages/proveedor; estructura de routes igual; AppShell envuelve Routes para layout persistente
+
+---
+
+## [v0.4.0] -- 2026-06-26 -- Paginas completas, flujos de negocio, chat en tiempo real — MVP v1.0.0
+
+### Archivos creados — Componentes UI auxiliares
+
+- `src/components/ui/StatCard.tsx` lineas 1-42 -- tarjeta de metrica para dashboards; props: label, value, icono (ComponentType con size/stroke), color (green/blue/amber/red), badge? (numero), sub? (texto); estructura: Card con icono en circulo w-10 h-10 rounded-xl coloreado segun prop color (bg-ep-*-light text-ep-*), label en text-xs uppercase tracking-wide, value en text-2xl font-bold font-mono, Badge amber si badge > 0, sub en text-xs muted
+
+- `src/components/ui/EmptyState.tsx` lineas 1-28 -- estado vacio centrado; props: icono, titulo, mensaje, accion? ({label, onClick}); estructura: div text-center py-12 px-6, icono en div text-ep-text-muted justify-center mb-4 (NO se pasa className al icono directamente — envolver en div), titulo text-base font-semibold, mensaje text-sm max-w-xs mx-auto, Button primary si accion definida
+
+- `src/components/ui/PageHeader.tsx` lineas 1-20 -- cabecera estandar de pagina; props: titulo, descripcion?, accion? (ReactNode); estructura: flex items-start justify-between mb-6, h1 text-xl font-semibold, p text-sm muted, accion con flex-shrink-0 ml-4
+
+- `src/components/ui/index.ts` -- actualizado: agrega exports de StatCard, EmptyState, PageHeader
+
+### Archivos creados — Componente de dominio
+
+- `src/components/cotizaciones/CotizacionForm.tsx` lineas 1-68 -- formulario de cotizacion; props: pedidoId, onSuccess; campos: precio (number, min=1, step=100), tiempoEntrega (text), notas (textarea, opcional); validacion: precio > 0 y tiempoEntrega no vacio, setErrores si falla; al enviar valido: construye Cotizacion con proveedorId='prov-demo-001', proveedorNombre='Mi Empresa (Proveedor)', calificacion=4.0, estado='pendiente', fechaCreacion=now; llama useCotizacionesStore.getState().agregarCotizacion(); setTimeout 600ms → onSuccess() (feedback visual de procesamiento)
+
+### Archivos modificados — Paginas comprador
+
+- `src/pages/comprador/DashboardComprador.tsx` lineas 1-80 -- implementacion completa: calcula pedidosActivos (abierto|en_cotizacion), cotizacionesPendientes (pendiente), ordenesEnCurso (confirmada|en_transito) filtrando por COMPRADOR_ID; PageHeader con boton "Publicar pedido" → navigate('/comprador/publicar'); grid 3-col StatCards; seccion "Ultimos pedidos" (3 recientes, PedidoCard compacto) con link "Ver todos"; seccion "Ultimas cotizaciones" (3 recientes, CotizacionCard compacto) con link "Ver todas"; EmptyState cuando no hay datos
+
+- `src/pages/comprador/PublicarPedido.tsx` lineas 1-120 -- formulario completo de publicacion; estado local: titulo/descripcion/cantidad/unidad/categoria/presupuestoMax/fechaLimite/errores/enviando/exitoso/pedidoIdSimulado; activa useSimuladorCotizaciones(pedidoIdSimulado, presupuestoMax) que empieza cuando pedidoIdSimulado != null; handleSubmit(): valida 5 campos requeridos → crea Pedido con crypto.randomUUID() → agregarPedido() → setPedidoIdSimulado() → setExitoso(true) → setTimeout 3000ms navigate('/comprador/cotizaciones'); si exitoso: banner bg-ep-green-light con IconCircleCheck + Spinner "Redirigiendo..."; formulario en 3 secciones (info, cantidad/categoria, condiciones); fecha minima = manana via fechaMinima()
+
+- `src/pages/comprador/MisCotizacionesComprador.tsx` lineas 1-105 -- lista de cotizaciones con tabs; tabs: todas/pendientes/aceptadas/rechazadas con count en tiempo real; filtra cotizaciones por pedidoId en misPedidoIds (compradorId=COMPRADOR_ID); agrupa por pedido: encabezado text-xs uppercase + CotizacionCard con onAceptar (→ aceptarCotizacion + navigate('/comprador/ordenes')) y onRechazar; EmptyState segun tab activa
+
+- `src/pages/comprador/MisOrdenesComprador.tsx` lineas 1-42 -- lista de ordenes del comprador; filtra por compradorId=COMPRADOR_ID, ordena por fechaConfirmacion desc; OrdenCard con onIrChat si chatHabilitado → navigate('/comprador/chat'); EmptyState con accion → navigate('/comprador/cotizaciones')
+
+- `src/pages/comprador/ChatComprador.tsx` lineas 1-165 -- chat de comprador; ordenActiva: primera orden con compradorId=COMPRADOR_ID y chatHabilitado=true; mensajes del comprador a la DERECHA (bg-ep-green text-white rounded-tr-sm), mensajes del proveedor a la IZQUIERDA (bg-ep-surface-raised rounded-tl-sm); enviarMensaje(): crea msg comprador (autorRol='comprador', autorNombre='Mi Empresa') → limpiar input → setEscribiendo(true) → setTimeout 1800ms → respuesta automatica rotativa del proveedor (4 frases) → setEscribiendo(false); indicador "escribiendo": 3 spans con animation typing-dot delays 0/150/300ms; auto-scroll via useRef + useEffect; textarea auto-resize hasta 4 lineas (maxHeight=96px); Enter sin Shift envia; Button send disabled si input vacio o escribiendo
+
+### Archivos modificados — Paginas proveedor
+
+- `src/pages/proveedor/DashboardProveedor.tsx` lineas 1-95 -- implementacion completa: calcula pedidosDisponibles, misCotizaciones (PROV_IDS), misOrdenes (['prov-4','prov-demo-001']); grid 3-col StatCards (azul/verde/amber); lista 5 pedidos recientes con PedidoCard compacto + onCotizar → setPedidoSeleccionado; Modal de cotizacion con CotizacionForm; toast de exito fixed bottom-6 right-6 que desaparece en 3s
+
+- `src/pages/proveedor/PedidosDisponibles.tsx` lineas 1-95 -- lista filtrable de pedidos; filtros: Input busqueda (titulo/descripcion) + Select categoriaFiltro; detecta si ya cotiice: cotizaciones.some(c.pedidoId===id && c.proveedorId==='prov-demo-001'); si ya cotizie: no pasa onCotizar + Badge gray "Ya cotizaste" absolute bottom-4 right-4; Modal con resumen del pedido (titulo, cantidad, unidad, categoria) + CotizacionForm; toast de exito
+
+- `src/pages/proveedor/MisCotizacionesProveedor.tsx` lineas 1-90 -- igual que version comprador; filtra cotizaciones donde proveedorId in ['prov-1','prov-2','prov-3','prov-4','prov-demo-001']; sin botones de accion; agrupa por pedido via [...new Set(filtradas.map(c => c.pedidoId))]
+
+- `src/pages/proveedor/MisOrdenesProveedor.tsx` lineas 1-42 -- filtra ordenes donde proveedorId in ['prov-4','prov-demo-001']; OrdenCard con onIrChat → navigate('/proveedor/chat')
+
+- `src/pages/proveedor/ChatProveedor.tsx` lineas 1-160 -- igual que ChatComprador con logica invertida: ordenActiva busca en ['prov-4','prov-demo-001']; mensajes del PROVEEDOR a la DERECHA, del COMPRADOR a la IZQUIERDA; msg enviado: autorRol='proveedor', autorNombre='DistribuidoraElec AR'; respuestas automaticas del comprador (4 frases distintas sobre seguimiento/factura/despacho/IVA)
+
+### Archivos modificados — CSS
+
+- `src/index.css` lineas 65-71 -- agrega @keyframes typing-dot para animacion de puntos del indicador "escribiendo" en ambos chats: 0%/60%/100% opacity 0.2 scale 0.8; 30% opacity 1 scale 1; se usa via style={{ animation: 'typing-dot 1.2s ease-in-out Xms infinite' }} con delays 0/150/300ms por punto

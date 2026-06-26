@@ -1,17 +1,49 @@
-import { Card } from '../../components/ui/Card';
+import { useNavigate } from 'react-router-dom';
+import { IconShoppingCart } from '@tabler/icons-react';
+import { PageHeader, EmptyState } from '../../components/ui';
+import { OrdenCard } from '../../components/ordenes/OrdenCard';
+import { useOrdenesStore } from '../../store/useOrdenesStore';
+import { COMPRADOR_ID } from '../../utils/constants';
 
 export default function MisOrdenesComprador() {
+  const navigate = useNavigate();
+  const ordenes = useOrdenesStore((s) => s.ordenes);
+
+  const misOrdenes = [...ordenes]
+    .filter((o) => o.compradorId === COMPRADOR_ID)
+    .sort(
+      (a, b) =>
+        new Date(b.fechaConfirmacion).getTime() - new Date(a.fechaConfirmacion).getTime(),
+    );
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-ep-text-primary">Mis órdenes</h1>
-        <p className="text-sm text-ep-text-secondary mt-1">
-          Seguí el estado de tus compras confirmadas.
-        </p>
-      </div>
-      <Card>
-        <p className="text-sm text-ep-text-muted">Implementación en Sesión 3</p>
-      </Card>
+      <PageHeader
+        titulo="Mis órdenes"
+        descripcion="Operaciones confirmadas con proveedores"
+      />
+
+      {misOrdenes.length === 0 ? (
+        <EmptyState
+          icono={IconShoppingCart}
+          titulo="Sin órdenes todavía"
+          mensaje="Aceptá una cotización para generar tu primera orden"
+          accion={{
+            label: 'Ver cotizaciones',
+            onClick: () => navigate('/comprador/cotizaciones'),
+          }}
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {misOrdenes.map((orden) => (
+            <OrdenCard
+              key={orden.id}
+              orden={orden}
+              onIrChat={orden.chatHabilitado ? () => navigate('/comprador/chat') : undefined}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

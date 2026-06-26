@@ -6,3 +6,6 @@ export { TextArea } from './TextArea';
 export { Select } from './Select';
 export { Modal } from './Modal';
 export { Spinner } from './Spinner';
+export { StatCard } from './StatCard';
+export { EmptyState } from './EmptyState';
+export { PageHeader } from './PageHeader';

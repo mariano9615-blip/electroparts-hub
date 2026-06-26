@@ -1,17 +1,46 @@
-import { Card } from '../../components/ui/Card';
+import { useNavigate } from 'react-router-dom';
+import { IconShoppingCart } from '@tabler/icons-react';
+import { PageHeader, EmptyState } from '../../components/ui';
+import { OrdenCard } from '../../components/ordenes/OrdenCard';
+import { useOrdenesStore } from '../../store/useOrdenesStore';
+
+const PROV_IDS = ['prov-4', 'prov-demo-001'];
 
 export default function MisOrdenesProveedor() {
+  const navigate = useNavigate();
+  const ordenes = useOrdenesStore((s) => s.ordenes);
+
+  const misOrdenes = [...ordenes]
+    .filter((o) => PROV_IDS.includes(o.proveedorId))
+    .sort(
+      (a, b) =>
+        new Date(b.fechaConfirmacion).getTime() - new Date(a.fechaConfirmacion).getTime(),
+    );
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-ep-text-primary">Mis órdenes</h1>
-        <p className="text-sm text-ep-text-secondary mt-1">
-          Gestioná las órdenes que te fueron adjudicadas.
-        </p>
-      </div>
-      <Card>
-        <p className="text-sm text-ep-text-muted">Implementación en Sesión 3</p>
-      </Card>
+      <PageHeader
+        titulo="Mis órdenes"
+        descripcion="Operaciones confirmadas donde fuiste proveedor"
+      />
+
+      {misOrdenes.length === 0 ? (
+        <EmptyState
+          icono={IconShoppingCart}
+          titulo="Sin órdenes todavía"
+          mensaje="Cuando un comprador acepte tu cotización, la orden aparecerá aquí"
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {misOrdenes.map((orden) => (
+            <OrdenCard
+              key={orden.id}
+              orden={orden}
+              onIrChat={orden.chatHabilitado ? () => navigate('/proveedor/chat') : undefined}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
