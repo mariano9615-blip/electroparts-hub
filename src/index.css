@@ -1,17 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+@theme {
+  /* Paleta de producto ElectroParts Hub */
+  --color-ep-green:          #16a34a;
+  --color-ep-green-light:    #dcfce7;
+  --color-ep-green-dark:     #14532d;
+  --color-ep-green-hover:    #15803d;
+
+  --color-ep-blue:           #2563eb;
+  --color-ep-blue-light:     #dbeafe;
+  --color-ep-blue-dark:      #1e3a8a;
+
+  --color-ep-amber:          #d97706;
+  --color-ep-amber-light:    #fef3c7;
+  --color-ep-amber-dark:     #92400e;
+
+  --color-ep-red:            #dc2626;
+  --color-ep-red-light:      #fee2e2;
+  --color-ep-red-dark:       #991b1b;
+
+  --color-ep-bg:             #f8fafc;
+  --color-ep-surface:        #ffffff;
+  --color-ep-surface-raised: #f1f5f9;
+  --color-ep-border:         #e2e8f0;
+  --color-ep-border-strong:  #cbd5e1;
+
+  --color-ep-text-primary:   #0f172a;
+  --color-ep-text-secondary: #475569;
+  --color-ep-text-muted:     #94a3b8;
+  --color-ep-text-disabled:  #cbd5e1;
+
+  /* Tipografias */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Reset y base global */
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, sans-serif;
-  background-color: #f9fafb;
-  color: #111827;
-  -webkit-font-smoothing: antialiased;
+  font-family: var(--font-sans);
+  background-color: #f8fafc;
+  color: #0f172a;
+  line-height: 1.5;
 }
+
+/* Scrollbar custom discreta */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
