@@ -146,10 +146,144 @@ src/
   router/          -- definicion de rutas (AppRouter.tsx)
 
 ## Modulos y responsabilidades
-(Claude Code: completar por modulo post-implementacion Sesion 2)
+
+### Componentes UI base (src/components/ui/)
+
+Todos se exportan desde `src/components/ui/index.ts`.
+
+| Componente | Props clave | Variantes | Cuándo usarlo |
+|------------|-------------|-----------|----------------|
+| **Button** | variant, size, loading, fullWidth | primary / secondary / danger / ghost | Toda acción del usuario. Primary para CTA principal, secondary para acciones secundarias, danger para destruir/rechazar, ghost para acciones de baja jerarquía (cerrar, icono). |
+| **Badge** | color, dot | green / blue / amber / red / gray | Estados de entidades (pedido, cotización, orden), roles de usuario, etiquetas. Dot para indicadores de estado activo. |
+| **Card** | padding, hoverable | none / sm / md / lg | Contenedor de unidades de información. hoverable=true para listas clickeables. |
+| **Input** | label, error, hint, required | estados: normal / focus / error / disabled | Campos de texto de formularios. hint para ayuda contextual, error para validación. |
+| **TextArea** | label, error, rows | igual que Input | Texto multilínea (descripciones, notas). |
+| **Select** | options, placeholder | igual que Input | Selección de un valor de lista cerrada (categoría, unidad). |
+| **Modal** | open, onClose, title, size, footer | sm / md / lg | Confirmaciones, formularios cortos, detalle de entidad. footer para botones de acción. |
+| **Spinner** | size, color | sm / md / lg | Indicador de carga inline. Automático dentro de Button cuando loading=true. |
+
+#### Convenciones de diseño que aplican a todos
+
+- **Colores**: siempre clases `ep-*`. Nunca `gray-*` ni variables CSS del sistema.
+- **Bordes**: `border-ep-border` para superficies, `border-ep-border-strong` para énfasis.
+- **Texto**: `text-ep-text-primary` → títulos y datos importantes; `text-ep-text-secondary` → descripción y metadatos; `text-ep-text-muted` → labels y fechas; `text-ep-text-disabled` → campos inactivos.
+- **Border radius**: `rounded-lg` para inputs/botones, `rounded-xl` para cards, `rounded-2xl` para modales.
+- **Sombras**: `shadow-sm` en surfaces elevadas únicamente. Nunca `shadow-lg` en elementos inline.
+- **Transiciones**: `transition-colors duration-150` en todos los elementos interactivos.
+- **Tipografía numérica**: `font-mono` (JetBrains Mono) para precios, IDs y cantidades. `font-sans` (Inter) para el resto.
+
+#### Cuándo usar cada color de Badge
+
+| Color | Usar para |
+|-------|-----------|
+| green | Estado activo/positivo, rol comprador, pedido abierto, cotización aceptada, orden entregada |
+| blue | En proceso, rol proveedor, pedido en cotización, orden confirmada |
+| amber | Pendiente de acción, orden en tránsito, cotización pendiente |
+| red | Error o rechazo, pedido cancelado, cotización rechazada, orden disputada |
+| gray | Finalizado neutro, pedido adjudicado, elementos archivados |
+
+---
+
+### Componentes de dominio
+
+#### PedidoCard (src/components/pedidos/PedidoCard.tsx)
+
+Props:
+- `pedido: Pedido` — datos del pedido
+- `compacto?: boolean` — modo resumen para dashboards (default false)
+- `onCotizar?: () => void` — si existe, muestra botón "Cotizar"
+
+Modos:
+- **Normal**: muestra título, badge de estado, metadatos (cantidad, categoría, fecha límite), descripción, presupuesto máx y contador de cotizaciones. Fecha urgente (< 3 días) resalta en rojo con ícono de alerta.
+- **Compacto**: solo título + badge, categoría + fecha, contador de cotizaciones.
+
+Sin dependencias de store (recibe el pedido por prop).
+
+#### CotizacionCard (src/components/cotizaciones/CotizacionCard.tsx)
+
+Props:
+- `cotizacion: Cotizacion` — datos de la cotización
+- `onAceptar?: () => void` — callback aceptar (solo visible si estado === 'pendiente' y ambas funciones definidas)
+- `onRechazar?: () => void` — callback rechazar (ídem)
+- `compacto?: boolean` — modo resumen
+
+Modos:
+- **Normal**: nombre proveedor, badge estado, zona, badge "Verificado" (si aplica), estrellas de calificación, precio en font-mono grande, tiempo de entrega, notas en caja destacada, fecha relativa, botones de acción si pendiente.
+- **Compacto**: solo nombre, precio, badge estado, tiempo de entrega.
+
+Dependencia: `PROVEEDORES_SIMULADOS` de `src/utils/constants.ts` para obtener `zona` y `verificado` por `proveedorId`.
+
+#### OrdenCard (src/components/ordenes/OrdenCard.tsx)
+
+Props:
+- `orden: Orden` — datos de la orden
+- `onIrChat?: () => void` — si existe, muestra botón "Ir al chat"
+
+Muestra: ID abreviado en font-mono, badge de estado, nombre proveedor con ícono, monto en font-mono, fecha de confirmación. Sin modos compacto/normal.
+
+---
+
+### Layout principal (src/components/layout/)
+
+#### AppShell (AppShell.tsx)
+
+Envuelve toda la aplicación. Gestiona el estado `sidebarAbierto` (useState) para mobile.
+
+Estructura desktop (≥ md):
+```
+flex h-screen overflow-hidden
+├── div.hidden.md:flex (w-64) → <Sidebar />
+└── div.flex-1 (flex-col, overflow-hidden)
+    ├── <TopBar onToggleSidebar />
+    └── main (flex-1, overflow-y-auto, bg-ep-bg, p-6) → {children}
+```
+
+Comportamiento mobile (< md):
+- Sidebar oculto por defecto.
+- Al tocar hamburger en TopBar → `sidebarAbierto=true` → aparece drawer con overlay semitransparente.
+- Click en overlay → `cerrarSidebar()`.
+
+#### Sidebar (Sidebar.tsx)
+
+Lee `useRolStore` y `useCotizacionesStore` directamente (sin props).
+
+Secciones de arriba a abajo:
+1. **Branding**: logo IconBolt + "ElectroParts Hub" + subtítulo "Marketplace B2B".
+2. **Toggle de rol**: dos botones 50/50 en pill. Click → `setRol()` + `navigate()` al dashboard correspondiente.
+3. **Etiqueta de sección**: "Comprador" o "Proveedor" en uppercase tracking-wider.
+4. **Navegación**: ítems según rol. Ítem activo detectado por `pathname === item.ruta` (useLocation). Badge amber sobre cotizaciones = cantidad de cotizaciones con `estado === 'pendiente'`.
+5. **Footer**: versión "v0.1.0".
+
+Ítems comprador: Dashboard, Publicar pedido, Cotizaciones (badge), Mis órdenes, Chat activo.
+Ítems proveedor: Dashboard, Pedidos disponibles, Mis cotizaciones (badge), Mis órdenes, Chat activo.
+
+#### TopBar (TopBar.tsx)
+
+Props: `onToggleSidebar: () => void`.
+
+Slot izquierdo:
+- Mobile: botón IconMenu2 → llama `onToggleSidebar`.
+- Desktop: nombre de la sección activa derivado de `BREADCRUMB_MAP[pathname]`.
+
+Slot derecho:
+- Badge de rol (green=comprador, blue=proveedor).
+- Separador vertical.
+- Avatar "ME" (iniciales de Mi Empresa) + nombre "Mi Empresa" (oculto en mobile).
+
+---
 
 ## Flujos de negocio implementados
-(Claude Code: completar al implementar cada flujo en Sesion 2)
+
+### Flujo de cambio de rol
+Usuario hace click en toggle Comprador/Proveedor del Sidebar →
+`useRolStore.setRol(nuevoRol)` (persiste en localStorage) →
+`navigate('/comprador' | '/proveedor')` →
+Sidebar actualiza ítems y badge → TopBar actualiza badge de rol.
+
+### Flujo visual de cotizaciones pendientes (badge)
+`useCotizacionesStore.cotizaciones` filtra por `estado === 'pendiente'` →
+count se muestra como badge amber sobre el ítem "Cotizaciones" en el Sidebar.
+Con datos mock iniciales: 2 cotizaciones pendientes (cot-001, cot-002).
 
 ## Convenciones del proyecto
 - UI completamente en espanol

@@ -61,8 +61,58 @@
 - `src/router/AppRouter.tsx` lineas 1-55 -- AppRouter con BrowserRouter+Routes+Route; 11 rutas definidas (/comprador, /comprador/publicar, /comprador/cotizaciones, /comprador/ordenes, /comprador/chat, /proveedor, /proveedor/pedidos, /proveedor/cotizaciones, /proveedor/ordenes, /proveedor/chat, * → /comprador); PlaceholderPage y AppShell como componentes temporales para Sesion 1; rutas / y * redirigen a /comprador
 
 ---
-<!-- Claude Code: agregar entradas siguientes a partir de aqui en formato:
-## [vX.Y.Z] -- YYYY-MM-DD -- Descripcion
-### Archivos creados/modificados
-- ruta/archivo.tsx lineas X-Y -- descripcion de funcionalidad especifica
--->
+
+## [v0.3.0] -- 2026-06-26 -- Layout AppShell/Sidebar/TopBar, sistema de componentes UI, componentes de dominio
+
+### Archivos creados — Componentes UI base
+
+- `src/components/ui/Spinner.tsx` lineas 1-25 -- SVG spinner con animacion animate-spin; props: size (sm/md/lg → 4/5/8 unidades) y color (clase Tailwind, default text-ep-green); implementado como SVG con circulo de fondo opacidad 25% y arco opacidad 75%
+
+- `src/components/ui/Button.tsx` lineas 1-65 -- boton reutilizable; props: variant (primary/secondary/danger/ghost), size (sm/md/lg), loading (muestra Spinner + deshabilita), disabled, fullWidth, onClick, type; estilos via VARIANT_CLASSES y SIZE_CLASSES; renderiza Spinner size="sm" color="text-current" cuando loading=true
+
+- `src/components/ui/Badge.tsx` lineas 1-30 -- etiqueta de estado; props: color (green/blue/amber/red/gray), dot (punto circular antes del texto); mapea color a clases bg-ep-*-light text-ep-*-dark; inline-flex rounded-full text-xs font-medium
+
+- `src/components/ui/Card.tsx` lineas 1-30 -- contenedor de superficies; props: padding (none/sm/md/lg → 0/p-4/p-5/p-6), hoverable (agrega transition-shadow hover:shadow-md cursor-pointer); base: bg-ep-surface border border-ep-border rounded-xl
+
+- `src/components/ui/Input.tsx` lineas 1-60 -- input de formulario; props: label, placeholder, value, onChange, type, error, required, disabled, min, max, step, hint; label con asterisco rojo si required; borde cambia a ep-green con ring en focus, a ep-red con ring si error; hint visible solo si no hay error
+
+- `src/components/ui/TextArea.tsx` lineas 1-55 -- textarea de formulario; misma API que Input con rows (default 3) en lugar de min/max/step; tiene resize-none para mantener altura fija
+
+- `src/components/ui/Select.tsx` lineas 1-65 -- select de formulario; props: label, value, onChange, options (value+label[]), placeholder (primera opcion deshabilitada), error, required, disabled; icono IconChevronDown posicionado absolute derecha con pointer-events-none; appearance-none para remover flecha nativa
+
+- `src/components/ui/Modal.tsx` lineas 1-90 -- modal con portal; props: open, onClose, title, children, footer, size (sm/md/lg → max-w-sm/lg/2xl); usa createPortal a document.body; siempre montado en DOM con opacity/scale condicionales (transition-all duration-150) para animacion; bloquea scroll body con overflow-hidden en useEffect; cierra con tecla Escape; trampa de foco (Tab/Shift+Tab cicla entre focusables del panel); header con IconX, body, footer opcional con bg-ep-surface-raised
+
+- `src/components/ui/index.ts` lineas 1-8 -- barrel export: re-exporta Button, Badge, Card, Input, TextArea, Select, Modal, Spinner
+
+### Archivos creados — Layout principal
+
+- `src/components/layout/TopBar.tsx` lineas 1-55 -- barra superior h-14; props: onToggleSidebar; slot izquierdo: boton hamburger (IconMenu2) en mobile / breadcrumb de seccion en desktop derivado de BREADCRUMB_MAP[pathname]; slot derecho: Badge de rol (green comprador / blue proveedor), separador vertical, avatar circular "ME" + "Mi Empresa" (oculto en mobile); lee useRolStore y useLocation
+
+- `src/components/layout/Sidebar.tsx` lineas 1-120 -- sidebar de navegacion; sin props (lee stores directamente); 5 secciones: branding (IconBolt + nombre + subtitulo), toggle de rol (pill con dos botones 50/50, click → setRol + navigate), etiqueta seccion (uppercase tracking-wider), navegacion (items segun rol, activo detectado por pathname===ruta, badge amber con count cotizaciones pendientes), footer (v0.1.0); lee useRolStore y useCotizacionesStore
+
+- `src/components/layout/AppShell.tsx` lineas 1-45 -- shell de layout; gestiona sidebarAbierto con useState; desktop: sidebar w-64 flex-shrink-0 + area flex-1; mobile: sidebar oculto, drawer fixed z-50 con overlay bg-black/40 z-40 al abrir; TopBar recibe onToggleSidebar; main con overflow-y-auto bg-ep-bg p-6 para el contenido
+
+### Archivos creados — Componentes de dominio
+
+- `src/components/pedidos/PedidoCard.tsx` lineas 1-85 -- card de pedido; props: pedido, compacto (default false), onCotizar; modo normal: titulo+badge estado, metadatos (cantidad/categoria/fecha con IconPackage/IconTag/IconCalendar), urgente (<3 dias) en rojo con IconAlertTriangle, descripcion line-clamp-2, presupuestoMax en font-mono, cotizaciones+boton Cotizar con IconSend; modo compacto: titulo+badge, categoria+fecha, contador; helpers estadoAColor() y estadoALabel() locales
+
+- `src/components/cotizaciones/CotizacionCard.tsx` lineas 1-110 -- card de cotizacion; props: cotizacion, onAceptar, onRechazar, compacto; busca proveedor en PROVEEDORES_SIMULADOS por proveedorId para zona y verificado; modo normal: nombre+badge, zona+badge Verificado con IconShieldCheck, 5 estrellas (text-ep-amber llenas / text-ep-text-disabled vacias), precio en text-xl font-mono, tiempoEntrega, notas en caja bg-ep-surface-raised italic, fecha relativa, botones accion si estado=pendiente y ambas funciones presentes; modo compacto: nombre+precio+badge+entrega
+
+- `src/components/ordenes/OrdenCard.tsx` lineas 1-55 -- card de orden; props: orden, onIrChat; muestra ID abreviado (.slice(-6).toUpperCase()) en font-mono, badge estado, proveedor con IconBuilding, monto en text-lg font-mono, fecha confirmacion, boton "Ir al chat" con IconMessage si onIrChat definido
+
+### Archivos creados — Páginas placeholder reales
+
+- `src/pages/comprador/DashboardComprador.tsx` -- placeholder con h1 "Dashboard" y descripcion de cuenta compradora
+- `src/pages/comprador/PublicarPedido.tsx` -- placeholder con h1 "Publicar pedido"
+- `src/pages/comprador/MisCotizacionesComprador.tsx` -- placeholder con h1 "Cotizaciones"
+- `src/pages/comprador/MisOrdenesComprador.tsx` -- placeholder con h1 "Mis órdenes"
+- `src/pages/comprador/ChatComprador.tsx` -- placeholder con h1 "Chat activo"
+- `src/pages/proveedor/DashboardProveedor.tsx` -- placeholder con h1 "Dashboard"
+- `src/pages/proveedor/PedidosDisponibles.tsx` -- placeholder con h1 "Pedidos disponibles"
+- `src/pages/proveedor/MisCotizacionesProveedor.tsx` -- placeholder con h1 "Mis cotizaciones"
+- `src/pages/proveedor/MisOrdenesProveedor.tsx` -- placeholder con h1 "Mis órdenes"
+- `src/pages/proveedor/ChatProveedor.tsx` -- placeholder con h1 "Chat activo"
+
+### Archivos modificados
+
+- `src/router/AppRouter.tsx` lineas 1-40 -- reemplazado: eliminados PlaceholderPage y AppShell temporales; importa AppShell real de components/layout; importa las 10 paginas reales de pages/comprador y pages/proveedor; estructura de routes igual; AppShell envuelve Routes para layout persistente

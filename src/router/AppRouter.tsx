@@ -1,16 +1,17 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppShell } from '../components/layout/AppShell';
 
-const PlaceholderPage = ({ titulo }: { titulo: string }) => (
-  <div className="p-8">
-    <h1 className="text-2xl font-semibold text-ep-text-primary">{titulo}</h1>
-    <p className="text-ep-text-secondary mt-2">En construcción — Sesión 2</p>
-  </div>
-);
+import DashboardComprador from '../pages/comprador/DashboardComprador';
+import PublicarPedido from '../pages/comprador/PublicarPedido';
+import MisCotizacionesComprador from '../pages/comprador/MisCotizacionesComprador';
+import MisOrdenesComprador from '../pages/comprador/MisOrdenesComprador';
+import ChatComprador from '../pages/comprador/ChatComprador';
 
-const AppShell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-ep-bg">{children}</div>
-);
+import DashboardProveedor from '../pages/proveedor/DashboardProveedor';
+import PedidosDisponibles from '../pages/proveedor/PedidosDisponibles';
+import MisCotizacionesProveedor from '../pages/proveedor/MisCotizacionesProveedor';
+import MisOrdenesProveedor from '../pages/proveedor/MisOrdenesProveedor';
+import ChatProveedor from '../pages/proveedor/ChatProveedor';
 
 export function AppRouter() {
   return (
@@ -18,40 +19,19 @@ export function AppRouter() {
       <AppShell>
         <Routes>
           <Route path="/" element={<Navigate to="/comprador" replace />} />
-          <Route path="/comprador" element={<PlaceholderPage titulo="Dashboard Comprador" />} />
-          <Route
-            path="/comprador/publicar"
-            element={<PlaceholderPage titulo="Publicar Pedido" />}
-          />
-          <Route
-            path="/comprador/cotizaciones"
-            element={<PlaceholderPage titulo="Mis Cotizaciones" />}
-          />
-          <Route
-            path="/comprador/ordenes"
-            element={<PlaceholderPage titulo="Mis Órdenes (Comprador)" />}
-          />
-          <Route
-            path="/comprador/chat"
-            element={<PlaceholderPage titulo="Chat (Comprador)" />}
-          />
-          <Route path="/proveedor" element={<PlaceholderPage titulo="Dashboard Proveedor" />} />
-          <Route
-            path="/proveedor/pedidos"
-            element={<PlaceholderPage titulo="Pedidos Disponibles" />}
-          />
-          <Route
-            path="/proveedor/cotizaciones"
-            element={<PlaceholderPage titulo="Mis Cotizaciones (Proveedor)" />}
-          />
-          <Route
-            path="/proveedor/ordenes"
-            element={<PlaceholderPage titulo="Mis Órdenes (Proveedor)" />}
-          />
-          <Route
-            path="/proveedor/chat"
-            element={<PlaceholderPage titulo="Chat (Proveedor)" />}
-          />
+
+          <Route path="/comprador" element={<DashboardComprador />} />
+          <Route path="/comprador/publicar" element={<PublicarPedido />} />
+          <Route path="/comprador/cotizaciones" element={<MisCotizacionesComprador />} />
+          <Route path="/comprador/ordenes" element={<MisOrdenesComprador />} />
+          <Route path="/comprador/chat" element={<ChatComprador />} />
+
+          <Route path="/proveedor" element={<DashboardProveedor />} />
+          <Route path="/proveedor/pedidos" element={<PedidosDisponibles />} />
+          <Route path="/proveedor/cotizaciones" element={<MisCotizacionesProveedor />} />
+          <Route path="/proveedor/ordenes" element={<MisOrdenesProveedor />} />
+          <Route path="/proveedor/chat" element={<ChatProveedor />} />
+
           <Route path="*" element={<Navigate to="/comprador" replace />} />
         </Routes>
       </AppShell>
