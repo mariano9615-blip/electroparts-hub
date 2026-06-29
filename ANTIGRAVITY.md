@@ -189,6 +189,7 @@ src/
     pedidos/       -- PedidoCard
     cotizaciones/  -- CotizacionCard, CotizacionForm
     ordenes/       -- OrdenCard
+    domain/        -- PedidosTable, CotizacionesTable (tablas para dashboards)
     chat/          -- (reservado para extraccion futura)
   pages/
     comprador/     -- DashboardComprador, PublicarPedido, MisCotizacionesComprador,
@@ -238,7 +239,7 @@ NO acepta className directamente — envolver en un div para aplicar color.
 - Tipografia numerica: font-mono (JetBrains Mono) para precios, IDs y cantidades.
 - Headers de seccion: text-xs font-bold text-ep-text-muted uppercase tracking-widest + border-b border-ep-border pb-2.5 mb-4
 - Separadores internos de card (footer): border-t border-ep-border mt-3 pt-3
-- StatCard layout: icono top-right (w-11 h-11 rounded-xl), valor text-3xl font-bold font-mono leading-none, label text-xs uppercase tracking-wider
+- StatCard layout: border-l-4 con color del stat como acento, icono 13px inline junto al label, valor text-2xl font-bold font-mono leading-none, label text-xs uppercase tracking-wider. Sin Card wrapper — div propio con bg-ep-surface border border-ep-border rounded-xl shadow-sm.
 - PageHeader: titulo text-2xl font-bold leading-tight + border-b border-ep-border pb-5 mb-6
 - EmptyState: contenedor con bg-ep-surface border shadow-sm rounded-xl, icono text-ep-text-disabled
 - Sidebar activo: stripe absoluta left-0 h-6 w-[3px] bg-ep-green rounded-r-full + bg-ep-green-light text-ep-green-dark font-semibold
@@ -275,6 +276,17 @@ Depende de PROVEEDORES_SIMULADOS de constants.ts para zona/verificado.
 Props: orden: Orden, onIrChat?: () => void
 Muestra: ID abreviado (font-mono), badge estado, nombre proveedor con IconBuilding,
 monto (font-mono), fecha confirmacion. Boton "Ir al chat" si onIrChat definido.
+
+### PedidosTable (src/components/domain/PedidosTable.tsx)
+Props: pedidos: Pedido[], onCotizar?: (pedido: Pedido) => void
+Tabla HTML con columnas: Producto | Categoría | Fecha límite | Cotizaciones | Estado | (Acción).
+Columna Acción (Button "Cotizar") solo aparece cuando onCotizar está definido.
+Fecha urgente (< 3 dias) en rojo con IconAlertTriangle. divide-y divide-ep-border + hover:bg-ep-surface-raised.
+
+### CotizacionesTable (src/components/domain/CotizacionesTable.tsx)
+Props: cotizaciones: Cotizacion[], pedidos: Pedido[]
+Tabla HTML con columnas: Proveedor | Pedido | Precio | Entrega | Estado.
+Resuelve el título del pedido internamente via pedidos[]. Precio en font-mono. divide-y divide-ep-border.
 
 ### CotizacionForm (src/components/cotizaciones/CotizacionForm.tsx)
 Props: pedidoId: string, onSuccess: () => void

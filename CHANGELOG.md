@@ -1,5 +1,61 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.3] -- 2026-06-29 -- Dashboard rediseñado con tablas y layout B2B corporativo
+
+### src/components/ui/StatCard.tsx (reescritura completa)
+- Eliminado el wrapper `<Card>` — ahora usa `<div>` propio con `bg-ep-surface border border-ep-border rounded-xl shadow-sm px-4 py-3`
+- Agregado `border-l-4` con color del stat como acento visual izquierdo (border-l-ep-green/blue/amber/red según prop `color`)
+- Eliminado icono grande w-11 h-11 top-right; reemplazado por icono inline 13px junto al label
+- Label: mantenido `text-xs font-semibold text-ep-text-muted uppercase tracking-wider`; icono coloreado en div separado antes del label para no contaminar el color del texto
+- Valor: reducido de `text-3xl` a `text-2xl font-bold font-mono leading-none`
+- Badge de pendientes: sin cambios funcionales
+- Props invariantes: label, value, icono, color, badge?, sub?
+
+### src/components/domain/PedidosTable.tsx (nuevo)
+- Componente de tabla HTML para listar pedidos en dashboards
+- Props: `pedidos: Pedido[]`, `onCotizar?: (pedido: Pedido) => void`
+- Columnas: Producto | Categoría | Fecha límite | Cotizaciones | Estado | (Acción opcional)
+- Columna Acción con `<Button variant="secondary" size="sm">Cotizar</Button>` solo aparece cuando `onCotizar` está definido (usado en DashboardProveedor)
+- Fecha urgente (diasHasta < 3) en `text-ep-red font-semibold` con `IconAlertTriangle` inline
+- Contenedor: `bg-ep-surface border border-ep-border rounded-xl shadow-sm overflow-hidden`
+- Filas: `divide-y divide-ep-border` + `hover:bg-ep-surface-raised transition-colors duration-150`
+- Thead: `bg-ep-surface-raised border-b border-ep-border` con headers `text-xs font-semibold text-ep-text-muted uppercase tracking-wider`
+
+### src/components/domain/CotizacionesTable.tsx (nuevo)
+- Componente de tabla HTML para listar cotizaciones en dashboards
+- Props: `cotizaciones: Cotizacion[]`, `pedidos: Pedido[]`
+- Columnas: Proveedor | Pedido | Precio | Entrega | Estado
+- Resuelve título del pedido internamente via `pedidos.find(p => p.id === c.pedidoId)` — recibe pedidos como prop para evitar acceso al store desde el componente
+- Precio: `font-mono font-semibold text-ep-text-primary` alineado a la derecha
+- Mismo estilo de contenedor y filas que PedidosTable
+
+### src/pages/comprador/DashboardComprador.tsx
+- Eliminado import de `PedidoCard` (ya no se usa en dashboard)
+- Eliminado import de `CotizacionCard` (ya no se usa en dashboard)
+- Agregados imports de `PedidosTable` y `CotizacionesTable` desde `../../components/domain/`
+- Sección "Últimos pedidos": reemplazado `<div className="flex flex-col gap-3">` + PedidoCards por `<PedidosTable pedidos={ultimosPedidos} />`
+- Sección "Últimas cotizaciones": reemplazado `<div className="flex flex-col gap-3">` + CotizacionCards por `<CotizacionesTable cotizaciones={ultimasCotizaciones} pedidos={misPedidos} />`
+- Section headers: reducido padding `pb-2 mb-3` (antes `pb-2.5 mb-4`) para layout más denso
+- Grid StatCards: `gap-3` (antes `gap-4`) y `mb-6` (antes `mb-8`)
+- Secciones: `mb-6` (antes `mb-8`)
+- Lógica de negocio y datos calculados: sin cambios
+
+### src/pages/proveedor/DashboardProveedor.tsx
+- Eliminado import de `PedidoCard`
+- Agregado import de `PedidosTable` desde `../../components/domain/`
+- Sección "Pedidos recientes disponibles": reemplazado `<div className="flex flex-col gap-3">` + PedidoCards por `<PedidosTable pedidos={ultimosPedidos} onCotizar={(p) => setPedidoSeleccionado(p)} />`
+- Section header: reducido a `pb-2 mb-3`
+- Grid StatCards: `gap-3` y `mb-6`
+- Modal de cotización y toast de éxito: sin cambios
+- Lógica de negocio: sin cambios
+
+### ANTIGRAVITY.md
+- Sección "Estructura de carpetas": agregada línea `domain/ -- PedidosTable, CotizacionesTable (tablas para dashboards)` en components/
+- Sección "Convenciones de diseño": actualizada descripción de StatCard layout (border-l-4 accent, icono inline 13px, text-2xl)
+- Sección "Componentes de dominio": agregadas entradas para PedidosTable y CotizacionesTable
+
+---
+
 ## [v0.1.2] -- 2026-06-28 -- Sidebar oscuro estilo B2B corporativo
 
 ### src/components/layout/Sidebar.tsx

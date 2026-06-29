@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { IconPackage, IconFileInvoice, IconShoppingCart, IconPlus, IconInbox } from '@tabler/icons-react';
 import { StatCard, PageHeader, EmptyState, Button } from '../../components/ui';
-import { PedidoCard } from '../../components/pedidos/PedidoCard';
-import { CotizacionCard } from '../../components/cotizaciones/CotizacionCard';
+import { PedidosTable } from '../../components/domain/PedidosTable';
+import { CotizacionesTable } from '../../components/domain/CotizacionesTable';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
@@ -48,7 +48,7 @@ export default function DashboardComprador() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <StatCard
           label="Pedidos activos"
           value={pedidosActivos.length}
@@ -70,8 +70,8 @@ export default function DashboardComprador() {
         />
       </div>
 
-      <div className="mb-8">
-        <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-ep-border">
+      <div className="mb-6">
+        <div className="flex items-center justify-between pb-2 mb-3 border-b border-ep-border">
           <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
             Últimos pedidos
           </h2>
@@ -90,16 +90,12 @@ export default function DashboardComprador() {
             accion={{ label: 'Publicar pedido', onClick: () => navigate('/comprador/publicar') }}
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {ultimosPedidos.map((pedido) => (
-              <PedidoCard key={pedido.id} pedido={pedido} compacto />
-            ))}
-          </div>
+          <PedidosTable pedidos={ultimosPedidos} />
         )}
       </div>
 
       <div>
-        <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-ep-border">
+        <div className="flex items-center justify-between pb-2 mb-3 border-b border-ep-border">
           <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
             Últimas cotizaciones
           </h2>
@@ -117,11 +113,7 @@ export default function DashboardComprador() {
             mensaje="Publicá un pedido para que los proveedores puedan cotizarte"
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {ultimasCotizaciones.map((cot) => (
-              <CotizacionCard key={cot.id} cotizacion={cot} compacto />
-            ))}
-          </div>
+          <CotizacionesTable cotizaciones={ultimasCotizaciones} pedidos={misPedidos} />
         )}
       </div>
     </div>

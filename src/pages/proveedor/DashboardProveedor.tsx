@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { IconPackage, IconFileInvoice, IconShoppingCart } from '@tabler/icons-react';
 import { StatCard, PageHeader, EmptyState } from '../../components/ui';
 import { Modal } from '../../components/ui/Modal';
-import { PedidoCard } from '../../components/pedidos/PedidoCard';
+import { PedidosTable } from '../../components/domain/PedidosTable';
 import { CotizacionForm } from '../../components/cotizaciones/CotizacionForm';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
@@ -39,7 +39,7 @@ export default function DashboardProveedor() {
     <div>
       <PageHeader titulo="Dashboard" descripcion="Tu actividad como proveedor" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <StatCard
           label="Pedidos disponibles"
           value={pedidosDisponibles.length}
@@ -61,7 +61,7 @@ export default function DashboardProveedor() {
       </div>
 
       <div>
-        <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-ep-border">
+        <div className="flex items-center justify-between pb-2 mb-3 border-b border-ep-border">
           <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
             Pedidos recientes disponibles
           </h2>
@@ -73,16 +73,10 @@ export default function DashboardProveedor() {
             mensaje="No hay pedidos disponibles en este momento"
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {ultimosPedidos.map((pedido) => (
-              <PedidoCard
-                key={pedido.id}
-                pedido={pedido}
-                compacto
-                onCotizar={() => setPedidoSeleccionado(pedido)}
-              />
-            ))}
-          </div>
+          <PedidosTable
+            pedidos={ultimosPedidos}
+            onCotizar={(pedido) => setPedidoSeleccionado(pedido)}
+          />
         )}
       </div>
 

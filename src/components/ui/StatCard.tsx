@@ -1,6 +1,5 @@
 import React from 'react';
 import { Badge } from './Badge';
-import { Card } from './Card';
 
 interface StatCardProps {
   label: string;
@@ -11,31 +10,38 @@ interface StatCardProps {
   sub?: string;
 }
 
-const ICON_CLASSES = {
-  green: 'bg-ep-green-light text-ep-green',
-  blue: 'bg-ep-blue-light text-ep-blue',
-  amber: 'bg-ep-amber-light text-ep-amber',
-  red: 'bg-ep-red-light text-ep-red',
+const ACCENT_BORDER: Record<string, string> = {
+  green: 'border-l-ep-green',
+  blue: 'border-l-ep-blue',
+  amber: 'border-l-ep-amber',
+  red: 'border-l-ep-red',
+};
+
+const ICON_COLOR: Record<string, string> = {
+  green: 'text-ep-green',
+  blue: 'text-ep-blue',
+  amber: 'text-ep-amber',
+  red: 'text-ep-red',
 };
 
 export const StatCard = ({ label, value, icono: Icono, color, badge, sub }: StatCardProps) => (
-  <Card hoverable={false}>
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-ep-text-muted uppercase tracking-wider">{label}</p>
-        <div className="flex items-baseline gap-2.5 mt-1.5">
-          <span className="text-3xl font-bold font-mono text-ep-text-primary leading-none">
-            {value}
-          </span>
-          {badge != null && badge > 0 && <Badge color="amber">{badge} pendientes</Badge>}
-        </div>
-        {sub && <p className="text-xs text-ep-text-muted mt-1.5">{sub}</p>}
+  <div
+    className={`bg-ep-surface border border-ep-border border-l-4 ${ACCENT_BORDER[color]} rounded-xl shadow-sm px-4 py-3`}
+  >
+    <div className="flex items-center gap-1.5 mb-2">
+      <div className={ICON_COLOR[color]}>
+        <Icono size={13} stroke={1.75} />
       </div>
-      <div
-        className={`w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center ${ICON_CLASSES[color]}`}
-      >
-        <Icono size={22} stroke={1.5} />
-      </div>
+      <span className="text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
+        {label}
+      </span>
     </div>
-  </Card>
+    <div className="flex items-baseline gap-2">
+      <span className="text-2xl font-bold font-mono text-ep-text-primary leading-none">
+        {value}
+      </span>
+      {badge != null && badge > 0 && <Badge color="amber">{badge} pendientes</Badge>}
+    </div>
+    {sub && <p className="text-xs text-ep-text-muted mt-1">{sub}</p>}
+  </div>
 );
