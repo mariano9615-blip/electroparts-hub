@@ -1,5 +1,56 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.5] -- 2026-06-29 -- Rediseño enterprise dashboard — StatCards compactos, tablas pulidas, layout denso
+
+### src/components/ui/StatCard.tsx (reescritura completa, líneas 1-43)
+- Eliminado prop `badge` de la interfaz y de la lógica de rendering — badge de pendientes ya no aparece en StatCard
+- Eliminado import de `Badge` (sin uso tras quitar badge)
+- Eliminado wrapper `flex items-baseline gap-2` alrededor del valor
+- Contenedor: `rounded-xl shadow-sm` → `rounded-lg` (sin sombra), padding py-3 mantenido
+- Mapa `ICON_COLOR` renombrado a `ACCENT_COLOR` y aplicado tanto al ícono como al label (antes el label era siempre `text-ep-text-muted`)
+- Label span: `text-xs font-semibold text-ep-text-muted tracking-wider` → `text-[10px] font-medium tracking-[0.06em]` con color del stat vía clase padre
+- Valor: `text-2xl font-bold` → `text-[26px] font-medium` + `mt-1`; `leading-none` mantenido
+- Sub (si existe): `text-xs mt-1` → `text-[11px] mt-0.5`
+
+### src/components/domain/PedidosTable.tsx (reescritura, líneas 1-80)
+- Wrapper: `rounded-xl shadow-sm` → `rounded-lg` (sin sombra)
+- Extraída constante `TH` para clases compartidas de `<th>`
+- `<thead><tr>`: eliminado `border-b border-ep-border` del `<tr>` — el borde pasa a cada `<th>`
+- `<th>` todas: `px-4 py-2.5 text-xs font-semibold tracking-wider` → `px-3 py-2 text-[10px] font-medium tracking-[0.06em] border-b border-ep-border`
+- `<tbody>`: eliminado `divide-y divide-ep-border`; el borde pasa a cada `<tr>` con `border-b border-ep-border last:border-0`
+- `<tr>`: `hover:bg-ep-surface-raised transition-colors duration-150` → `border-b border-ep-border last:border-0 hover:bg-ep-surface-raised transition-colors`
+- `<td>` padding base: `px-4 py-3` → `px-3 py-2.5`
+- Columna Categoría: `text-ep-text-secondary` → `text-[11px] text-ep-text-muted`
+- Columna Fecha límite: eliminado `font-mono`; clases `text-xs font-mono` → `text-[11px]`; urgente ahora `text-[11px] text-ep-red` (antes `font-semibold`)
+- Columna Cotizaciones: reemplazado `font-mono text-ep-text-secondary` por condicional: `text-sm font-medium text-ep-text-primary` si > 0, `text-sm text-ep-text-muted` si = 0
+
+### src/components/domain/CotizacionesTable.tsx (reescritura, líneas 1-67)
+- Wrapper: `rounded-xl shadow-sm` → `rounded-lg`
+- Misma constante `TH` y mismo sistema de `<th>` que PedidosTable
+- `<tbody>`: eliminado `divide-y divide-ep-border`; bordes pasados a cada `<tr>`
+- Columna Pedido: `text-ep-text-secondary text-xs` → `text-[11px] text-ep-text-muted`
+- Columna Precio: `font-semibold` → `font-medium`
+- Columna Entrega: `text-ep-text-secondary` → `text-[11px] text-ep-text-muted`
+
+### src/pages/comprador/DashboardComprador.tsx (líneas 1-111)
+- Eliminada variable `cotizacionesPendientes` (era solo para el badge de StatCard)
+- Grid StatCards: `grid-cols-1 sm:grid-cols-3 gap-3 mb-6` → `grid-cols-3 gap-2.5 mb-5`
+- StatCard "Cotizaciones recibidas": eliminada prop `badge`
+- Sección "Últimos pedidos" wrapper: `mb-6` → `mb-5`
+- Header de sección: `flex items-center justify-between pb-2 mb-3 border-b border-ep-border` → `flex items-center justify-between mb-2` (sin border-b ni pb)
+- Título de sección: `<h2 className="text-xs font-bold ... tracking-widest">` → `<span className="text-[10px] font-medium ... tracking-[0.08em]">`
+- Link "Ver todos": `text-xs text-ep-green hover:text-ep-green-dark font-semibold` → `text-[11px] text-ep-blue font-medium hover:underline`
+- Link "Ver todos" de pedidos ahora navega a `/comprador/publicar` (antes iba erróneamente a `/comprador/cotizaciones`)
+- Mismos cambios aplicados a sección "Últimas cotizaciones"
+
+### src/pages/proveedor/DashboardProveedor.tsx (líneas 1-115)
+- Agregado import `useNavigate` de react-router-dom y hook `navigate` en el componente
+- Grid StatCards: `grid-cols-1 sm:grid-cols-3 gap-3 mb-6` → `grid-cols-3 gap-2.5 mb-5`
+- Header de sección "Pedidos recientes disponibles": mismos cambios de título y estilo que DashboardComprador
+- Agregado link "Ver todos →" a `/proveedor/pedidos` (no existía antes)
+
+---
+
 ## [v0.1.4-fix] -- 2026-06-29 -- Fix: infinite loop en NotificacionesPanel por selector no cacheado
 
 ### src/components/layout/NotificacionesPanel.tsx (líneas 1 y 97-99)

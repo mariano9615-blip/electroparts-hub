@@ -248,7 +248,7 @@ Todos se exportan desde `src/components/ui/index.ts`.
 | Select       | options [{value,label}], placeholder, error, required    | igual que Input |
 | Modal        | open, onClose, title, size, footer                       | sm/md/lg · portal a document.body · trap foco + Escape |
 | Spinner      | size, color                                              | sm/md/lg · dentro de Button cuando loading=true |
-| StatCard     | label, value, icono, color, badge?, sub?                 | color: green/blue/amber/red · badge = numero amber "N pendientes" |
+| StatCard     | label, value, icono, color, sub?                         | color: green/blue/amber/red · SIN badge (eliminado en v0.1.5) |
 | EmptyState   | icono, titulo, mensaje, accion?                          | accion: {label, onClick} muestra Button primary |
 | PageHeader   | titulo, descripcion?, accion?                            | flex justify-between · accion alineado a la derecha |
 
@@ -266,7 +266,7 @@ NO acepta className directamente — envolver en un div para aplicar color.
 - Tipografia numerica: font-mono (JetBrains Mono) para precios, IDs y cantidades.
 - Headers de seccion: text-xs font-bold text-ep-text-muted uppercase tracking-widest + border-b border-ep-border pb-2.5 mb-4
 - Separadores internos de card (footer): border-t border-ep-border mt-3 pt-3
-- StatCard layout: border-l-4 con color del stat como acento, icono 13px inline junto al label, valor text-2xl font-bold font-mono leading-none, label text-xs uppercase tracking-wider. Sin Card wrapper — div propio con bg-ep-surface border border-ep-border rounded-xl shadow-sm.
+- StatCard layout: border-l-4 con color del stat como acento, icono 13px inline junto al label, ambos coloreados con el color del stat (no text-ep-text-muted). Valor text-[26px] font-medium font-mono leading-none mt-1. Label text-[10px] font-medium uppercase tracking-[0.06em]. Sub text-[11px] text-ep-text-muted mt-0.5. Sin badge de pendientes — ese dato ya no se muestra en StatCard. Sin Card wrapper — div propio con bg-ep-surface border border-ep-border rounded-lg (no rounded-xl, no shadow-sm).
 - PageHeader: titulo text-2xl font-bold leading-tight + border-b border-ep-border pb-5 mb-6
 - EmptyState: contenedor con bg-ep-surface border shadow-sm rounded-xl, icono text-ep-text-disabled
 - Sidebar activo: stripe absoluta left-0 h-6 w-[3px] bg-ep-green rounded-r-full + bg-ep-green-light text-ep-green-dark font-semibold
@@ -407,7 +407,8 @@ Textarea auto-resize hasta 4 lineas; Enter sin Shift envia.
 Stores: usePedidosStore, useCotizacionesStore, useOrdenesStore.
 Calcula: pedidosDisponibles (abierto|en_cotizacion), misCotizaciones (proveedorId en PROV_IDS),
   misOrdenes (proveedorId en ['prov-4','prov-demo-001']).
-Grid 3-col StatCards + lista de 5 pedidos recientes disponibles con PedidoCard compacto.
+Grid 3-col StatCards + lista de 5 pedidos recientes disponibles con PedidosTable + onCotizar.
+Header de sección "Pedidos recientes disponibles" con link "Ver todos →" → navigate('/proveedor/pedidos').
 Modal de cotizacion: Modal con CotizacionForm abierto cuando pedidoSeleccionado != null.
 Toast de exito (fixed bottom-6 right-6) que desaparece en 3s.
 
