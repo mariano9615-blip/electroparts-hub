@@ -233,9 +233,17 @@ NO acepta className directamente — envolver en un div para aplicar color.
 - Texto: text-ep-text-primary → titulos/datos; text-ep-text-secondary → descripcion/metadatos;
   text-ep-text-muted → labels/fechas; text-ep-text-disabled → campos inactivos.
 - Border radius: rounded-lg inputs/botones, rounded-xl cards, rounded-2xl modales.
-- Sombras: shadow-sm en surfaces elevadas unicamente. Nunca shadow-lg en elementos inline.
+- Sombras: shadow-sm SIEMPRE en Card y superficies elevadas. Nunca shadow-lg en elementos inline.
 - Transiciones: transition-colors duration-150 en todos los elementos interactivos.
 - Tipografia numerica: font-mono (JetBrains Mono) para precios, IDs y cantidades.
+- Headers de seccion: text-xs font-bold text-ep-text-muted uppercase tracking-widest + border-b border-ep-border pb-2.5 mb-4
+- Separadores internos de card (footer): border-t border-ep-border mt-3 pt-3
+- StatCard layout: icono top-right (w-11 h-11 rounded-xl), valor text-3xl font-bold font-mono leading-none, label text-xs uppercase tracking-wider
+- PageHeader: titulo text-2xl font-bold leading-tight + border-b border-ep-border pb-5 mb-6
+- EmptyState: contenedor con bg-ep-surface border shadow-sm rounded-xl, icono text-ep-text-disabled
+- Sidebar activo: stripe absoluta left-0 h-6 w-[3px] bg-ep-green rounded-r-full + bg-ep-green-light text-ep-green-dark font-semibold
+- Sidebar branding: icono en pill verde (w-8 h-8 bg-ep-green rounded-lg) + texto bold tracking-tight
+- TopBar: shadow-sm z-10 + breadcrumb font-semibold
 
 ### Color de Badge por estado
 | Color | Usar para |

@@ -1,5 +1,77 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.1] -- 2026-06-28 -- Mejoras visuales B2B corporativo (commit 84f1fa1)
+
+### src/components/ui/Card.tsx · líneas 19-28
+- Línea 21: agregado `shadow-sm` permanente a la clase base del card (antes solo en hover con `hoverable`)
+
+### src/components/ui/StatCard.tsx · líneas 1-42 (reescritura)
+- Layout reestructurado: icono movido a top-right (flex justify-between), valor principal a la izquierda
+- Línea 26: label `text-xs font-semibold uppercase tracking-wider` (antes `font-medium tracking-wide`)
+- Línea 28: valor `text-3xl font-bold font-mono leading-none` (antes `text-2xl`)
+- Línea 36: icono `w-11 h-11` (antes `w-10 h-10`)
+
+### src/components/ui/PageHeader.tsx · líneas 1-18 (reescritura)
+- Línea 9: contenedor con `border-b border-ep-border pb-5 mb-6` (antes solo `mb-6` sin borde)
+- Línea 10: título `text-2xl font-bold leading-tight` (antes `text-xl font-semibold`)
+- Línea 11: descripción `mt-1` (antes `mt-0.5`)
+
+### src/components/ui/EmptyState.tsx · líneas 1-27 (reescritura)
+- Línea 11: contenedor con `bg-ep-surface border border-ep-border rounded-xl shadow-sm py-14`
+- Línea 12: icono `text-ep-text-disabled` y `size={44} stroke={1.25}` (antes muted, size 48)
+- Línea 14: texto con `leading-relaxed`
+- Línea 16: margen acción `mt-5` (antes `mt-4`)
+
+### src/components/layout/Sidebar.tsx · líneas 1-130 (reescritura)
+- Línea 64: branding rediseñado — ícono en pill verde `w-8 h-8 bg-ep-green rounded-lg` con `IconBolt` blanco
+- Línea 69: título `font-bold tracking-tight` (antes `font-semibold`)
+- Línea 75: toggle con `border-b border-ep-border` y clase `font-semibold` (antes `font-medium`)
+- Línea 86: sección label `text-[10px] font-bold tracking-widest` (antes `text-xs font-semibold tracking-wider`)
+- Líneas 94-120: ítems de nav reestructurados — wrapper `<div relative px-3 mb-0.5>` con `<span>` absoluta
+  para indicador activo `w-[3px] h-6 bg-ep-green rounded-r-full` a `left-0`
+- Ítem activo: `bg-ep-green-light text-ep-green-dark font-semibold` + icono `stroke={2}`
+- Ítem inactivo: `font-medium` (antes `font-medium` sin diferenciación explícita)
+- Badge de pendientes: `text-[10px]` (antes `text-xs`)
+- Línea 125: footer `text-ep-text-disabled` (antes `text-ep-text-muted`)
+
+### src/components/layout/TopBar.tsx · líneas 36, 45
+- Línea 36: header con `shadow-sm z-10` agregados
+- Línea 45: breadcrumb `font-semibold` (antes `font-medium`)
+
+### src/components/pedidos/PedidoCard.tsx · líneas 1-112 (reescritura)
+- Modo compacto (líneas 48-62): metadata inline separada por `·`, cotizaciones con `IconMessageCircle`,
+  Badge alineado a `items-start` para mejor tipografía multilínea
+- Modo full (líneas 64-112): metadata con `gap-4 mt-2` y `text-ep-text-secondary` (antes muted),
+  descripción con `leading-relaxed`, presupuesto con `font-semibold font-mono` del valor,
+  footer con `border-t border-ep-border mt-4 pt-3` separando contador de botón Cotizar
+
+### src/components/cotizaciones/CotizacionCard.tsx · líneas 1-128 (reescritura)
+- Modo compacto (líneas 64-78): precio `text-base font-bold font-mono leading-none` prominente
+  (antes `text-sm font-bold`), layout con `items-start` y metadata inline con `·`
+- Modo full: header con provider+zona en columna izquierda, badge top-right
+- Línea 100: precio `text-2xl font-bold font-mono leading-none pb-3 border-b border-ep-border`
+- Líneas 108-111: notas con `border border-ep-border` explícito además de bg-ep-surface-raised
+- Estrellas: reducidas a `w-3 h-3` (antes `w-3.5 h-3.5`)
+
+### src/components/ordenes/OrdenCard.tsx · líneas 1-55 (reescritura)
+- Líneas 38-44: ID monospace con `text-[11px] uppercase tracking-wider mb-1`, proveedor en fila debajo
+- Líneas 46-54: footer con `border-t border-ep-border mt-3 pt-3`, monto `text-xl leading-none`,
+  fecha en `mt-1`, botón "Ir al chat" alineado a la derecha del footer
+
+### src/pages/comprador/DashboardComprador.tsx · líneas 61-126
+- Líneas 73-78: section header "Últimos pedidos" con `border-b border-ep-border pb-2.5 mb-4`,
+  label `text-xs font-bold tracking-widest`, link "Ver todos" `font-semibold`
+- Línea 93: gap entre cards `gap-3` (antes `gap-2`)
+- Líneas 101-107: mismo tratamiento para section "Últimas cotizaciones"
+- Línea 122: gap `gap-3`
+
+### src/pages/proveedor/DashboardProveedor.tsx · líneas 52-82
+- Línea 57: sección header con `border-b border-ep-border pb-2.5 mb-4` y label `tracking-widest`
+- Línea 72: gap `gap-3` (antes `gap-2`)
+- Línea 111: toast con `font-semibold` (antes `font-medium`)
+
+---
+
 ## [v0.1.0] -- 2026-06-26 -- Scaffolding inicial
 
 ### Archivos creados por script PowerShell
