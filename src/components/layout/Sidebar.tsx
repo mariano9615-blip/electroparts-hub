@@ -58,28 +58,28 @@ export const Sidebar = () => {
   };
 
   return (
-    <aside className="flex flex-col h-full bg-ep-surface border-r border-ep-border overflow-hidden">
+    <aside className="flex flex-col h-full bg-ep-blue-dark overflow-hidden">
       {/* Branding */}
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-ep-border flex-shrink-0">
+      <div className="h-16 flex items-center gap-3 px-5 border-b border-white/10 flex-shrink-0">
         <div className="w-8 h-8 bg-ep-green rounded-lg flex items-center justify-center flex-shrink-0">
           <IconBolt size={18} className="text-white" />
         </div>
         <div className="min-w-0">
-          <p className="font-bold text-sm text-ep-text-primary leading-tight tracking-tight">
+          <p className="font-bold text-sm text-white leading-tight tracking-tight">
             ElectroParts Hub
           </p>
-          <p className="text-xs text-ep-text-muted leading-tight">Marketplace B2B</p>
+          <p className="text-xs text-slate-400 leading-tight">Marketplace B2B</p>
         </div>
       </div>
 
       {/* Toggle de rol */}
-      <div className="px-4 py-3 border-b border-ep-border flex-shrink-0">
-        <div className="bg-ep-surface-raised rounded-lg p-1 flex">
+      <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
+        <div className="bg-white/10 rounded-lg p-1 flex">
           <button
             className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ${
               rol === 'comprador'
-                ? 'bg-ep-surface shadow-sm text-ep-text-primary'
-                : 'text-ep-text-muted hover:text-ep-text-secondary'
+                ? 'bg-white/20 shadow-sm text-white'
+                : 'text-slate-400 hover:text-white'
             }`}
             onClick={() => handleSetRol('comprador')}
           >
@@ -88,8 +88,8 @@ export const Sidebar = () => {
           <button
             className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ${
               rol === 'proveedor'
-                ? 'bg-ep-surface shadow-sm text-ep-text-primary'
-                : 'text-ep-text-muted hover:text-ep-text-secondary'
+                ? 'bg-white/20 shadow-sm text-white'
+                : 'text-slate-400 hover:text-white'
             }`}
             onClick={() => handleSetRol('proveedor')}
           >
@@ -100,7 +100,7 @@ export const Sidebar = () => {
 
       {/* Etiqueta de sección */}
       <div className="px-5 pt-4 pb-1.5 flex-shrink-0">
-        <span className="text-[10px] font-bold text-ep-text-muted uppercase tracking-widest">
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
           {rol === 'comprador' ? 'Comprador' : 'Proveedor'}
         </span>
       </div>
@@ -119,8 +119,8 @@ export const Sidebar = () => {
                 onClick={() => navigate(item.ruta)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer rounded-lg relative transition-colors duration-150 ${
                   esActivo
-                    ? 'bg-ep-green-light text-ep-green-dark font-semibold'
-                    : 'text-ep-text-secondary hover:bg-ep-surface-raised hover:text-ep-text-primary font-medium'
+                    ? 'bg-white/15 text-white font-semibold'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white font-medium'
                 }`}
               >
                 <Icono
@@ -141,8 +141,8 @@ export const Sidebar = () => {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-ep-border px-5 py-3 flex-shrink-0">
-        <span className="text-xs text-ep-text-disabled">v0.1.0</span>
+      <div className="border-t border-white/10 px-5 py-3 flex-shrink-0">
+        <span className="text-xs text-slate-500">v0.1.0</span>
       </div>
     </aside>
   );

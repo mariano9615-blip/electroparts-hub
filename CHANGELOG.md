@@ -1,5 +1,23 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.2] -- 2026-06-28 -- Sidebar oscuro estilo B2B corporativo
+
+### src/components/layout/Sidebar.tsx
+
+- Línea 61: `<aside>` — fondo cambiado de `bg-ep-surface border-r border-ep-border` a `bg-ep-blue-dark` (sin borde derecho, el borde visual desaparece al unificarse con el fondo)
+- Línea 63: header branding — `border-b border-ep-border` → `border-b border-white/10`
+- Línea 68: título brand — `text-ep-text-primary` → `text-white`
+- Línea 71: subtítulo brand — `text-ep-text-muted` → `text-slate-400`
+- Línea 76: toggle wrapper — `border-b border-ep-border` → `border-b border-white/10`
+- Línea 77: toggle pill — `bg-ep-surface-raised` → `bg-white/10`
+- Líneas 79-96: botones toggle — activo: `bg-ep-surface shadow-sm text-ep-text-primary` → `bg-white/20 shadow-sm text-white`; inactivo: `text-ep-text-muted hover:text-ep-text-secondary` → `text-slate-400 hover:text-white`
+- Línea 103: label sección — `text-ep-text-muted` → `text-slate-400`
+- Líneas 120-123: ítem nav activo — `bg-ep-green-light text-ep-green-dark` → `bg-white/15 text-white`; ícono activo mantiene `text-ep-green` (acento verde visible sobre fondo oscuro)
+- Líneas 123: ítem nav inactivo — `text-ep-text-secondary hover:bg-ep-surface-raised hover:text-ep-text-primary` → `text-slate-300 hover:bg-white/10 hover:text-white`
+- Línea 144: footer — `border-t border-ep-border` → `border-t border-white/10`; `text-ep-text-disabled` → `text-slate-500`
+
+---
+
 ## [v0.1.1] -- 2026-06-28 -- Mejoras visuales B2B corporativo (commit 84f1fa1)
 
 ### src/components/ui/Card.tsx · líneas 19-28
