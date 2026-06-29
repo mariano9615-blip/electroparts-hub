@@ -106,14 +106,41 @@ Patron comun a todos los stores:
   - Cada action que muta estado persiste inmediatamente
   - Para llamar otros stores desde una action: useXxxStore.getState().action()
 
-| Store                   | Entidad     | Clave localStorage    | Depende de                          |
-|-------------------------|-------------|----------------------|-------------------------------------|
-| useAuthStore.ts         | Auth        | ep_auth              | —                                   |
-| useRolStore.ts          | Rol         | ep_rol               | —                                   |
-| usePedidosStore.ts      | Pedido[]    | ep_pedidos           | —                                   |
-| useOrdenesStore.ts      | Orden[]     | ep_ordenes           | —                                   |
-| useCotizacionesStore.ts | Cotizacion[]| ep_cotizaciones      | useOrdenesStore, usePedidosStore     |
-| useChatStore.ts         | Mensaje[]   | ep_mensajes          | —                                   |
+| Store                      | Entidad          | Clave localStorage    | Depende de                                              |
+|----------------------------|------------------|-----------------------|---------------------------------------------------------|
+| useAuthStore.ts            | Auth             | ep_auth               | —                                                       |
+| useRolStore.ts             | Rol              | ep_rol                | —                                                       |
+| usePedidosStore.ts         | Pedido[]         | ep_pedidos            | useNotificacionesStore                                  |
+| useOrdenesStore.ts         | Orden[]          | ep_ordenes            | —                                                       |
+| useCotizacionesStore.ts    | Cotizacion[]     | ep_cotizaciones       | useOrdenesStore, usePedidosStore, useNotificacionesStore |
+| useChatStore.ts            | Mensaje[]        | ep_mensajes           | —                                                       |
+| useNotificacionesStore.ts  | Notificacion[]   | ep_notificaciones     | —                                                       |
+
+### useNotificacionesStore (src/store/useNotificacionesStore.ts)
+Tipos exportados:
+  TipoNotificacion: 'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada'
+  Notificacion: { id, tipo, titulo, mensaje, fecha, leida, rolDestino: 'comprador'|'proveedor', entidadId? }
+
+State: notificaciones: Notificacion[]  (más reciente primero — nuevas se agregan al frente del array)
+
+Actions:
+  agregarNotificacion(n: Omit<Notificacion, 'id'|'fecha'|'leida'>) → asigna UUID, fecha ISO y leida=false; prepend al array
+  marcarLeida(id) → muta leida=true para el id dado
+  marcarTodasLeidas() → muta leida=true en todas
+  eliminarNotificacion(id) → filtra el id del array
+  limpiarTodas() → array vacío
+
+Selectores (no son reactive hooks — llaman a get() internamente):
+  getNoLeidas(rol) → filtra por rolDestino===rol y leida=false
+  getTodas(rol) → filtra por rolDestino===rol
+
+Persistencia: 'ep_notificaciones' en localStorage (JSON.stringify/parse manual, sin middleware).
+Inicializa vacío si no hay clave guardada (sin datos mock).
+
+Flujo de notificaciones por acción de negocio:
+  usePedidosStore.agregarPedido() → notifica rolDestino='proveedor', tipo='nueva_orden', mensaje=pedido.titulo
+  useCotizacionesStore.agregarCotizacion() → notifica rolDestino='comprador', tipo='nueva_cotizacion', mensaje con proveedor y precio
+  useCotizacionesStore.aceptarCotizacion() → notifica rolDestino='comprador' (orden_confirmada) + rolDestino='proveedor' (cotizacion_aceptada)
 
 Flujo critico en useCotizacionesStore.aceptarCotizacion():
   1. Cambia cotizacion seleccionada a 'aceptada'
@@ -185,7 +212,7 @@ src/
   components/
     ui/            -- componentes base: Button, Badge, Card, Input, TextArea, Select,
                       Modal, Spinner, StatCard, EmptyState, PageHeader (barrel: index.ts)
-    layout/        -- AppShell, Sidebar, TopBar
+    layout/        -- AppShell, Sidebar, TopBar, NotificacionesPanel
     pedidos/       -- PedidoCard
     cotizaciones/  -- CotizacionCard, CotizacionForm
     ordenes/       -- OrdenCard
@@ -197,7 +224,7 @@ src/
     proveedor/     -- DashboardProveedor, PedidosDisponibles, MisCotizacionesProveedor,
                       MisOrdenesProveedor, ChatProveedor
   store/           -- useRolStore, usePedidosStore, useOrdenesStore,
-                      useCotizacionesStore, useChatStore
+                      useCotizacionesStore, useChatStore, useNotificacionesStore
   types/           -- index.ts: Rol, Pedido, Cotizacion, Orden, Mensaje, Proveedor,
                       EstadoPedido, EstadoCotizacion, EstadoOrden
   data/            -- mockData.ts: PEDIDOS_INICIALES, COTIZACIONES_INICIALES,
@@ -312,7 +339,25 @@ Items proveedor: Dashboard, Pedidos disponibles, Mis cotizaciones (badge), Mis o
 ### TopBar (TopBar.tsx)
 Props: onToggleSidebar: () => void
 Mobile: IconMenu2 → onToggleSidebar. Desktop: nombre seccion activa via BREADCRUMB_MAP[pathname].
-Slot derecho: Badge rol + avatar "ME" + "Mi Empresa".
+Slot derecho: IconBell con badge rojo de no-leidas (max "9+") + Badge rol + avatar "ME" + "Mi Empresa".
+Estado local: panelAbierto (useState) — controla visibilidad de NotificacionesPanel.
+Renderiza NotificacionesPanel fuera del <header> dentro de un Fragment.
+
+### NotificacionesPanel (NotificacionesPanel.tsx)
+Props: abierto: boolean, onCerrar: () => void
+Panel lateral derecho fixed, w-80, h-full, z-50, bg-ep-surface, border-l, shadow-2xl.
+Animación: translate-x-full (cerrado) → translate-x-0 (abierto) con transition-transform duration-200.
+Overlay transparente fixed inset-0 z-40 activo cuando abierto=true — click cierra el panel.
+Lee useRolStore para filtrar notificaciones por rol activo.
+Header h-14: título "Notificaciones" + botón "Marcar todas como leídas" (solo si hay no-leídas) + botón X.
+Lista: divide-y divide-ep-border; cada ítem muestra ícono coloreado según tipo, título (bold si no-leída),
+  mensaje en text-xs text-ep-text-secondary, fecha relativa (formatFechaRelativa), punto verde si no-leída,
+  botón X pequeño para eliminar (stopPropagation — no marca como leída).
+Click en ítem → marcarLeida(id).
+No-leídas: bg-ep-surface-raised como fondo; leídas: sin fondo especial.
+Estado vacío: EmptyState con IconBell cuando no hay notificaciones.
+Íconos por tipo: nueva_cotizacion→IconFileInvoice(blue), pedido_adjudicado→IconAward(amber),
+  orden_confirmada→IconCircleCheck(green), nueva_orden→IconPackage(blue), cotizacion_aceptada→IconThumbUp(green).
 
 ## Paginas comprador (src/pages/comprador/)
 

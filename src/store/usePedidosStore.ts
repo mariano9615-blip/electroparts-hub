@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Pedido, EstadoPedido } from '../types';
 import { STORAGE_KEY_PEDIDOS } from '../utils/constants';
 import { PEDIDOS_INICIALES } from '../data/mockData';
+import { useNotificacionesStore } from './useNotificacionesStore';
 
 interface PedidosState {
   pedidos: Pedido[];
@@ -32,6 +33,13 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
     const pedidos = [...get().pedidos, pedido];
     persistir(pedidos);
     set({ pedidos });
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'nueva_orden',
+      rolDestino: 'proveedor',
+      titulo: 'Nuevo pedido disponible',
+      mensaje: pedido.titulo,
+      entidadId: pedido.id,
+    });
   },
 
   actualizarEstadoPedido: (id, estado) => {

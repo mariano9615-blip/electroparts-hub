@@ -1,5 +1,57 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.4] -- 2026-06-29 -- Sistema de notificaciones con store, panel lateral y badge en TopBar
+
+### src/utils/constants.ts (línea 39)
+- Agregada constante `STORAGE_KEY_NOTIFICACIONES = 'ep_notificaciones'` siguiendo el patrón de las otras claves de localStorage del proyecto
+
+### src/store/useNotificacionesStore.ts (nuevo, líneas 1-86)
+- Tipos exportados: `TipoNotificacion` ('nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada') e interfaz `Notificacion` ({ id, tipo, titulo, mensaje, fecha, leida, rolDestino, entidadId? })
+- Interface `NotificacionesState` con array `notificaciones` y 7 acciones/selectores
+- `leerNotificaciones()` inicializa desde 'ep_notificaciones'; si no existe retorna array vacío (sin mock data)
+- `persistir()` serializa a JSON en localStorage — mismo patrón que todos los stores existentes
+- `agregarNotificacion(n)` líneas 52-60: asigna UUID vía crypto.randomUUID(), fecha ISO, leida=false; prepend al array (notificaciones recientes primero)
+- `marcarLeida(id)` líneas 62-68: muta leida=true solo para el id dado
+- `marcarTodasLeidas()` líneas 70-74: map sobre todo el array, leida=true en todos
+- `eliminarNotificacion(id)` líneas 76-80: filter remove por id
+- `limpiarTodas()` líneas 82-85: persiste y setea array vacío
+- `getNoLeidas(rol)` línea 87: filtra por rolDestino===rol y leida===false
+- `getTodas(rol)` línea 91: filtra solo por rolDestino===rol
+
+### src/store/usePedidosStore.ts (líneas 1-2 y 32-41)
+- Línea 5: nuevo import `useNotificacionesStore` desde './useNotificacionesStore'
+- Líneas 37-41: en `agregarPedido()`, después de persistir y hacer set(), llama `useNotificacionesStore.getState().agregarNotificacion()` con tipo='nueva_orden', rolDestino='proveedor', titulo='Nuevo pedido disponible', mensaje=pedido.titulo, entidadId=pedido.id
+
+### src/store/useCotizacionesStore.ts (líneas 1-7 y 34-50 y 63-82)
+- Línea 7: nuevo import `useNotificacionesStore` desde './useNotificacionesStore'
+- Líneas 39-46: en `agregarCotizacion()`, después de set(), dispara notificación tipo='nueva_cotizacion', rolDestino='comprador', titulo='Nueva cotización recibida', mensaje=`${cotizacion.proveedorNombre} cotizó $${cotizacion.precio} para tu pedido`
+- Líneas 70-82: en `aceptarCotizacion()`, después de set(), dispara DOS notificaciones: (1) tipo='orden_confirmada' rolDestino='comprador' mensaje con nombre del proveedor entidadId=orden.id; (2) tipo='cotizacion_aceptada' rolDestino='proveedor' mensaje indicando que fue aceptada entidadId=cotizacion.id
+
+### src/components/layout/NotificacionesPanel.tsx (nuevo, líneas 1-130)
+- Imports: ComponentType de react, íconos tabler (X, Bell, Package, FileInvoice, CircleCheck, ThumbUp, Award), EmptyState de ui, useNotificacionesStore, useRolStore, formatFechaRelativa
+- `ICONOS_TIPO` líneas 16-23: mapeo TipoNotificacion → ComponentType de ícono
+- `COLORES_ICONO` líneas 25-32: mapeo TipoNotificacion → clases Tailwind ep-* para fondo+texto del pill de ícono
+- Subcomponente `ItemNotificacion` líneas 43-87: recibe notif, onMarcarLeida, onEliminar; renderiza pill de ícono coloreado, título (font-semibold si no-leída / font-medium si leída), mensaje text-xs, fecha relativa, punto verde w-2 h-2 bg-ep-green si no-leída, botón X con stopPropagation para eliminar sin marcar como leída; fondo bg-ep-surface-raised si no-leída
+- `NotificacionesPanel` líneas 89-130: overlay transparente fixed inset-0 z-40 (solo cuando abierto) que cierra el panel al click; panel div fixed top-0 right-0 h-full w-80 z-50 bg-ep-surface border-l shadow-2xl con transition-transform duration-200 entre translate-x-full y translate-x-0; header h-14 con título + botón "Marcar todas como leídas" (condicional, texto ep-blue) + botón X; body overflow-y-auto con EmptyState (IconBell) si vacío o lista divide-y divide-ep-border de ItemNotificacion
+
+### src/components/layout/TopBar.tsx (líneas 1-9 y 33-38 y 47-62)
+- Línea 1: nuevo import `useState` de react
+- Línea 3: agregado `IconBell` al import de @tabler/icons-react
+- Líneas 7-8: nuevos imports de `useNotificacionesStore` y `NotificacionesPanel`
+- Línea 33: `const [panelAbierto, setPanelAbierto] = useState(false)` — estado local de UI puro para toggle del panel
+- Líneas 35-37: `cantidadNoLeidas` — suscripción reactiva al store filtrando por rol activo y leida===false
+- Líneas 48-63: nuevo bloque "Botón de notificaciones con badge" en el slot derecho (antes del Badge de rol): `<div className="relative">` con button p-1.5 rounded-lg + IconBell size=20; badge rojo absolute -top-0.5 -right-0.5 min-w-4 h-4 bg-ep-red text-white text-[10px] font-bold rounded-full visible solo si cantidadNoLeidas>0, muestra número o "9+" si >9; click → setPanelAbierto toggle
+- Líneas 93-95: renderiza `<NotificacionesPanel>` fuera del header dentro del Fragment (`<>`)
+
+### ANTIGRAVITY.md
+- Tabla de stores: actualizada con fila useNotificacionesStore y columnas de dependencias de usePedidosStore y useCotizacionesStore
+- Nueva sección "useNotificacionesStore" documentando tipos, state, actions, selectores, persistencia y flujo de notificaciones por acción
+- Sección "Estructura de carpetas": store/ y layout/ actualizados con los nuevos archivos
+- Sección "TopBar": actualizada con descripción del badge de notificaciones y panel
+- Nueva sección "NotificacionesPanel": documentación completa de props, animación, overlay, header, lista e íconos por tipo
+
+---
+
 ## [v0.1.3] -- 2026-06-29 -- Dashboard rediseñado con tablas y layout B2B corporativo
 
 ### src/components/ui/StatCard.tsx (reescritura completa)

@@ -4,6 +4,7 @@ import { STORAGE_KEY_COTIZACIONES, COMPRADOR_ID } from '../utils/constants';
 import { COTIZACIONES_INICIALES } from '../data/mockData';
 import { useOrdenesStore } from './useOrdenesStore';
 import { usePedidosStore } from './usePedidosStore';
+import { useNotificacionesStore } from './useNotificacionesStore';
 
 interface CotizacionesState {
   cotizaciones: Cotizacion[];
@@ -34,6 +35,12 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
     const cotizaciones = [...get().cotizaciones, cotizacion];
     persistir(cotizaciones);
     set({ cotizaciones });
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'nueva_cotizacion',
+      rolDestino: 'comprador',
+      titulo: 'Nueva cotización recibida',
+      mensaje: `${cotizacion.proveedorNombre} cotizó $${cotizacion.precio} para tu pedido`,
+    });
   },
 
   aceptarCotizacion: (cotizacionId) => {
@@ -65,6 +72,21 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
 
     persistir(cotizaciones);
     set({ cotizaciones });
+
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'orden_confirmada',
+      rolDestino: 'comprador',
+      titulo: 'Orden confirmada',
+      mensaje: `Tu orden con ${cotizacion.proveedorNombre} ha sido confirmada`,
+      entidadId: orden.id,
+    });
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'cotizacion_aceptada',
+      rolDestino: 'proveedor',
+      titulo: 'Cotización aceptada',
+      mensaje: `Tu cotización fue aceptada. Prepará el envío`,
+      entidadId: cotizacion.id,
+    });
   },
 
   rechazarCotizacion: (cotizacionId) => {
