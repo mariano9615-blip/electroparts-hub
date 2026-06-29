@@ -17,7 +17,7 @@ const PADDING_CLASSES = {
 export const Card = ({ children, className = '', padding = 'md', hoverable = false }: CardProps) => (
   <div
     className={[
-      'bg-ep-surface border border-ep-border rounded-xl',
+      'bg-ep-surface border border-ep-border rounded-xl shadow-sm',
       PADDING_CLASSES[padding],
       hoverable ? 'transition-shadow duration-150 hover:shadow-md cursor-pointer' : '',
       className,

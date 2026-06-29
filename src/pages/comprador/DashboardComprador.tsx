@@ -71,13 +71,13 @@ export default function DashboardComprador() {
       </div>
 
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-ep-text-primary uppercase tracking-wide">
+        <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-ep-border">
+          <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
             Últimos pedidos
           </h2>
           <button
             onClick={() => navigate('/comprador/cotizaciones')}
-            className="text-xs text-ep-green hover:text-ep-green-dark transition-colors font-medium"
+            className="text-xs text-ep-green hover:text-ep-green-dark transition-colors font-semibold"
           >
             Ver todos →
           </button>
@@ -90,7 +90,7 @@ export default function DashboardComprador() {
             accion={{ label: 'Publicar pedido', onClick: () => navigate('/comprador/publicar') }}
           />
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {ultimosPedidos.map((pedido) => (
               <PedidoCard key={pedido.id} pedido={pedido} compacto />
             ))}
@@ -99,13 +99,13 @@ export default function DashboardComprador() {
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-ep-text-primary uppercase tracking-wide">
+        <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-ep-border">
+          <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
             Últimas cotizaciones
           </h2>
           <button
             onClick={() => navigate('/comprador/cotizaciones')}
-            className="text-xs text-ep-green hover:text-ep-green-dark transition-colors font-medium"
+            className="text-xs text-ep-green hover:text-ep-green-dark transition-colors font-semibold"
           >
             Ver todas →
           </button>
@@ -117,7 +117,7 @@ export default function DashboardComprador() {
             mensaje="Publicá un pedido para que los proveedores puedan cotizarte"
           />
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {ultimasCotizaciones.map((cot) => (
               <CotizacionCard key={cot.id} cotizacion={cot} compacto />
             ))}

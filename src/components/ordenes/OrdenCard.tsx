@@ -34,31 +34,32 @@ function estadoALabel(estado: string): string {
 
 export const OrdenCard = ({ orden, onIrChat }: OrdenCardProps) => (
   <Card padding="md">
-    <div className="flex items-center justify-between gap-2">
-      <span className="font-mono text-sm text-ep-text-muted">
-        Orden #{orden.id.slice(-6).toUpperCase()}
-      </span>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-[11px] font-mono text-ep-text-muted uppercase tracking-wider mb-1">
+          Orden #{orden.id.slice(-6).toUpperCase()}
+        </p>
+        <div className="flex items-center gap-1.5">
+          <IconBuilding size={14} stroke={1.75} className="text-ep-text-muted flex-shrink-0" />
+          <span className="text-sm font-semibold text-ep-text-primary">{orden.proveedorNombre}</span>
+        </div>
+      </div>
       <Badge color={estadoAColor(orden.estado)}>{estadoALabel(orden.estado)}</Badge>
     </div>
 
-    <div className="flex items-center gap-1.5 mt-2">
-      <IconBuilding size={15} className="text-ep-text-muted flex-shrink-0" />
-      <span className="text-sm font-medium text-ep-text-primary">{orden.proveedorNombre}</span>
-    </div>
-
-    <p className="text-lg font-bold font-mono text-ep-text-primary mt-2">
-      {formatARS(orden.monto)}
-    </p>
-
-    <p className="text-xs text-ep-text-muted mt-1">{formatFecha(orden.fechaConfirmacion)}</p>
-
-    {onIrChat && (
-      <div className="mt-3">
+    <div className="flex items-center justify-between mt-3 pt-3 border-t border-ep-border">
+      <div>
+        <p className="text-xl font-bold font-mono text-ep-text-primary leading-none">
+          {formatARS(orden.monto)}
+        </p>
+        <p className="text-xs text-ep-text-muted mt-1">{formatFecha(orden.fechaConfirmacion)}</p>
+      </div>
+      {onIrChat && (
         <Button variant="secondary" size="sm" onClick={onIrChat}>
           <IconMessage size={14} />
           Ir al chat
         </Button>
-      </div>
-    )}
+      )}
+    </div>
   </Card>
 );

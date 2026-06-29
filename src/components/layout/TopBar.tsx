@@ -33,7 +33,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   };
 
   return (
-    <header className="h-14 bg-ep-surface border-b border-ep-border flex items-center justify-between px-6 flex-shrink-0">
+    <header className="h-14 bg-ep-surface border-b border-ep-border shadow-sm flex items-center justify-between px-6 flex-shrink-0 z-10">
       <div className="flex items-center gap-3">
         <button
           className="md:hidden p-1.5 rounded-lg text-ep-text-secondary hover:bg-ep-surface-raised transition-colors duration-150"
@@ -42,7 +42,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
         >
           <IconMenu2 size={20} />
         </button>
-        <span className="text-sm font-medium text-ep-text-primary hidden md:block">{seccion}</span>
+        <span className="text-sm font-semibold text-ep-text-primary hidden md:block">{seccion}</span>
       </div>
 
       <div className="flex items-center gap-3">

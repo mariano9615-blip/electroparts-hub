@@ -61,9 +61,11 @@ export default function DashboardProveedor() {
       </div>
 
       <div>
-        <p className="text-sm font-semibold text-ep-text-primary uppercase tracking-wide mb-3">
-          Pedidos recientes disponibles
-        </p>
+        <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-ep-border">
+          <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
+            Pedidos recientes disponibles
+          </h2>
+        </div>
         {ultimosPedidos.length === 0 ? (
           <EmptyState
             icono={IconPackage}
@@ -71,7 +73,7 @@ export default function DashboardProveedor() {
             mensaje="No hay pedidos disponibles en este momento"
           />
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {ultimosPedidos.map((pedido) => (
               <PedidoCard
                 key={pedido.id}
@@ -109,7 +111,7 @@ export default function DashboardProveedor() {
       </Modal>
 
       {toastVisible && (
-        <div className="fixed bottom-6 right-6 bg-ep-green text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg z-50 transition-all">
+        <div className="fixed bottom-6 right-6 bg-ep-green text-white text-sm font-semibold px-4 py-3 rounded-xl shadow-lg z-50">
           ¡Cotización enviada exitosamente!
         </div>
       )}

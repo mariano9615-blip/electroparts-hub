@@ -60,10 +60,12 @@ export const Sidebar = () => {
   return (
     <aside className="flex flex-col h-full bg-ep-surface border-r border-ep-border overflow-hidden">
       {/* Branding */}
-      <div className="h-16 flex items-center gap-2.5 px-4 border-b border-ep-border flex-shrink-0">
-        <IconBolt size={22} className="text-ep-green flex-shrink-0" />
+      <div className="h-16 flex items-center gap-3 px-5 border-b border-ep-border flex-shrink-0">
+        <div className="w-8 h-8 bg-ep-green rounded-lg flex items-center justify-center flex-shrink-0">
+          <IconBolt size={18} className="text-white" />
+        </div>
         <div className="min-w-0">
-          <p className="font-semibold text-sm text-ep-text-primary leading-tight">
+          <p className="font-bold text-sm text-ep-text-primary leading-tight tracking-tight">
             ElectroParts Hub
           </p>
           <p className="text-xs text-ep-text-muted leading-tight">Marketplace B2B</p>
@@ -71,10 +73,10 @@ export const Sidebar = () => {
       </div>
 
       {/* Toggle de rol */}
-      <div className="px-3 py-3 flex-shrink-0">
+      <div className="px-4 py-3 border-b border-ep-border flex-shrink-0">
         <div className="bg-ep-surface-raised rounded-lg p-1 flex">
           <button
-            className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-all duration-150 ${
+            className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ${
               rol === 'comprador'
                 ? 'bg-ep-surface shadow-sm text-ep-text-primary'
                 : 'text-ep-text-muted hover:text-ep-text-secondary'
@@ -84,7 +86,7 @@ export const Sidebar = () => {
             Comprador
           </button>
           <button
-            className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-all duration-150 ${
+            className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ${
               rol === 'proveedor'
                 ? 'bg-ep-surface shadow-sm text-ep-text-primary'
                 : 'text-ep-text-muted hover:text-ep-text-secondary'
@@ -97,47 +99,50 @@ export const Sidebar = () => {
       </div>
 
       {/* Etiqueta de sección */}
-      <div className="px-3 pt-2 pb-1 flex-shrink-0">
-        <span className="text-xs font-semibold text-ep-text-muted uppercase tracking-wider px-3">
+      <div className="px-5 pt-4 pb-1.5 flex-shrink-0">
+        <span className="text-[10px] font-bold text-ep-text-muted uppercase tracking-widest">
           {rol === 'comprador' ? 'Comprador' : 'Proveedor'}
         </span>
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 overflow-y-auto py-1">
+      <nav className="flex-1 overflow-y-auto pb-2">
         {navItems.map((item) => {
           const esActivo = pathname === item.ruta;
           const Icono = item.icono;
           return (
-            <button
-              key={item.ruta}
-              onClick={() => navigate(item.ruta)}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium cursor-pointer rounded-lg mx-2 relative transition-colors duration-150 ${
-                esActivo
-                  ? 'bg-ep-green-light text-ep-green-dark'
-                  : 'text-ep-text-secondary hover:bg-ep-surface-raised hover:text-ep-text-primary'
-              }`}
-              style={{ width: 'calc(100% - 16px)' }}
-            >
-              <Icono
-                size={18}
-                stroke={1.75}
-                className={esActivo ? 'text-ep-green' : 'text-current'}
-              />
-              <span className="flex-1 text-left">{item.label}</span>
-              {item.badge != null && item.badge > 0 && (
-                <span className="absolute right-3 bg-ep-amber text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {item.badge}
-                </span>
+            <div key={item.ruta} className="relative px-3 mb-0.5">
+              {esActivo && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] bg-ep-green rounded-r-full" />
               )}
-            </button>
+              <button
+                onClick={() => navigate(item.ruta)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer rounded-lg relative transition-colors duration-150 ${
+                  esActivo
+                    ? 'bg-ep-green-light text-ep-green-dark font-semibold'
+                    : 'text-ep-text-secondary hover:bg-ep-surface-raised hover:text-ep-text-primary font-medium'
+                }`}
+              >
+                <Icono
+                  size={17}
+                  stroke={esActivo ? 2 : 1.75}
+                  className={esActivo ? 'text-ep-green' : 'text-current'}
+                />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.badge != null && item.badge > 0 && (
+                  <span className="bg-ep-amber text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            </div>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto border-t border-ep-border px-4 py-3 flex-shrink-0">
-        <span className="text-xs text-ep-text-muted">v0.1.0</span>
+      <div className="border-t border-ep-border px-5 py-3 flex-shrink-0">
+        <span className="text-xs text-ep-text-disabled">v0.1.0</span>
       </div>
     </aside>
   );
