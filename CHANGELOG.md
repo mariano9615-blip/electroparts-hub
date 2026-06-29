@@ -1,5 +1,12 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.4-fix] -- 2026-06-29 -- Fix: infinite loop en NotificacionesPanel por selector no cacheado
+
+### src/components/layout/NotificacionesPanel.tsx (líneas 1 y 97-99)
+- Bug crítico: el selector de Zustand llamaba `.filter()` inline, retornando un array nuevo en cada render y provocando "getSnapshot should be cached" + "Maximum update depth exceeded"
+- Fix: separar la suscripción al array completo (`useNotificacionesStore((s) => s.notificaciones)`) y aplicar el filtro con `useMemo(() => todas.filter(...), [todas, rol])` — la referencia del array solo cambia cuando el store muta, no en cada render
+- Importado `useMemo` de `react` (reemplazando el import previo de `ComponentType`)
+
 ## [v0.1.4] -- 2026-06-29 -- Sistema de notificaciones con store, panel lateral y badge en TopBar
 
 ### src/utils/constants.ts (línea 39)

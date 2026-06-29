@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { useMemo, type ComponentType } from 'react';
 import {
   IconX,
   IconBell,
@@ -94,9 +94,8 @@ function ItemNotificacion({
 
 export const NotificacionesPanel = ({ abierto, onCerrar }: NotificacionesPanelProps) => {
   const rol = useRolStore((s) => s.rol);
-  const notificaciones = useNotificacionesStore((s) =>
-    s.notificaciones.filter((n) => n.rolDestino === rol),
-  );
+  const todas = useNotificacionesStore((s) => s.notificaciones);
+  const notificaciones = useMemo(() => todas.filter((n) => n.rolDestino === rol), [todas, rol]);
   const { marcarLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificacionesStore.getState();
   const hayNoLeidas = notificaciones.some((n) => !n.leida);
 
