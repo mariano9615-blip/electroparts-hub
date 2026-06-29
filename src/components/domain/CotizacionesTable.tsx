@@ -21,49 +21,43 @@ const ESTADO_LABEL: Record<string, string> = {
   rechazada: 'Rechazada',
 };
 
+const TH = 'px-3 py-2 text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.06em] border-b border-ep-border';
+
 export const CotizacionesTable = ({ cotizaciones, pedidos }: CotizacionesTableProps) => {
   const getPedidoTitulo = (pedidoId: string) =>
     pedidos.find((p) => p.id === pedidoId)?.titulo ?? '—';
 
   return (
-    <div className="bg-ep-surface border border-ep-border rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-ep-surface border border-ep-border rounded-lg overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-ep-surface-raised border-b border-ep-border">
-            <th className="text-left px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-              Proveedor
-            </th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-              Pedido
-            </th>
-            <th className="text-right px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-              Precio
-            </th>
-            <th className="text-left px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-              Entrega
-            </th>
-            <th className="text-right px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-              Estado
-            </th>
+          <tr className="bg-ep-surface-raised">
+            <th className={`${TH} text-left`}>Proveedor</th>
+            <th className={`${TH} text-left`}>Pedido</th>
+            <th className={`${TH} text-right`}>Precio</th>
+            <th className={`${TH} text-left`}>Entrega</th>
+            <th className={`${TH} text-right`}>Estado</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-ep-border">
+        <tbody>
           {cotizaciones.map((cot) => (
             <tr
               key={cot.id}
-              className="hover:bg-ep-surface-raised transition-colors duration-150"
+              className="border-b border-ep-border last:border-0 hover:bg-ep-surface-raised transition-colors"
             >
-              <td className="px-4 py-3 font-medium text-ep-text-primary">
+              <td className="px-3 py-2.5 text-sm font-medium text-ep-text-primary">
                 {cot.proveedorNombre}
               </td>
-              <td className="px-4 py-3 text-ep-text-secondary text-xs max-w-[180px] truncate">
+              <td className="px-3 py-2.5 text-[11px] text-ep-text-muted max-w-[180px] truncate">
                 {getPedidoTitulo(cot.pedidoId)}
               </td>
-              <td className="px-4 py-3 text-right font-mono font-semibold text-ep-text-primary">
+              <td className="px-3 py-2.5 text-right font-mono font-medium text-ep-text-primary">
                 {formatARS(cot.precio)}
               </td>
-              <td className="px-4 py-3 text-ep-text-secondary">{cot.tiempoEntrega}</td>
-              <td className="px-4 py-3 text-right">
+              <td className="px-3 py-2.5 text-[11px] text-ep-text-muted">
+                {cot.tiempoEntrega}
+              </td>
+              <td className="px-3 py-2.5 text-right">
                 <Badge color={ESTADO_COLOR[cot.estado] ?? 'gray'}>
                   {ESTADO_LABEL[cot.estado] ?? cot.estado}
                 </Badge>

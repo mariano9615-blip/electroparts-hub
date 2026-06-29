@@ -21,7 +21,6 @@ export default function DashboardComprador() {
   const misCotizaciones = cotizaciones.filter((c) =>
     misPedidos.some((p) => p.id === c.pedidoId),
   );
-  const cotizacionesPendientes = misCotizaciones.filter((c) => c.estado === 'pendiente');
   const misOrdenes = ordenes.filter((o) => o.compradorId === COMPRADOR_ID);
   const ordenesEnCurso = misOrdenes.filter((o) =>
     ['confirmada', 'en_transito'].includes(o.estado),
@@ -48,7 +47,7 @@ export default function DashboardComprador() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2.5 mb-5">
         <StatCard
           label="Pedidos activos"
           value={pedidosActivos.length}
@@ -60,7 +59,6 @@ export default function DashboardComprador() {
           value={misCotizaciones.length}
           icono={IconFileInvoice}
           color="blue"
-          badge={cotizacionesPendientes.length}
         />
         <StatCard
           label="Órdenes en curso"
@@ -70,14 +68,14 @@ export default function DashboardComprador() {
         />
       </div>
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-ep-border">
-          <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.08em]">
             Últimos pedidos
-          </h2>
+          </span>
           <button
-            onClick={() => navigate('/comprador/cotizaciones')}
-            className="text-xs text-ep-green hover:text-ep-green-dark transition-colors font-semibold"
+            onClick={() => navigate('/comprador/publicar')}
+            className="text-[11px] text-ep-blue font-medium hover:underline"
           >
             Ver todos →
           </button>
@@ -95,13 +93,13 @@ export default function DashboardComprador() {
       </div>
 
       <div>
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-ep-border">
-          <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.08em]">
             Últimas cotizaciones
-          </h2>
+          </span>
           <button
             onClick={() => navigate('/comprador/cotizaciones')}
-            className="text-xs text-ep-green hover:text-ep-green-dark transition-colors font-semibold"
+            className="text-[11px] text-ep-blue font-medium hover:underline"
           >
             Ver todas →
           </button>

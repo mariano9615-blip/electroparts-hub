@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IconPackage, IconFileInvoice, IconShoppingCart } from '@tabler/icons-react';
 import { StatCard, PageHeader, EmptyState } from '../../components/ui';
 import { Modal } from '../../components/ui/Modal';
@@ -12,6 +13,7 @@ import type { Pedido } from '../../types';
 const PROV_IDS = ['prov-1', 'prov-2', 'prov-3', 'prov-4', 'prov-demo-001'];
 
 export default function DashboardProveedor() {
+  const navigate = useNavigate();
   const [pedidoSeleccionado, setPedidoSeleccionado] = useState<Pedido | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -39,7 +41,7 @@ export default function DashboardProveedor() {
     <div>
       <PageHeader titulo="Dashboard" descripcion="Tu actividad como proveedor" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2.5 mb-5">
         <StatCard
           label="Pedidos disponibles"
           value={pedidosDisponibles.length}
@@ -61,10 +63,16 @@ export default function DashboardProveedor() {
       </div>
 
       <div>
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-ep-border">
-          <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.08em]">
             Pedidos recientes disponibles
-          </h2>
+          </span>
+          <button
+            onClick={() => navigate('/proveedor/pedidos')}
+            className="text-[11px] text-ep-blue font-medium hover:underline"
+          >
+            Ver todos →
+          </button>
         </div>
         {ultimosPedidos.length === 0 ? (
           <EmptyState

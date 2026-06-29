@@ -25,61 +25,61 @@ const ESTADO_LABEL: Record<string, string> = {
   cancelado: 'Cancelado',
 };
 
+const TH = 'px-3 py-2 text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.06em] border-b border-ep-border';
+
 export const PedidosTable = ({ pedidos, onCotizar }: PedidosTableProps) => (
-  <div className="bg-ep-surface border border-ep-border rounded-xl shadow-sm overflow-hidden">
+  <div className="bg-ep-surface border border-ep-border rounded-lg overflow-hidden">
     <table className="w-full text-sm">
       <thead>
-        <tr className="bg-ep-surface-raised border-b border-ep-border">
-          <th className="text-left px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-            Producto
-          </th>
-          <th className="text-left px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-            Categoría
-          </th>
-          <th className="text-left px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-            Fecha límite
-          </th>
-          <th className="text-center px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-            Cotizaciones
-          </th>
-          <th className="text-right px-4 py-2.5 text-xs font-semibold text-ep-text-muted uppercase tracking-wider">
-            Estado
-          </th>
-          {onCotizar && <th className="px-4 py-2.5" />}
+        <tr className="bg-ep-surface-raised">
+          <th className={`${TH} text-left`}>Producto</th>
+          <th className={`${TH} text-left`}>Categoría</th>
+          <th className={`${TH} text-left`}>Fecha límite</th>
+          <th className={`${TH} text-center`}>Cotizaciones</th>
+          <th className={`${TH} text-right`}>Estado</th>
+          {onCotizar && <th className={`${TH}`} />}
         </tr>
       </thead>
-      <tbody className="divide-y divide-ep-border">
+      <tbody>
         {pedidos.map((pedido) => {
           const urgente = diasHasta(pedido.fechaLimite) < 3;
           return (
             <tr
               key={pedido.id}
-              className="hover:bg-ep-surface-raised transition-colors duration-150"
+              className="border-b border-ep-border last:border-0 hover:bg-ep-surface-raised transition-colors"
             >
-              <td className="px-4 py-3 font-medium text-ep-text-primary max-w-[220px] truncate">
+              <td className="px-3 py-2.5 text-sm font-medium text-ep-text-primary max-w-[220px] truncate">
                 {pedido.titulo}
               </td>
-              <td className="px-4 py-3 text-ep-text-secondary">{pedido.categoria}</td>
-              <td className="px-4 py-3">
+              <td className="px-3 py-2.5 text-[11px] text-ep-text-muted">
+                {pedido.categoria}
+              </td>
+              <td className="px-3 py-2.5">
                 <span
-                  className={`flex items-center gap-1 text-xs font-mono ${
-                    urgente ? 'text-ep-red font-semibold' : 'text-ep-text-muted'
-                  }`}
+                  className={`flex items-center gap-1 ${urgente ? 'text-[11px] text-ep-red' : 'text-[11px] text-ep-text-muted'}`}
                 >
                   {urgente && <IconAlertTriangle size={11} stroke={2} />}
                   {formatFecha(pedido.fechaLimite)}
                 </span>
               </td>
-              <td className="px-4 py-3 text-center font-mono text-ep-text-secondary">
-                {pedido.cotizacionesRecibidas}
+              <td className="px-3 py-2.5 text-center">
+                <span
+                  className={
+                    pedido.cotizacionesRecibidas > 0
+                      ? 'text-sm font-medium text-ep-text-primary'
+                      : 'text-sm text-ep-text-muted'
+                  }
+                >
+                  {pedido.cotizacionesRecibidas}
+                </span>
               </td>
-              <td className="px-4 py-3 text-right">
+              <td className="px-3 py-2.5 text-right">
                 <Badge color={ESTADO_COLOR[pedido.estado] ?? 'gray'}>
                   {ESTADO_LABEL[pedido.estado] ?? pedido.estado}
                 </Badge>
               </td>
               {onCotizar && (
-                <td className="px-4 py-3 text-right">
+                <td className="px-3 py-2.5 text-right">
                   <Button variant="secondary" size="sm" onClick={() => onCotizar(pedido)}>
                     Cotizar
                   </Button>
