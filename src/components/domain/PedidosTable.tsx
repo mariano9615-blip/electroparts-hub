@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { IconAlertTriangle } from '@tabler/icons-react';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -7,6 +8,7 @@ import type { Pedido } from '../../types';
 interface PedidosTableProps {
   pedidos: Pedido[];
   onCotizar?: (pedido: Pedido) => void;
+  linkeable?: boolean;
 }
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
@@ -27,7 +29,7 @@ const ESTADO_LABEL: Record<string, string> = {
 
 const TH = 'px-3 py-2 text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.06em] border-b border-ep-border';
 
-export const PedidosTable = ({ pedidos, onCotizar }: PedidosTableProps) => (
+export const PedidosTable = ({ pedidos, onCotizar, linkeable = true }: PedidosTableProps) => (
   <div className="bg-ep-surface border border-ep-border rounded-lg overflow-hidden">
     <table className="w-full text-sm">
       <thead>
@@ -49,7 +51,16 @@ export const PedidosTable = ({ pedidos, onCotizar }: PedidosTableProps) => (
               className="border-b border-ep-border last:border-0 hover:bg-ep-surface-raised transition-colors"
             >
               <td className="px-3 py-2.5 text-sm font-medium text-ep-text-primary max-w-[220px] truncate">
-                {pedido.titulo}
+                {linkeable ? (
+                  <Link
+                    to={`/comprador/pedidos/${pedido.id}`}
+                    className="text-ep-blue hover:underline font-medium"
+                  >
+                    {pedido.titulo}
+                  </Link>
+                ) : (
+                  pedido.titulo
+                )}
               </td>
               <td className="px-3 py-2.5 text-[11px] text-ep-text-muted">
                 {pedido.categoria}

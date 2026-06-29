@@ -1,5 +1,35 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.6] -- 2026-06-29 -- feat: página detalle de pedido con cotizaciones recibidas
+
+### src/pages/comprador/DetallePedidoComprador.tsx (nuevo archivo, líneas 1-165)
+- Nueva página para la ruta `/comprador/pedidos/:id` — solo lectura, sin adjudicar
+- Recibe `id` via `useParams()` y busca el pedido en `usePedidosStore`
+- Si el id no existe: botón volver + EmptyState "Pedido no encontrado" con acción volver a cotizaciones
+- Header: título `text-2xl font-bold`, subtítulo `categoría · cantidad unidad`, badge de estado alineado a la derecha (misma paleta de colores que PedidosTable)
+- Card informativa (`bg-ep-surface border border-ep-border rounded-lg`): grid 2 columnas — descripción completa a la izquierda; grid `grid-cols-2` de labels/valores a la derecha (presupuesto máx. condicional, fecha límite, cantidad, publicado, total cotizaciones)
+- Sección cotizaciones: si length=0 → EmptyState; si >0 → tabla con columnas Proveedor | Precio (font-mono) | Precio unitario (precio/cantidad, font-mono text-[11px] text-muted) | Entrega | Notas (truncado 60 chars + title= tooltip) | Estado (Badge)
+- Cotizaciones ordenadas por precio ascendente para identificar el mínimo
+- Fila de precio mínimo: `bg-ep-green-light` en toda la fila + badge inline "Mejor precio" (`bg-ep-green text-white text-[10px] rounded-full`)
+- Botón "← Volver": `navigate(-1)` — respeta el historial de navegación
+
+### src/router/AppRouter.tsx (línea 12, línea 56)
+- Agregado import de `DetallePedidoComprador` desde `../pages/comprador/DetallePedidoComprador`
+- Agregada ruta `<Route path="/comprador/pedidos/:id" element={<DetallePedidoComprador />} />` dentro del `LayoutProtegido`, a continuación de `/comprador/chat`
+
+### src/components/domain/PedidosTable.tsx (líneas 1-10, 30-62)
+- Agregado import de `Link` de `react-router-dom`
+- Agregada prop opcional `linkeable?: boolean` a la interfaz `PedidosTableProps` (default `true`)
+- Columna Producto: cuando `linkeable=true`, el título se envuelve en `<Link to="/comprador/pedidos/${pedido.id}">` con estilo `text-ep-blue hover:underline font-medium`; cuando `linkeable=false` muestra el texto plano (usar `false` en contexto proveedor donde la ruta no existe)
+
+### ANTIGRAVITY.md
+- Tabla de rutas: agregada fila `/comprador/pedidos/:id → DetallePedidoComprador`
+- Sección `## Paginas comprador`: agregada documentación de `DetallePedidoComprador.tsx`
+- Sección `## Componentes de dominio / PedidosTable`: documentada la nueva prop `linkeable` y su comportamiento
+- Sección `## Estructura de carpetas`: `DetallePedidoComprador` agregado a la lista de páginas comprador
+
+---
+
 ## [v0.1.5] -- 2026-06-29 -- Rediseño enterprise dashboard — StatCards compactos, tablas pulidas, layout denso
 
 ### src/components/ui/StatCard.tsx (reescritura completa, líneas 1-43)

@@ -177,6 +177,7 @@ Todas las rutas estan envueltas en AppShell (layout wrapper).
 | /comprador                  | DashboardComprador           |
 | /comprador/publicar         | PublicarPedido               |
 | /comprador/cotizaciones     | MisCotizacionesComprador     |
+| /comprador/pedidos/:id      | DetallePedidoComprador       |
 | /comprador/ordenes          | MisOrdenesComprador          |
 | /comprador/chat             | ChatComprador                |
 | /proveedor                  | DashboardProveedor           |
@@ -220,7 +221,7 @@ src/
     chat/          -- (reservado para extraccion futura)
   pages/
     comprador/     -- DashboardComprador, PublicarPedido, MisCotizacionesComprador,
-                      MisOrdenesComprador, ChatComprador
+                      DetallePedidoComprador, MisOrdenesComprador, ChatComprador
     proveedor/     -- DashboardProveedor, PedidosDisponibles, MisCotizacionesProveedor,
                       MisOrdenesProveedor, ChatProveedor
   store/           -- useRolStore, usePedidosStore, useOrdenesStore,
@@ -305,9 +306,11 @@ Muestra: ID abreviado (font-mono), badge estado, nombre proveedor con IconBuildi
 monto (font-mono), fecha confirmacion. Boton "Ir al chat" si onIrChat definido.
 
 ### PedidosTable (src/components/domain/PedidosTable.tsx)
-Props: pedidos: Pedido[], onCotizar?: (pedido: Pedido) => void
+Props: pedidos: Pedido[], onCotizar?: (pedido: Pedido) => void, linkeable?: boolean (default true)
 Tabla HTML con columnas: Producto | Categoría | Fecha límite | Cotizaciones | Estado | (Acción).
 Columna Acción (Button "Cotizar") solo aparece cuando onCotizar está definido.
+Columna Producto: cuando linkeable=true (default), el título es un <Link> a /comprador/pedidos/${pedido.id}
+  con estilo text-ep-blue hover:underline font-medium. Pasar linkeable={false} en contexto proveedor.
 Fecha urgente (< 3 dias) en rojo con IconAlertTriangle. divide-y divide-ep-border + hover:bg-ep-surface-raised.
 
 ### CotizacionesTable (src/components/domain/CotizacionesTable.tsx)
@@ -379,6 +382,21 @@ handleSubmit(): valida campos requeridos → crea Pedido con crypto.randomUUID()
   agregarPedido() → setPedidoIdSimulado(pedido.id) → setExitoso(true) →
   setTimeout 3000ms → navigate('/comprador/cotizaciones').
 Banner exito: bg-ep-green-light, border-ep-green, IconCircleCheck + Spinner.
+
+### DetallePedidoComprador.tsx · /comprador/pedidos/:id
+Stores leidos: usePedidosStore, useCotizacionesStore
+Recibe id via useParams(). Si el pedido no existe: EmptyState con "Pedido no encontrado" y botón volver.
+Layout:
+  Botón "← Volver" (navigate(-1)) arriba del header.
+  Header: título text-2xl + badge de estado alineado a la derecha + subtítulo categoría·cantidad·unidad.
+  Card información: grid 2 columnas — izquierda descripción completa; derecha grid 2-col de labels/valores
+    (presupuesto máx si existe, fecha límite, cantidad+unidad, publicado, total cotizaciones).
+  Sección "Cotizaciones recibidas (N)": si hay cero → EmptyState; si hay → tabla con columnas
+    Proveedor | Precio (font-mono) | Precio unitario (precio/cantidad, font-mono text-muted) |
+    Entrega | Notas (truncado 60 chars, title= tooltip) | Estado (Badge).
+  Fila con precio mínimo: bg-ep-green-light en toda la fila + badge inline "Mejor precio" (bg-ep-green text-white text-[10px] rounded-full).
+  Cotizaciones ordenadas por precio ascendente.
+Solo lectura — sin adjudicar ni modificar estado.
 
 ### MisCotizacionesComprador.tsx · /comprador/cotizaciones
 Tabs: todas | pendientes | aceptadas | rechazadas (con count entre parentesis).
