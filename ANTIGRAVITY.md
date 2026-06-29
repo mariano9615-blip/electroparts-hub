@@ -56,6 +56,48 @@ Animacion CSS global: @keyframes typing-dot (pulsacion para indicador de "escrib
   0%, 60%, 100% { opacity: 0.2; transform: scale(0.8); }
   30%            { opacity: 1;   transform: scale(1); }
 
+## Autenticacion
+
+Sistema de login del lado del cliente para proteger acceso en demos/presentaciones.
+No hay backend — las credenciales son hardcodeadas.
+
+Credenciales demo: usuario = 'admin', password = '123456'
+Clave localStorage: 'ep_auth' (valor 'true' cuando hay sesion activa)
+
+### useAuthStore (src/store/useAuthStore.ts)
+State: autenticado: boolean, usuario: string | null
+Inicializacion: lee localStorage['ep_auth']; si es 'true' arranca autenticado=true, usuario='admin'
+
+Actions:
+  login(usuario, password) → boolean
+    Valida credenciales hardcodeadas. Si coinciden: setState autenticado=true,
+    persiste ep_auth='true', retorna true. Si no: retorna false sin mutar estado.
+  logout() → void
+    setState autenticado=false/usuario=null, elimina ep_auth de localStorage.
+
+### RutaProtegida / LayoutProtegido (src/router/AppRouter.tsx)
+LayoutProtegido: layout route (sin path) que envuelve AppShell con <Outlet />.
+  Lee useAuthStore.autenticado; si es false redirige a /login con Navigate replace.
+  Todas las rutas de negocio son hijas de este layout — AppShell se monta una sola vez.
+
+RutaProtegida: componente wrapper simple (usado solo en el catch-all *).
+  Igual logica: si no autenticado → Navigate to="/login".
+
+RutaLogin: componente que envuelve la ruta /login.
+  Si ya autenticado → Navigate to="/comprador" (evita que usuario logueado vea el login).
+
+### Pagina Login (src/pages/Login.tsx)
+Fullscreen centrada, sin AppShell. Campos: usuario + password.
+Flujo de submit: setTimeout 600ms simula verificacion → llama login() via getState().
+  Si ok: el store muta autenticado=true → LayoutProtegido deja pasar → router redirige.
+  Si falla: muestra mensaje de error + animacion shake en el card.
+Animacion shake: clase CSS .shake definida en index.css (@keyframes shake, 0.4s).
+  Se agrega/remueve via DOM ref para poder repetirse en intentos sucesivos.
+
+### Logout
+Boton "Salir" en TopBar: llama useAuthStore.getState().logout() + navigate('/login').
+LayoutProtegido detecta autenticado=false y redirige automaticamente a /login.
+
 ## Stores Zustand (src/store/)
 
 Patron comun a todos los stores:
@@ -66,6 +108,7 @@ Patron comun a todos los stores:
 
 | Store                   | Entidad     | Clave localStorage    | Depende de                          |
 |-------------------------|-------------|----------------------|-------------------------------------|
+| useAuthStore.ts         | Auth        | ep_auth              | —                                   |
 | useRolStore.ts          | Rol         | ep_rol               | —                                   |
 | usePedidosStore.ts      | Pedido[]    | ep_pedidos           | —                                   |
 | useOrdenesStore.ts      | Orden[]     | ep_ordenes           | —                                   |
@@ -126,7 +169,7 @@ Flujo al arrancar la app:
   3. Monta <StrictMode><AppRouter /></StrictMode>
 
 Claves localStorage del sistema:
-  ep_initialized, ep_rol, ep_pedidos, ep_cotizaciones, ep_ordenes, ep_mensajes
+  ep_initialized, ep_auth, ep_rol, ep_pedidos, ep_cotizaciones, ep_ordenes, ep_mensajes
 
 ## IDs de sesion demo
 

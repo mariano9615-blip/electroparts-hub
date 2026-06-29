@@ -67,3 +67,13 @@ body {
   0%, 60%, 100% { opacity: 0.2; transform: scale(0.8); }
   30%            { opacity: 1;   transform: scale(1); }
 }
+
+/* Animación shake para login con credenciales incorrectas */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+.shake { animation: shake 0.4s ease-in-out; }

@@ -1,5 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
+import { useAuthStore } from '../store/useAuthStore';
+
+import Login from '../pages/Login';
 
 import DashboardComprador from '../pages/comprador/DashboardComprador';
 import PublicarPedido from '../pages/comprador/PublicarPedido';
@@ -13,11 +16,35 @@ import MisCotizacionesProveedor from '../pages/proveedor/MisCotizacionesProveedo
 import MisOrdenesProveedor from '../pages/proveedor/MisOrdenesProveedor';
 import ChatProveedor from '../pages/proveedor/ChatProveedor';
 
+function RutaProtegida({ children }: { children: React.ReactNode }) {
+  const autenticado = useAuthStore((s) => s.autenticado);
+  if (!autenticado) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function LayoutProtegido() {
+  const autenticado = useAuthStore((s) => s.autenticado);
+  if (!autenticado) return <Navigate to="/login" replace />;
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
+
+function RutaLogin() {
+  const autenticado = useAuthStore((s) => s.autenticado);
+  if (autenticado) return <Navigate to="/comprador" replace />;
+  return <Login />;
+}
+
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <AppShell>
-        <Routes>
+      <Routes>
+        <Route path="/login" element={<RutaLogin />} />
+
+        <Route element={<LayoutProtegido />}>
           <Route path="/" element={<Navigate to="/comprador" replace />} />
 
           <Route path="/comprador" element={<DashboardComprador />} />
@@ -31,10 +58,17 @@ export function AppRouter() {
           <Route path="/proveedor/cotizaciones" element={<MisCotizacionesProveedor />} />
           <Route path="/proveedor/ordenes" element={<MisOrdenesProveedor />} />
           <Route path="/proveedor/chat" element={<ChatProveedor />} />
+        </Route>
 
-          <Route path="*" element={<Navigate to="/comprador" replace />} />
-        </Routes>
-      </AppShell>
+        <Route
+          path="*"
+          element={
+            <RutaProtegida>
+              <Navigate to="/comprador" replace />
+            </RutaProtegida>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }

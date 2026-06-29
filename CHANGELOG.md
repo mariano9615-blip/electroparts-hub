@@ -162,3 +162,42 @@
 ### Archivos modificados — CSS
 
 - `src/index.css` lineas 65-71 -- agrega @keyframes typing-dot para animacion de puntos del indicador "escribiendo" en ambos chats: 0%/60%/100% opacity 0.2 scale 0.8; 30% opacity 1 scale 1; se usa via style={{ animation: 'typing-dot 1.2s ease-in-out Xms infinite' }} con delays 0/150/300ms por punto
+
+---
+
+## [v0.5.0] -- 2026-06-28 -- Login y proteccion de rutas
+
+### Archivos creados
+
+- `src/store/useAuthStore.ts` -- store Zustand para autenticacion; no tiene middleware persist (implementacion manual)
+  · lineas 1-7   -- imports y clave localStorage CLAVE_AUTH='ep_auth'
+  · lineas 9-14  -- interface AuthState: autenticado boolean, usuario string|null, actions login y logout
+  · lineas 16-17 -- inicializacion: lee localStorage['ep_auth']==='true' al crear el store (sesionGuardada)
+  · lineas 19-34 -- create<AuthState>: estado inicial autenticado=sesionGuardada / usuario='admin'|null
+  · lineas 21-28 -- action login(usuario, password): valida 'admin'/'123456' hardcodeado; si coincide escribe ep_auth='true' y setState autenticado=true/usuario='admin', retorna true; si no, retorna false sin mutar estado
+  · lineas 30-33 -- action logout(): removeItem('ep_auth'), setState autenticado=false/usuario=null
+
+- `src/pages/Login.tsx` -- pagina de login fullscreen, sin AppShell, centrada en bg-ep-bg
+  · lineas 1-7   -- imports: useState, useRef, IconBolt/IconAlertCircle de tabler, Card/Input/Button de ui, useAuthStore
+  · lineas 9-17  -- estado local: usuario, password, error (boolean), cargando (boolean); ref cardRef para el shake
+  · lineas 19-32 -- handleSubmit: e.preventDefault(), setError(false), setCargando(true); setTimeout 600ms → login() via getState(); si ok: store muta autenticado=true → LayoutProtegido deja pasar automaticamente; si falla: setCargando(false), setError(true), agrega clase CSS 'shake' al card y la remueve a los 400ms via setTimeout para permitir repeticion
+  · lineas 34-78 -- JSX: div min-h-screen flex center; div ref={cardRef} max-w-sm; Card padding="lg" con header (IconBolt text-ep-green tamaño 32, titulo, subtitulo), separador, form con Input usuario + Input password type="password", mensaje de error condicional (bg-ep-red-light border-ep-red, IconAlertCircle, texto), Button primary fullWidth type="submit" loading={cargando}, footer v0.1.0
+
+### Archivos modificados
+
+- `src/router/AppRouter.tsx` -- reestructurado para agregar login y proteccion de rutas
+  · lineas 1-3   -- imports: agrega Outlet (React Router) y useAuthStore
+  · lineas 4      -- import Login desde '../pages/Login'
+  · lineas 20-24 -- RutaProtegida: wrapper simple que lee useAuthStore.autenticado; si false → Navigate to="/login" replace; usado solo en catch-all *
+  · lineas 26-33 -- LayoutProtegido: layout route (sin path) que envuelve AppShell con <Outlet />; lee useAuthStore.autenticado; si false → Navigate to="/login"; de esta forma AppShell se monta una sola vez para todas las rutas protegidas
+  · lineas 35-38 -- RutaLogin: envuelve la ruta /login; si ya autenticado → Navigate to="/comprador"; si no → <Login /> (evita que usuario con sesion vea el login)
+  · lineas 40-78 -- AppRouter: /login usa RutaLogin sin AppShell; layout route <LayoutProtegido> agrupa las 11 rutas de negocio (/ → /comprador, /comprador/*, /proveedor/*); catch-all * usa RutaProtegida + Navigate to="/comprador"
+
+- `src/components/layout/TopBar.tsx` -- agrega boton logout en el slot derecho
+  · lineas 1-2   -- agrega import useNavigate de react-router-dom, IconLogout de tabler, Button de ui, useAuthStore
+  · lineas 30-33 -- handleLogout: llama useAuthStore.getState().logout() y navigate('/login'); LayoutProtegido detecta autenticado=false y protege el resto de rutas automaticamente
+  · lineas 60-63 -- Button variant="ghost" size="sm" onClick={handleLogout} con IconLogout size 16 + texto "Salir" (oculto en mobile con hidden sm:inline)
+
+- `src/index.css` lineas 72-79 -- agrega @keyframes shake y clase .shake para la animacion de error del login: 0%/100% translateX(0), 20% translateX(-6px), 40% translateX(6px), 60% translateX(-4px), 80% translateX(4px); duracion 0.4s ease-in-out; la clase se agrega/remueve via DOM ref en Login.tsx para poder repetirse en intentos sucesivos
+
+- `ANTIGRAVITY.md` -- agrega seccion "Autenticacion" con descripcion de useAuthStore, RutaProtegida/LayoutProtegido/RutaLogin, Login.tsx, flujo logout, y actualiza tabla de stores y claves localStorage

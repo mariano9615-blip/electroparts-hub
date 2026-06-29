@@ -1,7 +1,8 @@
-import { useLocation } from 'react-router-dom';
-import { IconMenu2 } from '@tabler/icons-react';
-import { Badge } from '../ui/Badge';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { IconMenu2, IconLogout } from '@tabler/icons-react';
+import { Badge, Button } from '../ui';
 import { useRolStore } from '../../store/useRolStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -22,8 +23,14 @@ const BREADCRUMB_MAP: Record<string, string> = {
 
 export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const rol = useRolStore((s) => s.rol);
   const seccion = BREADCRUMB_MAP[pathname] ?? 'ElectroParts Hub';
+
+  const handleLogout = () => {
+    useAuthStore.getState().logout();
+    navigate('/login');
+  };
 
   return (
     <header className="h-14 bg-ep-surface border-b border-ep-border flex items-center justify-between px-6 flex-shrink-0">
@@ -53,6 +60,11 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
             Mi Empresa
           </span>
         </div>
+
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <IconLogout size={16} />
+          <span className="hidden sm:inline ml-1">Salir</span>
+        </Button>
       </div>
     </header>
   );
