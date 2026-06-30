@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:full": "concurrently \"json-server --watch db.json --port 3001\" \"vite\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -23,6 +24,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.2",
+    "concurrently": "^10.0.3",
+    "json-server": "^1.0.0-beta.15",
     "oxlint": "^1.69.0",
     "postcss": "^8.5.15",
     "prettier": "^3.8.5",

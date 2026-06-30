@@ -557,6 +557,76 @@ Click toggle Comprador/Proveedor en Sidebar → useRolStore.setRol() → navigat
 - Comentarios en el codigo en espanol
 
 ## Comandos utiles
-npm run dev      # Servidor local en http://localhost:5173
-npm run build    # Build de produccion (tsc -b && vite build)
-npm run lint     # Linting con oxlint
+npm run dev       # Solo Vite (sin JSON Server) — datos de red local
+npm run dev:full  # JSON Server puerto 3001 + Vite puerto 5173 en paralelo (desarrollo como host)
+npm run build     # Build de produccion (tsc -b && vite build)
+npm run lint      # Linting con oxlint
+
+## Capa de datos — JSON Server (desde v0.1.9)
+
+Reemplaza la persistencia en localStorage. Los stores Zustand consumen una REST API local
+servida por JSON Server sobre db.json. Dos usuarios en la misma red local comparten los mismos datos.
+
+### Fuente de verdad: db.json
+Archivo en la raiz del proyecto. Estructura de colecciones:
+
+  {
+    "pedidos":       [...],   // Pedido[]
+    "cotizaciones":  [...],   // Cotizacion[]
+    "ordenes":       [...],   // Orden[]
+    "notificaciones": []      // Notificacion[]
+  }
+
+JSON Server expone endpoints REST automaticos:
+  GET    /pedidos              -> lista todos
+  GET    /pedidos/:id          -> uno por id
+  POST   /pedidos              -> crea
+  PATCH  /pedidos/:id          -> actualiza parcialmente
+  (igual para cotizaciones, ordenes, notificaciones)
+  DELETE /notificaciones/:id   -> elimina
+
+### src/services/api.ts
+Capa de acceso a datos. Unica fuente de llamadas fetch en el proyecto.
+BASE_URL viene de la variable de entorno VITE_API_URL (default http://localhost:3001).
+Todas las funciones son async/await con try/catch que loguea en consola si falla.
+Las funciones que retornan array devuelven [] en caso de error; las que retornan un objeto devuelven null.
+
+Funciones exportadas por entidad:
+  pedidos:       getPedidos(), getPedidoById(id), updatePedido(id, data), createPedido(data)
+  cotizaciones:  getCotizaciones(), getCotizacionesByPedidoId(pedidoId), updateCotizacion(id, data), createCotizacion(data)
+  ordenes:       getOrdenes(), createOrden(data), updateOrden(id, data)
+  notificaciones: getNotificaciones(), createNotificacion(data), updateNotificacion(id, data), deleteNotificacion(id)
+
+### Patron de los stores con API
+Cada store ahora:
+  - Arranca con estado vacio ([] en vez de datos hardcodeados)
+  - Tiene accion cargarDatos() que llama al endpoint GET y puebla el store
+  - Las acciones mutadoras hacen primero el POST/PATCH a la API y DESPUES actualizan el estado local
+  - Si la llamada a la API falla: se loguea en consola y no se muta el estado local
+  - Ya NO persisten en localStorage
+
+| Store                    | cargarDatos() llama  | Acciones que usan API                                                  |
+|--------------------------|----------------------|------------------------------------------------------------------------|
+| usePedidosStore          | api.getPedidos()     | agregarPedido→createPedido, actualizarEstadoPedido→updatePedido, incrementarCotizaciones→updatePedido |
+| useCotizacionesStore     | api.getCotizaciones()| agregarCotizacion→createCotizacion, aceptarCotizacion→updateCotizacion×N, rechazarCotizacion→updateCotizacion |
+| useOrdenesStore          | api.getOrdenes()     | agregarOrden→createOrden, actualizarEstadoOrden→updateOrden           |
+| useNotificacionesStore   | api.getNotificaciones()| agregarNotificacion→createNotificacion, marcarLeida→updateNotificacion, marcarTodasLeidas→updateNotificacion×N, eliminarNotificacion→deleteNotificacion, limpiarTodas→deleteNotificacion×N |
+
+### Inicializacion al montar la app
+AppRouter.tsx (el componente raiz) llama cargarDatos() de los 4 stores en un useEffect([], []).
+Los datos llegan asincrónicamente; los componentes re-renderizan via suscripcion Zustand cuando el store se actualiza.
+main.tsx ya no llama initializarDatos() — los datos iniciales viven en db.json, no en localStorage.
+
+### Variables de entorno
+VITE_API_URL  URL base del servidor JSON Server
+  - Host local:    http://localhost:3001  (default si no se define)
+  - Colaborador:   http://[IP-del-host]:3001
+
+Archivo .env.example en la raiz documenta la variable. El colaborador crea .env.local con la IP del host.
+
+### Levantar el entorno completo
+Host:         npm run dev:full  (levanta JSON Server + Vite en paralelo via concurrently)
+Colaborador:  crear .env.local con VITE_API_URL=http://[IP]:3001  →  npm run dev
+
+### Resetear datos al estado inicial
+git checkout db.json

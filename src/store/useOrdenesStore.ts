@@ -1,41 +1,34 @@
 import { create } from 'zustand';
 import type { Orden, EstadoOrden } from '../types';
-import { STORAGE_KEY_ORDENES } from '../utils/constants';
-import { ORDENES_INICIALES } from '../data/mockData';
+import * as api from '../services/api';
 
 interface OrdenesState {
   ordenes: Orden[];
+  cargarDatos: () => void;
   agregarOrden: (orden: Orden) => void;
   actualizarEstadoOrden: (id: string, estado: EstadoOrden) => void;
 }
 
-const leerOrdenes = (): Orden[] => {
-  try {
-    const guardado = localStorage.getItem(STORAGE_KEY_ORDENES);
-    if (guardado) {
-      const parsed = JSON.parse(guardado);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {}
-  return ORDENES_INICIALES;
-};
+export const useOrdenesStore = create<OrdenesState>((set) => ({
+  ordenes: [],
 
-const persistir = (ordenes: Orden[]) => {
-  localStorage.setItem(STORAGE_KEY_ORDENES, JSON.stringify(ordenes));
-};
-
-export const useOrdenesStore = create<OrdenesState>((set, get) => ({
-  ordenes: leerOrdenes(),
+  cargarDatos: () => {
+    api.getOrdenes().then((ordenes) => set({ ordenes }));
+  },
 
   agregarOrden: (orden) => {
-    const ordenes = [...get().ordenes, orden];
-    persistir(ordenes);
-    set({ ordenes });
+    api.createOrden(orden).then((created) => {
+      if (!created) return;
+      set((state) => ({ ordenes: [...state.ordenes, orden] }));
+    }).catch((e) => console.error('agregarOrden:', e));
   },
 
   actualizarEstadoOrden: (id, estado) => {
-    const ordenes = get().ordenes.map((o) => (o.id === id ? { ...o, estado } : o));
-    persistir(ordenes);
-    set({ ordenes });
+    api.updateOrden(id, { estado }).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        ordenes: state.ordenes.map((o) => (o.id === id ? { ...o, estado } : o)),
+      }));
+    }).catch((e) => console.error('actualizarEstadoOrden:', e));
   },
 }));

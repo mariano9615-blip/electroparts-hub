@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { STORAGE_KEY_NOTIFICACIONES } from '../utils/constants';
+import * as api from '../services/api';
 
 export type TipoNotificacion =
   | 'nueva_cotizacion'
@@ -21,6 +21,7 @@ export interface Notificacion {
 
 interface NotificacionesState {
   notificaciones: Notificacion[];
+  cargarDatos: () => void;
   agregarNotificacion: (n: Omit<Notificacion, 'id' | 'fecha' | 'leida'>) => void;
   marcarLeida: (id: string) => void;
   marcarTodasLeidas: () => void;
@@ -30,23 +31,14 @@ interface NotificacionesState {
   getTodas: (rol: 'comprador' | 'proveedor') => Notificacion[];
 }
 
-const leerNotificaciones = (): Notificacion[] => {
-  try {
-    const guardado = localStorage.getItem(STORAGE_KEY_NOTIFICACIONES);
-    if (guardado) {
-      const parsed = JSON.parse(guardado);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {}
-  return [];
-};
-
-const persistir = (notificaciones: Notificacion[]) => {
-  localStorage.setItem(STORAGE_KEY_NOTIFICACIONES, JSON.stringify(notificaciones));
-};
-
 export const useNotificacionesStore = create<NotificacionesState>((set, get) => ({
-  notificaciones: leerNotificaciones(),
+  notificaciones: [],
+
+  cargarDatos: () => {
+    api.getNotificaciones().then((notificaciones) =>
+      set({ notificaciones: notificaciones as Notificacion[] }),
+    );
+  },
 
   agregarNotificacion: (n) => {
     const nueva: Notificacion = {
@@ -55,34 +47,45 @@ export const useNotificacionesStore = create<NotificacionesState>((set, get) => 
       fecha: new Date().toISOString(),
       leida: false,
     };
-    const notificaciones = [nueva, ...get().notificaciones];
-    persistir(notificaciones);
-    set({ notificaciones });
+    api.createNotificacion(nueva).then((created) => {
+      if (!created) return;
+      set((state) => ({ notificaciones: [nueva, ...state.notificaciones] }));
+    }).catch((e) => console.error('agregarNotificacion:', e));
   },
 
   marcarLeida: (id) => {
-    const notificaciones = get().notificaciones.map((n) =>
-      n.id === id ? { ...n, leida: true } : n,
-    );
-    persistir(notificaciones);
-    set({ notificaciones });
+    api.updateNotificacion(id, { leida: true }).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        notificaciones: state.notificaciones.map((n) => (n.id === id ? { ...n, leida: true } : n)),
+      }));
+    }).catch((e) => console.error('marcarLeida:', e));
   },
 
   marcarTodasLeidas: () => {
-    const notificaciones = get().notificaciones.map((n) => ({ ...n, leida: true }));
-    persistir(notificaciones);
-    set({ notificaciones });
+    const noLeidas = get().notificaciones.filter((n) => !n.leida);
+    if (noLeidas.length === 0) return;
+    Promise.all(noLeidas.map((n) => api.updateNotificacion(n.id, { leida: true }))).then(() => {
+      set((state) => ({
+        notificaciones: state.notificaciones.map((n) => ({ ...n, leida: true })),
+      }));
+    }).catch((e) => console.error('marcarTodasLeidas:', e));
   },
 
   eliminarNotificacion: (id) => {
-    const notificaciones = get().notificaciones.filter((n) => n.id !== id);
-    persistir(notificaciones);
-    set({ notificaciones });
+    api.deleteNotificacion(id).then((ok) => {
+      if (!ok) return;
+      set((state) => ({
+        notificaciones: state.notificaciones.filter((n) => n.id !== id),
+      }));
+    }).catch((e) => console.error('eliminarNotificacion:', e));
   },
 
   limpiarTodas: () => {
-    persistir([]);
-    set({ notificaciones: [] });
+    const ids = get().notificaciones.map((n) => n.id);
+    Promise.all(ids.map((id) => api.deleteNotificacion(id))).then(() => {
+      set({ notificaciones: [] });
+    }).catch((e) => console.error('limpiarTodas:', e));
   },
 
   getNoLeidas: (rol) => {

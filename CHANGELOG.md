@@ -1,5 +1,83 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.9] -- 2026-06-30 -- feat: JSON Server + API service para pruebas en equipo
+
+### db.json (nuevo archivo)
+- Datos iniciales migrados desde `src/data/mockData.ts` a formato JSON estático
+- Colecciones: `pedidos` (3 registros), `cotizaciones` (4 registros), `ordenes` (1 registro), `notificaciones` (array vacío)
+- Fechas convertidas a ISO strings fijas (ya no relativas a `Date.now()`)
+- Servido por JSON Server en puerto 3001 como REST API con CRUD completo
+
+### src/services/api.ts (nuevo archivo, 215 líneas)
+- Nueva capa de acceso a datos — único punto de llamadas `fetch` en el proyecto
+- `BASE_URL` desde `import.meta.env.VITE_API_URL ?? 'http://localhost:3001'`
+- Interfaz local `NotificacionPayload` para tipado sin crear dependencia circular con `useNotificacionesStore`
+- Pedidos: `getPedidos()`, `getPedidoById(id)`, `updatePedido(id, data)`, `createPedido(data)`
+- Cotizaciones: `getCotizaciones()`, `getCotizacionesByPedidoId(pedidoId)`, `updateCotizacion(id, data)`, `createCotizacion(data)`
+- Ordenes: `getOrdenes()`, `createOrden(data)`, `updateOrden(id, data)`
+- Notificaciones: `getNotificaciones()`, `createNotificacion(data)`, `updateNotificacion(id, data)`, `deleteNotificacion(id)`
+- Todas las funciones: try/catch que loguea con prefijo `api.<nombre>:` en consola; arrays retornan `[]` en error, objetos retornan `null`
+
+### src/store/usePedidosStore.ts (reescrito)
+- Eliminados: `leerPedidos()`, `persistir()`, imports de `STORAGE_KEY_PEDIDOS` y `PEDIDOS_INICIALES`
+- Estado inicial: `pedidos: []` (vacío — se carga via API)
+- Nueva acción `cargarDatos()`: llama `api.getPedidos()` y puebla el store
+- `agregarPedido()`: llama `api.createPedido()` primero; si falla no muta el store; si ok actualiza estado y dispara notificación
+- `actualizarEstadoPedido()`: llama `api.updatePedido(id, { estado })`; si ok actualiza estado local
+- `incrementarCotizaciones()`: lee pedido del estado local, calcula nuevos valores, llama `api.updatePedido()`; si ok actualiza estado local
+
+### src/store/useCotizacionesStore.ts (reescrito)
+- Eliminados: `leerCotizaciones()`, `persistir()`, imports de `STORAGE_KEY_COTIZACIONES` y `COTIZACIONES_INICIALES`
+- Estado inicial: `cotizaciones: []`
+- Nueva acción `cargarDatos()`: llama `api.getCotizaciones()`
+- `agregarCotizacion()`: llama `api.createCotizacion()`; si ok actualiza estado y dispara notificación
+- `aceptarCotizacion()`: usa IIFE async para mantener tipo de retorno `void`; (1) PATCH cotizacion→'aceptada', (2) Promise.all PATCH otras del pedido→'rechazada', (3) actualiza estado local, (4) delega a `useOrdenesStore.agregarOrden()` y `usePedidosStore.actualizarEstadoPedido()`, (5) dispara 2 notificaciones
+- `rechazarCotizacion()`: llama `api.updateCotizacion(id, { estado: 'rechazada' })`
+
+### src/store/useOrdenesStore.ts (reescrito)
+- Eliminados: `leerOrdenes()`, `persistir()`, imports de `STORAGE_KEY_ORDENES` y `ORDENES_INICIALES`
+- Estado inicial: `ordenes: []`
+- Nueva acción `cargarDatos()`: llama `api.getOrdenes()`
+- `agregarOrden()`: llama `api.createOrden()`; si ok actualiza estado local
+- `actualizarEstadoOrden()`: llama `api.updateOrden(id, { estado })`; si ok actualiza estado local
+
+### src/store/useNotificacionesStore.ts (reescrito)
+- Eliminados: `leerNotificaciones()`, `persistir()`, import de `STORAGE_KEY_NOTIFICACIONES`
+- Estado inicial: `notificaciones: []`
+- Nueva acción `cargarDatos()`: llama `api.getNotificaciones()`
+- `agregarNotificacion()`: construye objeto completo con UUID/fecha/leida=false, llama `api.createNotificacion()`; si ok hace prepend al array local
+- `marcarLeida()`: llama `api.updateNotificacion(id, { leida: true })`; si ok actualiza estado local
+- `marcarTodasLeidas()`: `Promise.all` sobre todas las no-leídas con `api.updateNotificacion()`; si todo ok actualiza estado local
+- `eliminarNotificacion()`: llama `api.deleteNotificacion(id)`; si ok filtra del array local
+- `limpiarTodas()`: `Promise.all` DELETE sobre todos los ids; si todo ok vacía el array local
+
+### src/router/AppRouter.tsx (modificado)
+- Agrega `import { useEffect }` de react
+- Agrega imports de los 4 stores: `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore`
+- En `AppRouter()`: nuevo `useEffect(() => { cargarDatos() × 4 }, [])` que dispara la carga inicial de datos al montar la app
+
+### src/main.tsx (modificado)
+- Eliminada función `initializarDatos()` y todos sus imports (`PEDIDOS_INICIALES`, `COTIZACIONES_INICIALES`, `ORDENES_INICIALES`, `MENSAJES_INICIALES`, claves de storage)
+- Los datos iniciales ahora viven en `db.json`; los stores se hidratan via API al montar `AppRouter`
+- main.tsx queda solo con el `createRoot().render()` mínimo
+
+### package.json (modificado)
+- Nuevo script `"dev:full"`: `concurrently "json-server --watch db.json --port 3001" "vite"`
+- Nuevas devDependencies: `concurrently` y `json-server`
+
+### .env.example (nuevo archivo)
+- Documenta la variable `VITE_API_URL=http://localhost:3001`
+
+### README.md (actualizado)
+- Stack actualizado (React 19, Tailwind v4, JSON Server)
+- Comando de inicio actualizado a `npm run dev:full`
+- Nueva sección `## Desarrollo en equipo` con instrucciones para host y colaborador, cómo encontrar IP local en Windows
+
+### ANTIGRAVITY.md (actualizado)
+- Nueva sección `## Capa de datos — JSON Server` con estructura de db.json, endpoints, patrón de stores con API, tabla de acciones por store, instrucciones de entorno y reset
+
+---
+
 ## [v0.1.8] -- 2026-06-30 -- feat: filtros e historial en listas de pedidos y cotizaciones (Etapa 3)
 
 ### src/pages/comprador/ListaPedidosComprador.tsx (nuevo archivo)

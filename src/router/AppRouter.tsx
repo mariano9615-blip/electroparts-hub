@@ -1,6 +1,11 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuthStore } from '../store/useAuthStore';
+import { usePedidosStore } from '../store/usePedidosStore';
+import { useCotizacionesStore } from '../store/useCotizacionesStore';
+import { useOrdenesStore } from '../store/useOrdenesStore';
+import { useNotificacionesStore } from '../store/useNotificacionesStore';
 
 import Login from '../pages/Login';
 
@@ -41,6 +46,13 @@ function RutaLogin() {
 }
 
 export function AppRouter() {
+  useEffect(() => {
+    usePedidosStore.getState().cargarDatos();
+    useCotizacionesStore.getState().cargarDatos();
+    useOrdenesStore.getState().cargarDatos();
+    useNotificacionesStore.getState().cargarDatos();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

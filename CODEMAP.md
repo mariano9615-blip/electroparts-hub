@@ -167,3 +167,99 @@ Rama: mdemichelis
 | Líneas | Nombre | Descripción |
 |--------|--------|-------------|
 | 15 | `BREADCRUMB_MAP` — entrada nueva | `'/comprador/pedidos': 'Mis pedidos'` — muestra el título correcto en la TopBar al navegar a la lista de pedidos |
+
+---
+
+## src/services/api.ts (nuevo, 215 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1 | import tipos | Importa `Pedido`, `Cotizacion`, `Orden` de `../types` |
+| 3 | `BASE_URL` | Constante con la URL base: `import.meta.env.VITE_API_URL ?? 'http://localhost:3001'` |
+| 5–15 | `NotificacionPayload` | Interfaz local que replica la forma de `Notificacion` del store — evita importación circular entre `api.ts` y `useNotificacionesStore.ts` |
+| 19–27 | `getPedidos()` | GET `/pedidos` → `Pedido[]`. Retorna `[]` si la red falla |
+| 29–38 | `getPedidoById(id)` | GET `/pedidos/:id` → `Pedido \| null`. Retorna `null` si no existe o falla |
+| 40–52 | `updatePedido(id, data)` | PATCH `/pedidos/:id` con body JSON → `Pedido \| null` |
+| 54–66 | `createPedido(data)` | POST `/pedidos` con body JSON → `Pedido \| null` |
+| 70–78 | `getCotizaciones()` | GET `/cotizaciones` → `Cotizacion[]` |
+| 80–88 | `getCotizacionesByPedidoId(pedidoId)` | GET `/cotizaciones?pedidoId=X` → `Cotizacion[]` — usa query string de JSON Server |
+| 90–105 | `updateCotizacion(id, data)` | PATCH `/cotizaciones/:id` → `Cotizacion \| null` |
+| 107–119 | `createCotizacion(data)` | POST `/cotizaciones` → `Cotizacion \| null` |
+| 123–131 | `getOrdenes()` | GET `/ordenes` → `Orden[]` |
+| 133–145 | `createOrden(data)` | POST `/ordenes` → `Orden \| null` |
+| 147–159 | `updateOrden(id, data)` | PATCH `/ordenes/:id` → `Orden \| null` — usada por `actualizarEstadoOrden` |
+| 163–171 | `getNotificaciones()` | GET `/notificaciones` → `NotificacionPayload[]` |
+| 173–187 | `createNotificacion(data)` | POST `/notificaciones` → `NotificacionPayload \| null` |
+| 189–204 | `updateNotificacion(id, data)` | PATCH `/notificaciones/:id` → `NotificacionPayload \| null` — usada por `marcarLeida` y `marcarTodasLeidas` |
+| 206–214 | `deleteNotificacion(id)` | DELETE `/notificaciones/:id` → `boolean` — usada por `eliminarNotificacion` y `limpiarTodas` |
+
+---
+
+## src/store/usePedidosStore.ts (reescrito, 65 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–4 | imports | Zustand `create`, tipos `Pedido` y `EstadoPedido`, `useNotificacionesStore`, namespace `* as api` de `../services/api` |
+| 6–12 | `PedidosState` | Interface del store — agrega `cargarDatos: () => void` a las 3 acciones existentes |
+| 14–64 | `usePedidosStore` | Instancia del store; estado inicial `pedidos: []` |
+| 17–19 | `cargarDatos()` | Llama `api.getPedidos()` y setea el resultado completo en el store |
+| 21–33 | `agregarPedido(pedido)` | Llama `api.createPedido()`; si ok: push al estado local + notificación `nueva_orden` a proveedor via `useNotificacionesStore` |
+| 35–42 | `actualizarEstadoPedido(id, estado)` | Llama `api.updatePedido(id, { estado })`; si ok: map sobre array local |
+| 44–63 | `incrementarCotizaciones(pedidoId)` | Lee pedido del estado local para calcular nuevos valores; llama `api.updatePedido()` con `cotizacionesRecibidas` y `estado`; si ok: actualiza estado local |
+
+---
+
+## src/store/useCotizacionesStore.ts (reescrito, 110 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–7 | imports | Zustand `create`, tipos `Cotizacion` y `Orden`, `COMPRADOR_ID`, los tres stores dependientes, namespace `* as api` |
+| 9–15 | `CotizacionesState` | Interface del store — agrega `cargarDatos: () => void` |
+| 17–109 | `useCotizacionesStore` | Instancia del store; estado inicial `cotizaciones: []` |
+| 20–22 | `cargarDatos()` | Llama `api.getCotizaciones()` y setea el resultado |
+| 24–35 | `agregarCotizacion(cotizacion)` | Llama `api.createCotizacion()`; si ok: push al estado local + notificación `nueva_cotizacion` al comprador |
+| 37–97 | `aceptarCotizacion(cotizacionId)` | Construye el objeto `Orden` sincrónicamente, luego ejecuta un IIFE async: (1) PATCH cotizacion→'aceptada', (2) `Promise.all` PATCH otras del pedido→'rechazada', (3) actualiza estado local de cotizaciones, (4) delega `agregarOrden()` y `actualizarEstadoPedido()` a sus stores, (5) dispara 2 notificaciones. Retorna `void` — el IIFE es fire-and-forget |
+| 99–108 | `rechazarCotizacion(cotizacionId)` | Llama `api.updateCotizacion(id, { estado: 'rechazada' })`; si ok: map sobre array local |
+
+---
+
+## src/store/useOrdenesStore.ts (reescrito, 35 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–3 | imports | Zustand `create`, tipos `Orden` y `EstadoOrden`, namespace `* as api` |
+| 5–10 | `OrdenesState` | Interface del store — agrega `cargarDatos: () => void` |
+| 12–34 | `useOrdenesStore` | Instancia del store; estado inicial `ordenes: []` |
+| 15–17 | `cargarDatos()` | Llama `api.getOrdenes()` y setea el resultado |
+| 19–24 | `agregarOrden(orden)` | Llama `api.createOrden()`; si ok: push al array local. Llamada desde `useCotizacionesStore.aceptarCotizacion()` |
+| 26–33 | `actualizarEstadoOrden(id, estado)` | Llama `api.updateOrden(id, { estado })`; si ok: map sobre array local |
+
+---
+
+## src/store/useNotificacionesStore.ts (reescrito, 99 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–2 | imports | Zustand `create`, namespace `* as api` |
+| 4–9 | `TipoNotificacion` | Tipo unión exportado — sin cambios respecto a versión anterior |
+| 11–20 | `Notificacion` | Interfaz exportada — sin cambios |
+| 22–32 | `NotificacionesState` | Interface interna — agrega `cargarDatos: () => void` |
+| 34–98 | `useNotificacionesStore` | Instancia del store; estado inicial `notificaciones: []` |
+| 37–41 | `cargarDatos()` | Llama `api.getNotificaciones()` y setea el resultado (cast a `Notificacion[]`) |
+| 43–54 | `agregarNotificacion(n)` | Construye el objeto `Notificacion` completo (UUID, fecha, leida=false); llama `api.createNotificacion()`; si ok: prepend al array local |
+| 56–63 | `marcarLeida(id)` | Llama `api.updateNotificacion(id, { leida: true })`; si ok: map sobre array local |
+| 65–73 | `marcarTodasLeidas()` | `Promise.all` de `api.updateNotificacion()` sobre todas las no-leídas; si ok: map completo a `leida: true` |
+| 75–82 | `eliminarNotificacion(id)` | Llama `api.deleteNotificacion(id)`; si ok: filtra el id del array local |
+| 84–89 | `limpiarTodas()` | Recoge todos los ids y hace `Promise.all` de DELETE; si ok: vacía el array local |
+| 91–93 | `getNoLeidas(rol)` | Selector no reactivo — sin cambios en lógica |
+| 95–97 | `getTodas(rol)` | Selector no reactivo — sin cambios en lógica |
+
+---
+
+## src/router/AppRouter.tsx (cambios v0.1.9)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1 | import `useEffect` | Nuevo import de `react` para el efecto de carga inicial |
+| 5–8 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore` — usados solo para disparar `cargarDatos()` al montar |
+| 49–54 | `useEffect` en `AppRouter` | `useEffect(() => { cargarDatos() × 4 }, [])` — dispara la carga inicial de todas las entidades al montar la app por primera vez |
