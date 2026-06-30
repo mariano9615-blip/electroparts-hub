@@ -9,39 +9,42 @@ Rama: mdemichelis
 
 | Líneas | Nombre | Descripción |
 |--------|--------|-------------|
-| 1–10 | imports | React (`useState`), React Router (`useParams`, `useNavigate`), íconos Tabler, componentes UI (`Badge`, `Button`, `EmptyState`, `Modal`), los cuatro stores necesarios, utilidades de formato (`formatFecha`, `formatARS`), tipo `Cotizacion` de types |
-| 12 | `BadgeColor` | Tipo local que restringe las variantes de color permitidas para `Badge` (`green`, `blue`, `amber`, `red`, `gray`) |
-| 14–19 | `ESTADO_COLOR` | Mapa de estado de pedido → color de badge. `abierto`→green, `en_cotizacion`→blue, `adjudicado`→gray, `cancelado`→red |
-| 21–26 | `ESTADO_LABEL` | Mapa de estado de pedido → etiqueta legible en español para mostrar en el badge |
-| 28–33 | `COT_ESTADO_COLOR` | Mapa de estado de cotización → color de badge. `pendiente`→amber, `aceptada`→green, `rechazada`→red |
-| 34–38 | `COT_ESTADO_LABEL` | Mapa de estado de cotización → etiqueta legible en español para mostrar en el badge |
-| 40 | `TH` | Constante con las clases Tailwind compartidas de todos los `<th>` de la tabla de cotizaciones (padding, tipografía, borde inferior) |
-| 42 | `DetallePedidoComprador` | Página exportada por defecto para la ruta `/comprador/pedidos/:id` |
-| 43–44 | router hooks | `useParams` extrae el `id` de la URL; `useNavigate` permite navegación programática |
-| 46–47 | `useState` modales | `modalAdjudicar: Cotizacion\|null` y `modalRechazar: Cotizacion\|null` — único estado local del componente, controla qué modal está abierto y con qué cotización. No persiste en store |
-| 49–53 | suscripciones a stores | Lee reactivamente `pedidos`, `cotizaciones`, `ordenes`; extrae las acciones `aceptarCotizacion` y `rechazarCotizacion` de sus respectivos stores |
-| 55 | `pedido` | Busca el pedido cuyo `id` coincide con el parámetro de URL en el array del store |
-| 57–75 | guard: pedido no encontrado | Si `pedido` es undefined, renderiza botón "Volver" que navega a `/comprador/cotizaciones` y un `EmptyState` con acción de vuelta. Sale del render normal |
-| 77–79 | `cotizacionesPedido` | Filtra las cotizaciones del store para quedarse solo con las del pedido actual, luego las ordena por precio ascendente |
-| 81–84 | `precioMinimo` | Calcula el precio mínimo entre todas las cotizaciones del pedido usando `Math.min`. Devuelve `null` si no hay cotizaciones |
-| 86 | `pedidoAdjudicado` | Booleano derivado: `true` cuando `pedido.estado === 'adjudicado'`. Controla la visibilidad de la columna Acciones y el banner |
-| 87 | `cotizacionAceptada` | Busca la cotización con `estado === 'aceptada'` para mostrar el nombre del proveedor ganador en el banner. Solo relevante cuando `pedidoAdjudicado` es true |
-| 88 | `ordenAdjudicada` | Busca en el store de órdenes la orden cuyo `pedidoId` coincide con el pedido actual. Provee la `fechaConfirmacion` para el banner |
-| 90–106 | `handleConfirmarAdjudicacion` | Ejecuta el flujo completo de adjudicación: (1) filtra cotizaciones pendientes que no sean la seleccionada y dispara una notificación `pedido_adjudicado` a cada proveedor rechazado vía `useNotificacionesStore.getState()`; (2) llama `aceptarCotizacion(modalAdjudicar.id)` del store (que crea la orden, actualiza el pedido y notifica al ganador); (3) cierra el modal |
-| 108–119 | `handleConfirmarRechazo` | Ejecuta el rechazo individual: llama `rechazarCotizacion(modalRechazar.id)` del store y dispara una notificación `pedido_adjudicado` al proveedor afectado vía `useNotificacionesStore.getState()`. Cierra el modal |
-| 123–130 | JSX: botón volver | Botón `<button>` nativo con `navigate(-1)`. Estilo: `text-sm text-ep-text-muted hover:text-ep-text-primary`, icono `IconArrowLeft` |
-| 132–143 | JSX: header pedido | `flex justify-between` con título `text-2xl font-bold`, subtítulo `categoría · cantidad unidad` en `text-ep-text-muted`, y badge de estado del pedido alineado a la derecha |
-| 145–194 | JSX: card información | Card `bg-ep-surface border border-ep-border rounded-lg p-5`. Grid 2 columnas: izquierda muestra descripción completa; derecha usa grid 2-col para mostrar presupuesto máx. (condicional), fecha límite, cantidad+unidad, fecha de publicación y total de cotizaciones |
-| 196–200 | JSX: header sección cotizaciones | `<h2>` con estilo de sección (`text-xs font-bold uppercase tracking-widest border-b`) mostrando el count de cotizaciones |
-| 202–211 | JSX: banner adjudicado | Se renderiza solo cuando `pedidoAdjudicado && cotizacionAceptada`. Muestra "Pedido adjudicado a [proveedor] el [fecha]". Fondo `bg-ep-green-light border-ep-green rounded-lg`. La fecha solo aparece si existe `ordenAdjudicada` |
-| 213–218 | JSX: EmptyState sin cotizaciones | Renderiza `EmptyState` con `IconInbox` cuando `cotizacionesPedido.length === 0` |
-| 220–309 | JSX: tabla cotizaciones | Tabla HTML con borde y overflow hidden. Columnas: Proveedor, Precio, Precio unitario, Entrega, Notas, Estado, y Acciones (condicional) |
-| 222–233 | JSX: thead | Fila de encabezados. La columna "Acciones" solo se renderiza cuando `!pedidoAdjudicado` |
-| 236–243 | JSX: derivados por fila | Por cada `cot`: calcula `esMejorPrecio` (comparación con `precioMinimo`), `precioUnitario` (precio/cantidad), y `notasTruncadas` (truncado a 60 chars con tooltip `title=`) |
-| 245–304 | JSX: `<tr>` por cotización | Fila con `bg-ep-green-light` si es mejor precio, `hover:bg-ep-surface-raised` si no. Columna Proveedor incluye badge inline "Mejor precio" cuando corresponde. Precio en `font-mono`. Notas con `title=` para tooltip completo |
-| 281–302 | JSX: columna Acciones | Solo se renderiza la celda cuando `!pedidoAdjudicado`. Dentro, solo muestra los botones cuando `cot.estado === 'pendiente'`: Button `primary sm` "Adjudicar" (→ `setModalAdjudicar(cot)`) y Button `secondary sm` "Rechazar" (→ `setModalRechazar(cot)`) |
-| 312–370 | JSX: Modal adjudicar | `open={modalAdjudicar !== null}`, `size="md"`. Cuerpo: grid 3 columnas con proveedor, precio (font-mono) y entrega estimada, más aviso amber con `IconAlertTriangle` explicando el efecto en cadena. Footer: "Cancelar" (secondary) + "Confirmar adjudicación" (primary, llama `handleConfirmarAdjudicacion`) |
-| 372–398 | JSX: Modal rechazar | `open={modalRechazar !== null}`, `size="sm"`. Cuerpo: texto simple "¿Rechazar la cotización de [proveedor]?". Footer: "Cancelar" (secondary) + "Confirmar rechazo" (danger, llama `handleConfirmarRechazo`) |
+| 1–10 | imports | React (`useMemo`, `useState`), React Router (`useParams`, `useNavigate`), íconos Tabler, componentes UI (`Badge`, `Button`, `EmptyState`, `Modal`, `Select`), los cuatro stores, utilidades de formato, tipo `Cotizacion` |
+| 12 | `BadgeColor` | Tipo local para variantes de color de `Badge` |
+| 14–19 | `ESTADO_COLOR` | Mapa estado pedido → color badge (`abierto`→green, `en_cotizacion`→blue, `adjudicado`→gray, `cancelado`→red) |
+| 21–26 | `ESTADO_LABEL` | Mapa estado pedido → etiqueta legible en español |
+| 28–32 | `COT_ESTADO_COLOR` | Mapa estado cotización → color badge (`pendiente`→amber, `aceptada`→green, `rechazada`→red) |
+| 34–38 | `COT_ESTADO_LABEL` | Mapa estado cotización → etiqueta legible en español |
+| 40–45 | `FILTRO_ESTADO_COT_OPTIONS` | Opciones del select de estado de cotizaciones: Todas / Pendiente / Aceptada / Rechazada |
+| 47–51 | `ORDEN_PRECIO_OPTIONS` | Opciones del select de orden por precio: Sin orden / Menor a mayor / Mayor a menor |
+| 53 | `TH` | Clases Tailwind compartidas de todos los `<th>` de la tabla de cotizaciones |
+| 55 | `DetallePedidoComprador` | Página exportada por defecto para la ruta `/comprador/pedidos/:id` |
+| 56–57 | router hooks | `useParams` extrae `id` de URL; `useNavigate` para navegación programática |
+| 59–60 | `useState` modales | `modalAdjudicar: Cotizacion\|null` y `modalRechazar: Cotizacion\|null` — controlan qué modal está abierto |
+| 62–65 | `useState` filtros | `filtroEstadoCot`, `filtroProveedor`, `ordenPrecio` — estado local de UI de la barra de filtros, no persiste en store |
+| 67–71 | suscripciones a stores | Lee `pedidos`, `cotizaciones`, `ordenes`; extrae `aceptarCotizacion` y `rechazarCotizacion` de sus stores |
+| 73 | `pedido` | Busca el pedido cuyo `id` coincide con el parámetro de URL. No es un hook — resultado plain JS |
+| 75–79 | `todasCotizacionesPedido` | `useMemo` que filtra cotizaciones por `pedidoId === pedido?.id`. Sin filtros aplicados — es la fuente de verdad para el count del header y para `precioMinimo`. Colocado antes del early return porque es un hook |
+| 81–89 | `proveedoresOptions` | `useMemo` que construye el array de opciones del select de proveedor: "Todos los proveedores" + entries únicas de `Map(proveedorId → proveedorNombre)` sobre `todasCotizacionesPedido` |
+| 91–104 | `cotizacionesPedido` | `useMemo` con la lista filtrada y ordenada para la tabla: aplica filtros de estado, proveedor y orden por precio. Depende de `todasCotizacionesPedido`, `filtroEstadoCot`, `filtroProveedor`, `ordenPrecio` |
+| 106–113 | `precioMinimo` | `useMemo` calculado siempre sobre `todasCotizacionesPedido` (no sobre filtradas) para que el badge "Mejor precio" sea consistente independientemente de los filtros activos |
+| 115 | `hayFiltrosCot` | Booleano derivado truthy cuando alguno de los tres filtros es no-vacío; controla visibilidad del botón "Limpiar filtros" |
+| 117–121 | `limpiarFiltrosCot` | Resetea `filtroEstadoCot`, `filtroProveedor` y `ordenPrecio` a string vacío |
+| 123–141 | guard: pedido no encontrado | Si `pedido` es undefined: renderiza botón "Volver" hacia `/comprador/cotizaciones` + `EmptyState`. Los hooks anteriores ya se ejecutaron en orden correcto antes de este early return |
+| 143–145 | derivados post-guard | `pedidoAdjudicado`, `cotizacionAceptada` (desde `todasCotizacionesPedido`), `ordenAdjudicada` — plain JS seguro pues `pedido` está garantizado |
+| 147–166 | `handleConfirmarAdjudicacion` | Notifica a proveedores rechazados iterando `todasCotizacionesPedido` (no las filtradas); llama `aceptarCotizacion()` del store vía suscripción reactiva; cierra modal |
+| 168–181 | `handleConfirmarRechazo` | Llama `rechazarCotizacion()` + notifica al proveedor vía `useNotificacionesStore.getState()`; cierra modal |
+| 183–191 | JSX: botón volver | `navigate(-1)`. Estilo `text-ep-text-muted hover:text-ep-text-primary`, `IconArrowLeft` |
+| 193–204 | JSX: header pedido | `flex justify-between`: título `text-2xl font-bold`, subtítulo `categoría · cantidad unidad`, badge de estado alineado derecha |
+| 206–245 | JSX: card información | `bg-ep-surface border border-ep-border rounded-lg p-5`. Grid 2 cols: descripción completa a la izquierda; grid 2-col de metadatos a la derecha |
+| 247–253 | JSX: header sección cotizaciones | `<h2>` con count = `todasCotizacionesPedido.length` (total sin filtrar), estilo `text-xs font-bold uppercase tracking-widest border-b` |
+| 255–271 | JSX: barra filtros cotizaciones | Visible solo si `todasCotizacionesPedido.length > 0`. Contenedor `bg-ep-blue-light/10 border border-ep-border rounded-lg p-3`. Tres `Select` (estado, proveedor, orden precio) + botón "Limpiar filtros" condicional |
+| 273–280 | JSX: banner adjudicado | `bg-ep-green-light border border-ep-green` cuando `pedidoAdjudicado && cotizacionAceptada` |
+| 282–286 | JSX: EmptyState sin cotizaciones | `EmptyState` con `IconInbox` cuando `todasCotizacionesPedido.length === 0` (nunca llegaron cotizaciones) |
+| 287–290 | JSX: sin resultados con filtros | `<p className="text-center py-8 text-sm text-ep-text-muted">` cuando `cotizacionesPedido.length === 0` pero `todasCotizacionesPedido.length > 0` |
+| 291–390 | JSX: tabla cotizaciones | Tabla con borde y overflow hidden. Columnas: Proveedor, Precio, Precio unitario, Entrega, Notas, Estado, Acciones (condicional). Usa `cotizacionesPedido` (filtrada/ordenada). La fila con `esMejorPrecio` (basado en `precioMinimo` sobre todas) tiene fondo `bg-ep-green-light` |
+| 392–448 | JSX: Modal adjudicar | `size="md"`. Cuerpo: grid 3 cols (proveedor, precio, entrega) + aviso amber `IconAlertTriangle`. Footer: "Cancelar" + "Confirmar adjudicación" → `handleConfirmarAdjudicacion` |
+| 450–493 | JSX: Modal rechazar | `size="sm"`. Cuerpo: "¿Rechazar la cotización de [proveedor]?". Footer: "Cancelar" + "Confirmar rechazo" (danger) → `handleConfirmarRechazo` |
 
 ---
 
@@ -111,3 +114,56 @@ Rama: mdemichelis
 | 82–85 | `limpiarTodas()` | Reemplaza el array con `[]`. Persiste array vacío y actualiza el estado |
 | 87–90 | `getNoLeidas(rol)` | Selector no reactivo (usa `get()` interno). Filtra notificaciones donde `rolDestino === rol` y `leida === false`. Usado para el contador del badge en TopBar |
 | 92–94 | `getTodas(rol)` | Selector no reactivo. Filtra notificaciones por `rolDestino === rol` sin importar si están leídas. Usado para listar notificaciones en `NotificacionesPanel` |
+
+---
+
+## src/pages/comprador/ListaPedidosComprador.tsx
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–7 | imports | React (`useMemo`, `useState`), `Link` de react-router-dom, íconos (`IconClipboardList`, `IconAlertTriangle`), componentes UI (`Badge`, `Button`, `EmptyState`, `PageHeader`, `Select`), `usePedidosStore`, `COMPRADOR_ID`, utilidades `formatFecha` y `diasHasta` |
+| 9 | `BadgeColor` | Tipo local para variantes de color de `Badge` |
+| 11–16 | `ESTADO_COLOR` | Mapa estado pedido → color badge |
+| 18–23 | `ESTADO_LABEL` | Mapa estado pedido → etiqueta en español |
+| 25–30 | `FILTRO_ESTADO_OPTIONS` | Opciones del select de estado: "Todos" (vacío), "Pendiente" (mapea a `abierto`+`en_cotizacion`), "Adjudicado", "Cancelado" |
+| 32–33 | `TH` | Clases Tailwind compartidas para `<th>` de la tabla de pedidos |
+| 35 | `ListaPedidosComprador` | Página exportada por defecto para la ruta `/comprador/pedidos` |
+| 36–39 | `useState` filtros | `filtroEstado`, `filtroCategoria`, `fechaDesde`, `fechaHasta` — estado local de UI puro, no persiste en store |
+| 41 | `pedidos` | Suscripción reactiva al array completo de `usePedidosStore` |
+| 43–49 | `misPedidos` | `useMemo` que filtra por `compradorId === COMPRADOR_ID` y ordena por `fechaCreacion` descendente |
+| 51–59 | `categoriaOptions` | `useMemo` que extrae categorías únicas de `misPedidos` con `Set`, las ordena y construye las opciones del select |
+| 61–75 | `pedidosFiltrados` | `useMemo` principal del filtrado: aplica filtro de estado (si `filtroEstado === 'pendiente'` incluye `abierto` y `en_cotizacion`), categoría y rango de fechas. Depende de `misPedidos` y los cuatro estados de filtro |
+| 77 | `hayFiltros` | Booleano truthy cuando al menos un filtro está activo; controla visibilidad del botón "Limpiar filtros" y del mensaje "sin resultados" |
+| 79–84 | `limpiarFiltros` | Resetea los cuatro valores de filtro a string vacío |
+| 86–88 | JSX: `PageHeader` | Título "Mis pedidos", descripción "Pedidos que publicaste en el marketplace" |
+| 90–131 | JSX: barra de filtros | Contenedor `bg-ep-blue-light/10 border border-ep-border rounded-lg p-4`. Dos `Select` (estado, categoría), dos `<input type="date">` (desde, hasta), botón "Limpiar filtros" condicional |
+| 133–135 | JSX: contador | `<p>` con count de `pedidosFiltrados.length` — actualizado en tiempo real |
+| 137–149 | JSX: sin resultados | Si `pedidosFiltrados.length === 0`: con filtros activos → `<p>` centrado en `text-ep-text-muted`; sin filtros → `EmptyState` con `IconClipboardList` |
+| 150–202 | JSX: tabla de pedidos | `bg-ep-surface border border-ep-border rounded-lg overflow-hidden`. Columnas: Producto (`<Link>` a `/comprador/pedidos/:id`, `text-ep-blue hover:underline`), Categoría, Fecha límite (urgente `dias<3` → rojo + `IconAlertTriangle`), Cotizaciones (`font-mono`), Estado (`Badge`) |
+
+---
+
+## src/components/layout/Sidebar.tsx (cambios Etapa 3)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 10 | import `IconClipboardList` | Ícono para el ítem "Mis pedidos" en la navegación comprador |
+| 27–29 | `NAV_COMPRADOR` — ítem "Mis pedidos" | Nuevo ítem `{ label: 'Mis pedidos', ruta: '/comprador/pedidos', icono: IconClipboardList }` insertado entre "Publicar pedido" y "Cotizaciones" |
+| 114–116 | `esActivo` extendido | Además del match exacto `pathname === item.ruta`, agrega condición `item.ruta === '/comprador/pedidos' && pathname.startsWith('/comprador/pedidos/')` para mantener "Mis pedidos" activo cuando el usuario está en el detalle `/comprador/pedidos/:id` |
+
+---
+
+## src/router/AppRouter.tsx (cambios Etapa 3)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 13 | import `ListaPedidosComprador` | Importa la nueva página desde `../pages/comprador/ListaPedidosComprador` |
+| 57 | ruta `/comprador/pedidos` | `<Route path="/comprador/pedidos" element={<ListaPedidosComprador />} />` — declarada antes de `/comprador/pedidos/:id` para que React Router resuelva ambas sin conflicto |
+
+---
+
+## src/components/layout/TopBar.tsx (cambios Etapa 3)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 15 | `BREADCRUMB_MAP` — entrada nueva | `'/comprador/pedidos': 'Mis pedidos'` — muestra el título correcto en la TopBar al navegar a la lista de pedidos |

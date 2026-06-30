@@ -8,6 +8,7 @@ import {
   IconShoppingCart,
   IconMessage,
   IconPackage,
+  IconClipboardList,
 } from '@tabler/icons-react';
 import { useRolStore } from '../../store/useRolStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
@@ -23,6 +24,7 @@ interface NavItem {
 const NAV_COMPRADOR: NavItem[] = [
   { label: 'Dashboard', ruta: '/comprador', icono: IconLayoutDashboard },
   { label: 'Publicar pedido', ruta: '/comprador/publicar', icono: IconPlus },
+  { label: 'Mis pedidos', ruta: '/comprador/pedidos', icono: IconClipboardList },
   { label: 'Cotizaciones', ruta: '/comprador/cotizaciones', icono: IconFileInvoice },
   { label: 'Mis órdenes', ruta: '/comprador/ordenes', icono: IconShoppingCart },
   { label: 'Chat activo', ruta: '/comprador/chat', icono: IconMessage },
@@ -108,7 +110,9 @@ export const Sidebar = () => {
       {/* Navegación */}
       <nav className="flex-1 overflow-y-auto pb-2">
         {navItems.map((item) => {
-          const esActivo = pathname === item.ruta;
+          const esActivo =
+            pathname === item.ruta ||
+            (item.ruta === '/comprador/pedidos' && pathname.startsWith('/comprador/pedidos/'));
           const Icono = item.icono;
           return (
             <div key={item.ruta} className="relative px-3 mb-0.5">

@@ -10,6 +10,7 @@ import MisCotizacionesComprador from '../pages/comprador/MisCotizacionesComprado
 import MisOrdenesComprador from '../pages/comprador/MisOrdenesComprador';
 import ChatComprador from '../pages/comprador/ChatComprador';
 import DetallePedidoComprador from '../pages/comprador/DetallePedidoComprador';
+import ListaPedidosComprador from '../pages/comprador/ListaPedidosComprador';
 
 import DashboardProveedor from '../pages/proveedor/DashboardProveedor';
 import PedidosDisponibles from '../pages/proveedor/PedidosDisponibles';
@@ -53,6 +54,7 @@ export function AppRouter() {
           <Route path="/comprador/cotizaciones" element={<MisCotizacionesComprador />} />
           <Route path="/comprador/ordenes" element={<MisOrdenesComprador />} />
           <Route path="/comprador/chat" element={<ChatComprador />} />
+          <Route path="/comprador/pedidos" element={<ListaPedidosComprador />} />
           <Route path="/comprador/pedidos/:id" element={<DetallePedidoComprador />} />
 
           <Route path="/proveedor" element={<DashboardProveedor />} />

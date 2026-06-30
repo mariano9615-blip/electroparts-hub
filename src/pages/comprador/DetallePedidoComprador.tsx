@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IconArrowLeft, IconAlertCircle, IconInbox, IconAlertTriangle } from '@tabler/icons-react';
-import { Badge, Button, EmptyState, Modal } from '../../components/ui';
+import { Badge, Button, EmptyState, Modal, Select } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
@@ -37,6 +37,19 @@ const COT_ESTADO_LABEL: Record<string, string> = {
   rechazada: 'Rechazada',
 };
 
+const FILTRO_ESTADO_COT_OPTIONS = [
+  { value: '', label: 'Todas' },
+  { value: 'pendiente', label: 'Pendiente' },
+  { value: 'aceptada', label: 'Aceptada' },
+  { value: 'rechazada', label: 'Rechazada' },
+];
+
+const ORDEN_PRECIO_OPTIONS = [
+  { value: '', label: 'Sin orden' },
+  { value: 'asc', label: 'Menor a mayor' },
+  { value: 'desc', label: 'Mayor a menor' },
+];
+
 const TH = 'px-3 py-2 text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.06em] border-b border-ep-border';
 
 export default function DetallePedidoComprador() {
@@ -46,6 +59,11 @@ export default function DetallePedidoComprador() {
   const [modalAdjudicar, setModalAdjudicar] = useState<Cotizacion | null>(null);
   const [modalRechazar, setModalRechazar] = useState<Cotizacion | null>(null);
 
+  // Estado de filtros de cotizaciones
+  const [filtroEstadoCot, setFiltroEstadoCot] = useState('');
+  const [filtroProveedor, setFiltroProveedor] = useState('');
+  const [ordenPrecio, setOrdenPrecio] = useState('');
+
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
   const ordenes = useOrdenesStore((s) => s.ordenes);
@@ -53,6 +71,54 @@ export default function DetallePedidoComprador() {
   const rechazarCotizacion = useCotizacionesStore((s) => s.rechazarCotizacion);
 
   const pedido = pedidos.find((p) => p.id === id);
+
+  // Todas las cotizaciones del pedido sin filtrar (para conteo, precio mínimo y opciones)
+  const todasCotizacionesPedido = useMemo(
+    () => cotizaciones.filter((c) => c.pedidoId === (pedido?.id ?? '')),
+    [cotizaciones, pedido?.id],
+  );
+
+  const proveedoresOptions = useMemo(
+    () => [
+      { value: '', label: 'Todos los proveedores' },
+      ...[...new Map(todasCotizacionesPedido.map((c) => [c.proveedorId, c.proveedorNombre])).entries()].map(
+        ([provId, nombre]) => ({ value: provId, label: nombre }),
+      ),
+    ],
+    [todasCotizacionesPedido],
+  );
+
+  // Cotizaciones filtradas y ordenadas para la tabla
+  const cotizacionesPedido = useMemo(() => {
+    let lista = [...todasCotizacionesPedido];
+    if (filtroEstadoCot) lista = lista.filter((c) => c.estado === filtroEstadoCot);
+    if (filtroProveedor) lista = lista.filter((c) => c.proveedorId === filtroProveedor);
+    if (ordenPrecio === 'desc') {
+      lista.sort((a, b) => b.precio - a.precio);
+    } else if (ordenPrecio === 'asc') {
+      lista.sort((a, b) => a.precio - b.precio);
+    } else {
+      lista.sort((a, b) => a.precio - b.precio);
+    }
+    return lista;
+  }, [todasCotizacionesPedido, filtroEstadoCot, filtroProveedor, ordenPrecio]);
+
+  // Precio mínimo siempre calculado sobre TODAS las cotizaciones
+  const precioMinimo = useMemo(
+    () =>
+      todasCotizacionesPedido.length > 0
+        ? Math.min(...todasCotizacionesPedido.map((c) => c.precio))
+        : null,
+    [todasCotizacionesPedido],
+  );
+
+  const hayFiltrosCot = filtroEstadoCot || filtroProveedor || ordenPrecio;
+
+  const limpiarFiltrosCot = () => {
+    setFiltroEstadoCot('');
+    setFiltroProveedor('');
+    setOrdenPrecio('');
+  };
 
   if (!pedido) {
     return (
@@ -74,23 +140,14 @@ export default function DetallePedidoComprador() {
     );
   }
 
-  const cotizacionesPedido = [...cotizaciones]
-    .filter((c) => c.pedidoId === pedido.id)
-    .sort((a, b) => a.precio - b.precio);
-
-  const precioMinimo =
-    cotizacionesPedido.length > 0
-      ? Math.min(...cotizacionesPedido.map((c) => c.precio))
-      : null;
-
   const pedidoAdjudicado = pedido.estado === 'adjudicado';
-  const cotizacionAceptada = cotizacionesPedido.find((c) => c.estado === 'aceptada') ?? null;
+  const cotizacionAceptada = todasCotizacionesPedido.find((c) => c.estado === 'aceptada') ?? null;
   const ordenAdjudicada = ordenes.find((o) => o.pedidoId === pedido.id) ?? null;
 
   const handleConfirmarAdjudicacion = () => {
     if (!modalAdjudicar) return;
     // Notificar a los proveedores cuyas cotizaciones serán rechazadas automáticamente
-    cotizacionesPedido
+    todasCotizacionesPedido
       .filter((c) => c.id !== modalAdjudicar.id && c.estado === 'pendiente')
       .forEach((c) => {
         useNotificacionesStore.getState().agregarNotificacion({
@@ -196,26 +253,63 @@ export default function DetallePedidoComprador() {
       {/* Sección cotizaciones */}
       <div>
         <h2 className="text-xs font-bold text-ep-text-muted uppercase tracking-widest border-b border-ep-border pb-2.5 mb-4">
-          Cotizaciones recibidas ({cotizacionesPedido.length})
+          Cotizaciones recibidas ({todasCotizacionesPedido.length})
         </h2>
+
+        {/* Barra de filtros de cotizaciones */}
+        {todasCotizacionesPedido.length > 0 && (
+          <div className="bg-ep-blue-light/10 border border-ep-border rounded-lg p-3 mb-4 flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[140px]">
+              <Select
+                label="Estado"
+                value={filtroEstadoCot}
+                onChange={(e) => setFiltroEstadoCot(e.target.value)}
+                options={FILTRO_ESTADO_COT_OPTIONS}
+              />
+            </div>
+            <div className="flex-1 min-w-[170px]">
+              <Select
+                label="Proveedor"
+                value={filtroProveedor}
+                onChange={(e) => setFiltroProveedor(e.target.value)}
+                options={proveedoresOptions}
+              />
+            </div>
+            <div className="flex-1 min-w-[160px]">
+              <Select
+                label="Ordenar por precio"
+                value={ordenPrecio}
+                onChange={(e) => setOrdenPrecio(e.target.value)}
+                options={ORDEN_PRECIO_OPTIONS}
+              />
+            </div>
+            {hayFiltrosCot && (
+              <Button variant="secondary" size="sm" onClick={limpiarFiltrosCot}>
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Banner de adjudicación */}
         {pedidoAdjudicado && cotizacionAceptada && (
           <div className="bg-ep-green-light border border-ep-green rounded-lg px-4 py-3 text-sm text-ep-green-dark mb-4">
             Pedido adjudicado a{' '}
             <span className="font-semibold">{cotizacionAceptada.proveedorNombre}</span>
-            {ordenAdjudicada && (
-              <> el {formatFecha(ordenAdjudicada.fechaConfirmacion)}</>
-            )}
+            {ordenAdjudicada && <> el {formatFecha(ordenAdjudicada.fechaConfirmacion)}</>}
           </div>
         )}
 
-        {cotizacionesPedido.length === 0 ? (
+        {todasCotizacionesPedido.length === 0 ? (
           <EmptyState
             icono={IconInbox}
             titulo="Aún no hay cotizaciones para este pedido"
             mensaje="Los proveedores verificados serán notificados automáticamente."
           />
+        ) : cotizacionesPedido.length === 0 ? (
+          <p className="text-center py-8 text-sm text-ep-text-muted">
+            No hay cotizaciones que coincidan con los filtros aplicados.
+          </p>
         ) : (
           <div className="bg-ep-surface border border-ep-border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
@@ -227,9 +321,7 @@ export default function DetallePedidoComprador() {
                   <th className={`${TH} text-left`}>Entrega</th>
                   <th className={`${TH} text-left`}>Notas</th>
                   <th className={`${TH} text-right`}>Estado</th>
-                  {!pedidoAdjudicado && (
-                    <th className={`${TH} text-right`}>Acciones</th>
-                  )}
+                  {!pedidoAdjudicado && <th className={`${TH} text-right`}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>

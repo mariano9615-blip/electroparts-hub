@@ -14,6 +14,7 @@ interface TopBarProps {
 const BREADCRUMB_MAP: Record<string, string> = {
   '/comprador': 'Dashboard',
   '/comprador/publicar': 'Publicar pedido',
+  '/comprador/pedidos': 'Mis pedidos',
   '/comprador/cotizaciones': 'Cotizaciones',
   '/comprador/ordenes': 'Mis órdenes',
   '/comprador/chat': 'Chat activo',

@@ -1,5 +1,51 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.8] -- 2026-06-30 -- feat: filtros e historial en listas de pedidos y cotizaciones (Etapa 3)
+
+### src/pages/comprador/ListaPedidosComprador.tsx (nuevo archivo)
+- Nueva página para la ruta `/comprador/pedidos` — lista de todos los pedidos publicados por el comprador
+- Filtro por estado: select con opciones "Todos", "Pendiente" (mapea a `abierto`+`en_cotizacion`), "Adjudicado", "Cancelado"
+- Filtro por categoría: select dinámico con `useMemo` sobre las categorías presentes en los pedidos del comprador (ordenadas alfabéticamente)
+- Filtro por fecha: dos inputs `type="date"` (desde / hasta) que filtran por `fechaCreacion` del pedido
+- Botón "Limpiar filtros" (`Button variant="secondary" size="sm"`) visible solo cuando hay al menos un filtro activo
+- Barra de filtros: `bg-ep-blue-light/10 border border-ep-border rounded-lg p-4`
+- Sin resultados con filtros activos: mensaje centrado `text-ep-text-muted`
+- Sin pedidos publicados: `EmptyState` con `IconClipboardList`
+- Tabla: Producto (`<Link>` a `/comprador/pedidos/:id`, estilo `text-ep-blue hover:underline`) | Categoría | Fecha límite (urgente `< 3 días` en rojo con `IconAlertTriangle`) | Cotizaciones (`font-mono`) | Estado (`Badge`)
+- Lógica: `useMemo` sobre `usePedidosStore`, sin modificar el store
+
+### src/pages/comprador/DetallePedidoComprador.tsx (modificado)
+- Agrega imports `useMemo` y `Select`
+- Tres nuevos `useState` de filtros: `filtroEstadoCot`, `filtroProveedor`, `ordenPrecio`
+- Refactorización interna: `cotizacionesPedido` movido de valor computado post-early-return a tres `useMemo` antes del guard: `todasCotizacionesPedido` (sin filtrar, base para count y precio mínimo), `proveedoresOptions` (select dinámico), `cotizacionesPedido` (filtrado + ordenado)
+- `precioMinimo` también movido a `useMemo` y calculado siempre sobre `todasCotizacionesPedido` (no sobre las filtradas)
+- Barra de filtros sobre la tabla (visible solo cuando `todasCotizacionesPedido.length > 0`): Select estado, Select proveedor (dinámico), Select orden precio; botón "Limpiar filtros" condicional
+- Header de sección "Cotizaciones recibidas (N)": N refleja el total sin filtrar (`todasCotizacionesPedido.length`)
+- Sin resultados tras filtrar: `<p>No hay cotizaciones que coincidan con los filtros aplicados.</p>`
+- `handleConfirmarAdjudicacion` actualizado para usar `todasCotizacionesPedido` al notificar rechazados
+
+### src/router/AppRouter.tsx (modificado)
+- Agregado import de `ListaPedidosComprador`
+- Agregada ruta `<Route path="/comprador/pedidos" element={<ListaPedidosComprador />} />` antes de `/comprador/pedidos/:id`
+
+### src/components/layout/Sidebar.tsx (modificado)
+- Agrega import `IconClipboardList` de `@tabler/icons-react`
+- `NAV_COMPRADOR`: nuevo ítem `{ label: 'Mis pedidos', ruta: '/comprador/pedidos', icono: IconClipboardList }` entre "Publicar pedido" y "Cotizaciones"
+- Detección activo: `esActivo` ahora también es `true` cuando `item.ruta === '/comprador/pedidos' && pathname.startsWith('/comprador/pedidos/')`, para mantener el ítem activo al navegar al detalle de un pedido
+
+### src/components/layout/TopBar.tsx (modificado)
+- `BREADCRUMB_MAP`: agregada entrada `'/comprador/pedidos': 'Mis pedidos'`
+
+### ANTIGRAVITY.md
+- Tabla de rutas: agregada fila `/comprador/pedidos → ListaPedidosComprador`
+- Nueva sección `## Sistema de filtros (Etapa 3)` con convenciones visuales y descripción por página
+- Sección `Sidebar`: actualizada lista de ítems comprador con "Mis pedidos" y su lógica de activo extendida
+- Sección `Estructura de carpetas`: `ListaPedidosComprador` agregado a la lista de páginas comprador
+
+**Nota:** `ListaCotizacionesProveedor.tsx` no existe en el proyecto — la página equivalente es `MisCotizacionesProveedor.tsx`. Los filtros de punto 3 se omiten conforme a las instrucciones (solo si la página existe con ese nombre exacto).
+
+---
+
 ## [v0.1.7] -- 2026-06-30 -- feat: adjudicar y rechazar cotizaciones desde detalle de pedido
 
 ### src/pages/comprador/DetallePedidoComprador.tsx (modificado)

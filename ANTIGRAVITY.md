@@ -176,6 +176,7 @@ Todas las rutas estan envueltas en AppShell (layout wrapper).
 | /                           | → Navigate /comprador        |
 | /comprador                  | DashboardComprador           |
 | /comprador/publicar         | PublicarPedido               |
+| /comprador/pedidos          | ListaPedidosComprador        |
 | /comprador/cotizaciones     | MisCotizacionesComprador     |
 | /comprador/pedidos/:id      | DetallePedidoComprador       |
 | /comprador/ordenes          | MisOrdenesComprador          |
@@ -220,8 +221,9 @@ src/
     domain/        -- PedidosTable, CotizacionesTable (tablas para dashboards)
     chat/          -- (reservado para extraccion futura)
   pages/
-    comprador/     -- DashboardComprador, PublicarPedido, MisCotizacionesComprador,
-                      DetallePedidoComprador, MisOrdenesComprador, ChatComprador
+    comprador/     -- DashboardComprador, PublicarPedido, ListaPedidosComprador,
+                      MisCotizacionesComprador, DetallePedidoComprador,
+                      MisOrdenesComprador, ChatComprador
     proveedor/     -- DashboardProveedor, PedidosDisponibles, MisCotizacionesProveedor,
                       MisOrdenesProveedor, ChatProveedor
   store/           -- useRolStore, usePedidosStore, useOrdenesStore,
@@ -336,7 +338,8 @@ Mobile: sidebar como drawer con overlay semitransparente al tocar hamburger en T
 Lee useRolStore y useCotizacionesStore directamente.
 Secciones: Branding (IconBolt) → Toggle rol → Etiqueta seccion → Navegacion por rol → Footer v0.1.0.
 Badge amber sobre "Cotizaciones" = count cotizaciones con estado='pendiente'.
-Items comprador: Dashboard, Publicar pedido, Cotizaciones (badge), Mis ordenes, Chat activo.
+Items comprador: Dashboard, Publicar pedido, Mis pedidos, Cotizaciones (badge), Mis ordenes, Chat activo.
+  "Mis pedidos" (IconClipboardList) → /comprador/pedidos; se marca activo también cuando pathname empieza con /comprador/pedidos/ (detalle).
 Items proveedor: Dashboard, Pedidos disponibles, Mis cotizaciones (badge), Mis ordenes, Chat activo.
 
 ### TopBar (TopBar.tsx)
@@ -361,6 +364,38 @@ No-leídas: bg-ep-surface-raised como fondo; leídas: sin fondo especial.
 Estado vacío: EmptyState con IconBell cuando no hay notificaciones.
 Íconos por tipo: nueva_cotizacion→IconFileInvoice(blue), pedido_adjudicado→IconAward(amber),
   orden_confirmada→IconCircleCheck(green), nueva_orden→IconPackage(blue), cotizacion_aceptada→IconThumbUp(green).
+
+## Sistema de filtros (Etapa 3)
+
+Todas las páginas de listas principales tienen una barra de filtros encima de la tabla/lista.
+
+### Convenciones del sistema de filtros
+- Contenedor: `bg-ep-blue-light/10 border border-ep-border rounded-lg p-4 flex flex-wrap items-end gap-3`
+- Controles: componente `Select` con label (estado, categoría, proveedor, orden) e inputs `<input type="date">` para rangos de fecha
+- Lógica: `useMemo` local sobre datos del store — nunca modifica el store
+- Botón "Limpiar filtros": `Button variant="secondary" size="sm"`, visible solo cuando `hayFiltros` es truthy
+- Sin resultados tras filtrar: `<p className="text-center py-10 text-sm text-ep-text-muted">No hay ... que coincidan con los filtros aplicados.</p>`
+- Estado de filtros: `useState` local de UI — no persiste en store ni en URL
+
+### ListaPedidosComprador.tsx · /comprador/pedidos
+Stores leidos: usePedidosStore
+Filtra pedidos donde compradorId === COMPRADOR_ID, ordenados por fechaCreacion desc.
+Filtros disponibles:
+  - Estado: "Todos" / "Pendiente" (mapea a 'abierto'+'en_cotizacion') / "Adjudicado" / "Cancelado"
+  - Categoría: select dinámico con categorías presentes en los pedidos del comprador
+  - Fecha desde/hasta: inputs date filtran por fechaCreacion del pedido
+Tabla: Producto (Link a /comprador/pedidos/:id, text-ep-blue) | Categoría | Fecha límite (urgente<3d en rojo) | Cotizaciones (font-mono) | Estado (Badge)
+Sin resultados con filtros activos: mensaje centrado.
+Sin pedidos publicados (hayFiltros=false): EmptyState con IconClipboardList.
+
+### DetallePedidoComprador.tsx — filtros de cotizaciones
+Agregados sobre la tabla de cotizaciones (solo visible cuando todasCotizacionesPedido.length > 0):
+  Filtro estado cotización: "Todas" / "Pendiente" / "Aceptada" / "Rechazada"
+  Filtro proveedor: select dinámico construido desde los proveedores que cotizaron en este pedido
+  Orden precio: "Sin orden" (precio asc, default) / "Menor a mayor" / "Mayor a menor"
+useMemo split en dos arrays: todasCotizacionesPedido (sin filtrar, para count y precioMinimo) y cotizacionesPedido (filtrado+ordenado, para la tabla).
+precioMinimo siempre calculado sobre TODAS las cotizaciones del pedido.
+Sin resultados con filtros activos: `<p>No hay cotizaciones que coincidan con los filtros aplicados.</p>`
 
 ## Paginas comprador (src/pages/comprador/)
 
