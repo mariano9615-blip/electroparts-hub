@@ -384,19 +384,40 @@ handleSubmit(): valida campos requeridos → crea Pedido con crypto.randomUUID()
 Banner exito: bg-ep-green-light, border-ep-green, IconCircleCheck + Spinner.
 
 ### DetallePedidoComprador.tsx · /comprador/pedidos/:id
-Stores leidos: usePedidosStore, useCotizacionesStore
+Stores leidos: usePedidosStore, useCotizacionesStore, useOrdenesStore, useNotificacionesStore
 Recibe id via useParams(). Si el pedido no existe: EmptyState con "Pedido no encontrado" y botón volver.
+Estado local (useState): modalAdjudicar: Cotizacion|null, modalRechazar: Cotizacion|null.
 Layout:
   Botón "← Volver" (navigate(-1)) arriba del header.
   Header: título text-2xl + badge de estado alineado a la derecha + subtítulo categoría·cantidad·unidad.
   Card información: grid 2 columnas — izquierda descripción completa; derecha grid 2-col de labels/valores
     (presupuesto máx si existe, fecha límite, cantidad+unidad, publicado, total cotizaciones).
-  Sección "Cotizaciones recibidas (N)": si hay cero → EmptyState; si hay → tabla con columnas
-    Proveedor | Precio (font-mono) | Precio unitario (precio/cantidad, font-mono text-muted) |
-    Entrega | Notas (truncado 60 chars, title= tooltip) | Estado (Badge).
-  Fila con precio mínimo: bg-ep-green-light en toda la fila + badge inline "Mejor precio" (bg-ep-green text-white text-[10px] rounded-full).
-  Cotizaciones ordenadas por precio ascendente.
-Solo lectura — sin adjudicar ni modificar estado.
+  Sección "Cotizaciones recibidas (N)":
+    Banner adjudicación (si pedido.estado==='adjudicado'): bg-ep-green-light border-ep-green rounded-lg
+      "Pedido adjudicado a [proveedorNombre] el [fecha]". Aparece encima de la tabla.
+    Si hay cero cotizaciones → EmptyState.
+    Si hay cotizaciones → tabla con columnas:
+      Proveedor | Precio (font-mono) | Precio unitario (precio/cantidad, font-mono text-muted) |
+      Entrega | Notas (truncado 60 chars, title= tooltip) | Estado (Badge) | Acciones (solo si !adjudicado).
+    Fila con precio mínimo: bg-ep-green-light en toda la fila + badge inline "Mejor precio".
+    Cotizaciones ordenadas por precio ascendente.
+    Columna "Acciones" (alineada derecha): visible solo cuando pedido.estado !== 'adjudicado'.
+      cot.estado === 'pendiente' → Button primary sm "Adjudicar" + Button secondary sm "Rechazar".
+      cot.estado !== 'pendiente' → sin botones (solo el Badge de estado).
+
+Flujo adjudicar:
+  Click "Adjudicar" → setModalAdjudicar(cot).
+  Modal "Confirmar adjudicación": resumen proveedor/precio/entrega + aviso amber con IconAlertTriangle.
+  Confirmar → notifica proveedores rechazados (tipo 'pedido_adjudicado', rolDestino 'proveedor')
+    → aceptarCotizacion(id) [que internamente: marca como aceptada, otras como rechazadas,
+    crea Orden, actualiza pedido a 'adjudicado', notifica comprador y proveedor ganador]
+    → setModalAdjudicar(null).
+
+Flujo rechazar individual:
+  Click "Rechazar" → setModalRechazar(cot).
+  Modal "Rechazar cotización": "¿Rechazar la cotización de [proveedor]?".
+  Confirmar → rechazarCotizacion(id) + notifica proveedor (tipo 'pedido_adjudicado', rolDestino 'proveedor')
+    → setModalRechazar(null).
 
 ### MisCotizacionesComprador.tsx · /comprador/cotizaciones
 Tabs: todas | pendientes | aceptadas | rechazadas (con count entre parentesis).
@@ -463,11 +484,16 @@ Igual que ChatComprador con logica invertida:
    setPedidoIdSimulado() (activa simulador) → banner exito → 3s → navigate('/comprador/cotizaciones')
 4. MisCotizacionesComprador: llegan 4 cotizaciones a los 5/12/22/35s (via simulador)
    El badge del sidebar se actualiza en tiempo real.
-5. Click "Aceptar cotizacion" → aceptarCotizacion(id):
-   - cotizacion → 'aceptada', resto del pedido → 'rechazada'
-   - crea Orden con chatHabilitado=true
-   - pedido → 'adjudicado'
-   - navigate('/comprador/ordenes')
+5a. Desde MisCotizacionesComprador: Click "Aceptar cotizacion" → aceptarCotizacion(id):
+    - cotizacion → 'aceptada', resto del pedido → 'rechazada'
+    - crea Orden con chatHabilitado=true
+    - pedido → 'adjudicado'
+    - navigate('/comprador/ordenes')
+5b. Desde DetallePedidoComprador (/comprador/pedidos/:id): Click "Adjudicar" en fila de la tabla
+    → modal con resumen proveedor/precio/entrega + aviso de efecto en cadena
+    → Confirmar → notifica rechazados + aceptarCotizacion(id) → pedido pasa a 'adjudicado'
+    → banner verde aparece en la página, columna Acciones desaparece.
+    También disponible: "Rechazar" cotización individual sin adjudicar otra.
 6. MisOrdenesComprador: lista la orden con boton "Ir al chat"
 7. ChatComprador: conversacion bidireccional con respuestas automaticas del proveedor
 

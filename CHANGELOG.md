@@ -1,5 +1,26 @@
 # CHANGELOG -- ElectroParts Hub
 
+## [v0.1.7] -- 2026-06-30 -- feat: adjudicar y rechazar cotizaciones desde detalle de pedido
+
+### src/pages/comprador/DetallePedidoComprador.tsx (modificado)
+- Agrega import de `useState`, `Button`, `Modal` (de `../../components/ui`), `useOrdenesStore`, `useNotificacionesStore`, `type Cotizacion`
+- Estado local: `modalAdjudicar: Cotizacion | null` y `modalRechazar: Cotizacion | null` (useState solo para control de modales — lógica de negocio permanece en stores)
+- Suscripción reactiva a `useOrdenesStore` para obtener `ordenAdjudicada` (usada en el banner)
+- **Tabla de cotizaciones**: nueva columna "Acciones" (solo visible cuando `pedido.estado !== 'adjudicado'`)
+  - Cotizaciones con `estado === 'pendiente'`: Button primary sm "Adjudicar" + Button secondary sm "Rechazar" alineados a la derecha
+  - Cotizaciones con otro estado: celda vacía (solo el Badge de estado existente)
+- **Banner de adjudicación**: `bg-ep-green-light border border-ep-green rounded-lg px-4 py-3 text-sm text-ep-green-dark mb-4` — aparece encima de la tabla cuando `pedido.estado === 'adjudicado'`; muestra proveedor ganador y fecha de confirmación de la orden
+- **Modal "Confirmar adjudicación"** (`size="md"`): resumen en grid 3 columnas (proveedor, precio font-mono, entrega) + aviso amber con `IconAlertTriangle` explicando efecto en cadena
+  - Al confirmar: notifica proveedores pendientes rechazados (tipo `'pedido_adjudicado'`, `rolDestino 'proveedor'`) → llama `aceptarCotizacion(id)` que internamente crea orden, actualiza pedido, notifica comprador y proveedor ganador
+- **Modal "Rechazar cotización"** (`size="sm"`): confirmación simple "¿Rechazar la cotización de [proveedor]?"
+  - Al confirmar: llama `rechazarCotizacion(id)` + dispara notificación al proveedor (tipo `'pedido_adjudicado'`, `rolDestino 'proveedor'`)
+
+### ANTIGRAVITY.md
+- Sección `DetallePedidoComprador.tsx`: reescrita completamente — documenta stores, estado local, flujos adjudicar y rechazar individual, columna Acciones, banner
+- Sección `## Flujos de negocio / Flujo comprador completo`, paso 5: expandido en 5a (desde MisCotizacionesComprador) y 5b (desde DetallePedidoComprador con modal de confirmación)
+
+---
+
 ## [v0.1.6] -- 2026-06-29 -- feat: página detalle de pedido con cotizaciones recibidas
 
 ### src/pages/comprador/DetallePedidoComprador.tsx (nuevo archivo, líneas 1-165)
