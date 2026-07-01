@@ -11,6 +11,9 @@ interface PedidosState {
   actualizarEstadoPedido: (id: string, estado: EstadoPedido) => void;
   incrementarCotizaciones: (pedidoId: string) => void;
   eliminarPedido: (id: string) => void;
+  iniciarNegociacion: (pedidoId: string, cotizacionId: string) => void;
+  cancelarNegociacion: (pedidoId: string) => void;
+  cancelarPedido: (id: string, observacion: string) => void;
 }
 
 export const usePedidosStore = create<PedidosState>((set, get) => ({
@@ -49,6 +52,48 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
       useCotizacionesStore.getState().eliminarCotizacionesByPedidoId(id);
       set((state) => ({ pedidos: state.pedidos.filter((p) => p.id !== id) }));
     }).catch((e) => console.error('eliminarPedido:', e));
+  },
+
+  iniciarNegociacion: (pedidoId, cotizacionId) => {
+    const data: Partial<Pedido> = {
+      estado: 'en_negociacion',
+      cotizacionEnNegociacionId: cotizacionId,
+    };
+    api.updatePedido(pedidoId, data).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        pedidos: state.pedidos.map((p) =>
+          p.id === pedidoId ? { ...p, ...data } : p,
+        ),
+      }));
+    }).catch((e) => console.error('iniciarNegociacion:', e));
+  },
+
+  cancelarNegociacion: (pedidoId) => {
+    api.updatePedido(pedidoId, { estado: 'abierto', cotizacionEnNegociacionId: undefined }).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        pedidos: state.pedidos.map((p) =>
+          p.id === pedidoId
+            ? { ...p, estado: 'abierto', cotizacionEnNegociacionId: undefined }
+            : p,
+        ),
+      }));
+    }).catch((e) => console.error('cancelarNegociacion:', e));
+  },
+
+  cancelarPedido: (id, observacion) => {
+    const data: Partial<Pedido> = {
+      estado: 'cancelado',
+      observacionBaja: observacion,
+      fechaBaja: new Date().toISOString(),
+    };
+    api.updatePedido(id, data).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        pedidos: state.pedidos.map((p) => (p.id === id ? { ...p, ...data } : p)),
+      }));
+    }).catch((e) => console.error('cancelarPedido:', e));
   },
 
   incrementarCotizaciones: (pedidoId) => {

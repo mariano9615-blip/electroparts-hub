@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { IconMenu2, IconLogout, IconBell } from '@tabler/icons-react';
+import { IconMenu2, IconLogout, IconBell, IconBellOff } from '@tabler/icons-react';
 import { Badge, Button } from '../ui';
 import { useRolStore } from '../../store/useRolStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificacionesStore } from '../../store/useNotificacionesStore';
+import { useNotificationSound } from '../../hooks/useNotificationSound';
 import { NotificacionesPanel } from './NotificacionesPanel';
 
 interface TopBarProps {
@@ -31,6 +32,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const rol = useRolStore((s) => s.rol);
   const seccion = BREADCRUMB_MAP[pathname] ?? 'ElectroParts Hub';
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const { silenciado, toggleSilencio } = useNotificationSound();
 
   const cantidadNoLeidas = useNotificacionesStore(
     (s) => s.notificaciones.filter((n) => n.rolDestino === rol && !n.leida).length,
@@ -56,6 +58,20 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Toggle silencio de notificaciones */}
+          <button
+            onClick={toggleSilencio}
+            className="p-1.5 rounded-lg text-ep-text-secondary hover:bg-ep-surface-raised transition-colors duration-150"
+            aria-label={silenciado ? 'Activar sonidos' : 'Silenciar sonidos'}
+            title={silenciado ? 'Sonidos silenciados — click para activar' : 'Sonidos activos — click para silenciar'}
+          >
+            {silenciado ? (
+              <IconBellOff size={18} stroke={1.5} className="text-ep-text-muted" />
+            ) : (
+              <IconBell size={18} stroke={1.5} className="text-ep-text-secondary" />
+            )}
+          </button>
+
           {/* Botón de notificaciones con badge */}
           <div className="relative">
             <button

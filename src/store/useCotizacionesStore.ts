@@ -12,6 +12,8 @@ interface CotizacionesState {
   agregarCotizacion: (cotizacion: Cotizacion) => void;
   aceptarCotizacion: (cotizacionId: string) => void;
   rechazarCotizacion: (cotizacionId: string) => void;
+  iniciarNegociacionCotizacion: (cotizacionId: string) => void;
+  cancelarNegociacionCotizacion: (cotizacionId: string) => void;
   eliminarCotizacion: (id: string) => void;
   eliminarCotizacionesByPedidoId: (pedidoId: string) => void;
 }
@@ -107,6 +109,28 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
         ),
       }));
     }).catch((e) => console.error('rechazarCotizacion:', e));
+  },
+
+  iniciarNegociacionCotizacion: (cotizacionId) => {
+    api.updateCotizacion(cotizacionId, { estado: 'en_negociacion' }).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        cotizaciones: state.cotizaciones.map((c) =>
+          c.id === cotizacionId ? { ...c, estado: 'en_negociacion' as const } : c,
+        ),
+      }));
+    }).catch((e) => console.error('iniciarNegociacionCotizacion:', e));
+  },
+
+  cancelarNegociacionCotizacion: (cotizacionId) => {
+    api.updateCotizacion(cotizacionId, { estado: 'pendiente' }).then((updated) => {
+      if (!updated) return;
+      set((state) => ({
+        cotizaciones: state.cotizaciones.map((c) =>
+          c.id === cotizacionId ? { ...c, estado: 'pendiente' as const } : c,
+        ),
+      }));
+    }).catch((e) => console.error('cancelarNegociacionCotizacion:', e));
   },
 
   eliminarCotizacion: (id) => {

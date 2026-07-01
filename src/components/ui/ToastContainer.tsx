@@ -1,38 +1,51 @@
 import { useEffect, useState } from 'react';
 import { Toast } from './Toast';
-import type { Pedido } from '../../types';
+import type { ToastPayload } from './Toast';
+import { playNotificationSound } from '../../utils/sounds';
 
-interface ToastData {
-  id: string;
-  categoria: string;
-  presupuestoMax?: number;
-}
+const MAX_TOASTS = 4;
 
-const MAX_TOASTS = 3;
+// Mapeo de nombres de evento → tipo de toast + sonido
+const EVENTOS: {
+  nombre: string;
+  tipo: ToastPayload['tipo'];
+  sonido: 'pedido' | 'cotizacion' | 'mensaje' | null;
+}[] = [
+  { nombre: 'nuevo-pedido-toast', tipo: 'pedido_nuevo', sonido: 'cotizacion' },
+  { nombre: 'nueva-cotizacion-toast', tipo: 'cotizacion_nueva', sonido: 'cotizacion' },
+  { nombre: 'cotizacion-adjudicada-toast', tipo: 'cotizacion_adjudicada', sonido: 'pedido' },
+  { nombre: 'cotizacion-rechazada-toast', tipo: 'cotizacion_rechazada', sonido: 'mensaje' },
+  { nombre: 'cotizacion-negociacion-toast', tipo: 'cotizacion_negociacion', sonido: 'cotizacion' },
+  { nombre: 'mensaje-nuevo-toast', tipo: 'mensaje_nuevo', sonido: 'mensaje' },
+  { nombre: 'estado-pedido-toast', tipo: 'estado_cambio', sonido: null },
+];
 
 export function ToastContainer() {
-  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const [toasts, setToasts] = useState<ToastPayload[]>([]);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const pedido = (e as CustomEvent<Pedido>).detail;
-      setToasts((prev) => {
-        if (prev.length >= MAX_TOASTS) return prev;
-        // Evitar duplicados si el mismo pedido dispara el evento más de una vez
-        if (prev.some((t) => t.id === pedido.id)) return prev;
-        return [
-          ...prev,
-          {
-            id: pedido.id,
-            categoria: pedido.categoria,
-            presupuestoMax: pedido.presupuestoMax,
-          },
-        ];
-      });
-    };
+    const handlers = EVENTOS.map(({ nombre, tipo, sonido }) => {
+      const handler = (e: Event) => {
+        const detail = (e as CustomEvent).detail as ToastPayload;
+        if (!detail) return;
 
-    window.addEventListener('nuevo-pedido-toast', handler);
-    return () => window.removeEventListener('nuevo-pedido-toast', handler);
+        setToasts((prev) => {
+          if (prev.length >= MAX_TOASTS) return prev;
+          if (prev.some((t) => t.id === detail.id)) return prev;
+          return [...prev, { ...detail, tipo }];
+        });
+
+        if (sonido) playNotificationSound(sonido);
+      };
+      window.addEventListener(nombre, handler);
+      return { nombre, handler };
+    });
+
+    return () => {
+      handlers.forEach(({ nombre, handler }) =>
+        window.removeEventListener(nombre, handler),
+      );
+    };
   }, []);
 
   const handleClose = (id: string) => {
@@ -44,13 +57,7 @@ export function ToastContainer() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
       {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          id={toast.id}
-          categoria={toast.categoria}
-          presupuestoMax={toast.presupuestoMax}
-          onClose={handleClose}
-        />
+        <Toast key={toast.id} {...toast} onClose={handleClose} />
       ))}
     </div>
   );

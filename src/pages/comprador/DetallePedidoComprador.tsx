@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { IconArrowLeft, IconAlertCircle, IconInbox, IconAlertTriangle } from '@tabler/icons-react';
-import { Badge, Button, Chat, EmptyState, Modal, Select } from '../../components/ui';
+import { IconArrowLeft, IconAlertCircle, IconInbox, IconAlertTriangle, IconHandStop } from '@tabler/icons-react';
+import { Badge, Button, Chat, EmptyState, Modal, PedidoStepper, Select } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
@@ -14,6 +14,7 @@ type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 const ESTADO_COLOR: Record<string, BadgeColor> = {
   abierto: 'green',
   en_cotizacion: 'blue',
+  en_negociacion: 'amber',
   adjudicado: 'gray',
   cancelado: 'red',
 };
@@ -21,18 +22,21 @@ const ESTADO_COLOR: Record<string, BadgeColor> = {
 const ESTADO_LABEL: Record<string, string> = {
   abierto: 'Abierto',
   en_cotizacion: 'En cotización',
+  en_negociacion: 'En negociación',
   adjudicado: 'Adjudicado',
   cancelado: 'Cancelado',
 };
 
 const COT_ESTADO_COLOR: Record<string, BadgeColor> = {
   pendiente: 'amber',
+  en_negociacion: 'amber',
   aceptada: 'green',
   rechazada: 'red',
 };
 
 const COT_ESTADO_LABEL: Record<string, string> = {
   pendiente: 'Pendiente',
+  en_negociacion: 'En negociación',
   aceptada: 'Aceptada',
   rechazada: 'Rechazada',
 };
@@ -40,6 +44,7 @@ const COT_ESTADO_LABEL: Record<string, string> = {
 const FILTRO_ESTADO_COT_OPTIONS = [
   { value: '', label: 'Todas' },
   { value: 'pendiente', label: 'Pendiente' },
+  { value: 'en_negociacion', label: 'En negociación' },
   { value: 'aceptada', label: 'Aceptada' },
   { value: 'rechazada', label: 'Rechazada' },
 ];
@@ -58,6 +63,7 @@ export default function DetallePedidoComprador() {
 
   const [modalAdjudicar, setModalAdjudicar] = useState<Cotizacion | null>(null);
   const [modalRechazar, setModalRechazar] = useState<Cotizacion | null>(null);
+  const [modalNegociar, setModalNegociar] = useState<Cotizacion | null>(null);
 
   // Estado de filtros de cotizaciones
   const [filtroEstadoCot, setFiltroEstadoCot] = useState('');
@@ -69,6 +75,10 @@ export default function DetallePedidoComprador() {
   const ordenes = useOrdenesStore((s) => s.ordenes);
   const aceptarCotizacion = useCotizacionesStore((s) => s.aceptarCotizacion);
   const rechazarCotizacion = useCotizacionesStore((s) => s.rechazarCotizacion);
+  const iniciarNegociacionCotizacion = useCotizacionesStore((s) => s.iniciarNegociacionCotizacion);
+  const cancelarNegociacionCotizacion = useCotizacionesStore((s) => s.cancelarNegociacionCotizacion);
+  const iniciarNegociacionPedido = usePedidosStore((s) => s.iniciarNegociacion);
+  const cancelarNegociacionPedido = usePedidosStore((s) => s.cancelarNegociacion);
 
   const pedido = pedidos.find((p) => p.id === id);
 
@@ -95,8 +105,6 @@ export default function DetallePedidoComprador() {
     if (filtroProveedor) lista = lista.filter((c) => c.proveedorId === filtroProveedor);
     if (ordenPrecio === 'desc') {
       lista.sort((a, b) => b.precio - a.precio);
-    } else if (ordenPrecio === 'asc') {
-      lista.sort((a, b) => a.precio - b.precio);
     } else {
       lista.sort((a, b) => a.precio - b.precio);
     }
@@ -141,12 +149,16 @@ export default function DetallePedidoComprador() {
   }
 
   const pedidoAdjudicado = pedido.estado === 'adjudicado';
+  const pedidoEnNegociacion = pedido.estado === 'en_negociacion';
+  const pedidoCancelado = pedido.estado === 'cancelado';
+  const pedidoBloqueado = pedidoAdjudicado || pedidoCancelado;
+
   const cotizacionAceptada = todasCotizacionesPedido.find((c) => c.estado === 'aceptada') ?? null;
+  const cotizacionEnNegociacion = todasCotizacionesPedido.find((c) => c.estado === 'en_negociacion') ?? null;
   const ordenAdjudicada = ordenes.find((o) => o.pedidoId === pedido.id) ?? null;
 
   const handleConfirmarAdjudicacion = () => {
     if (!modalAdjudicar) return;
-    // Notificar a los proveedores cuyas cotizaciones serán rechazadas automáticamente
     todasCotizacionesPedido
       .filter((c) => c.id !== modalAdjudicar.id && c.estado === 'pendiente')
       .forEach((c) => {
@@ -175,6 +187,26 @@ export default function DetallePedidoComprador() {
     setModalRechazar(null);
   };
 
+  const handleConfirmarNegociacion = () => {
+    if (!modalNegociar) return;
+    iniciarNegociacionCotizacion(modalNegociar.id);
+    iniciarNegociacionPedido(pedido.id, modalNegociar.id);
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'cotizacion_en_negociacion',
+      rolDestino: 'proveedor',
+      titulo: 'El comprador quiere negociar',
+      mensaje: `Tu cotización está siendo evaluada`,
+      entidadId: modalNegociar.id,
+    });
+    setModalNegociar(null);
+  };
+
+  const handleCancelarNegociacion = () => {
+    if (!cotizacionEnNegociacion) return;
+    cancelarNegociacionCotizacion(cotizacionEnNegociacion.id);
+    cancelarNegociacionPedido(pedido.id);
+  };
+
   return (
     <div>
       {/* Botón volver */}
@@ -198,6 +230,14 @@ export default function DetallePedidoComprador() {
           {ESTADO_LABEL[pedido.estado] ?? pedido.estado}
         </Badge>
       </div>
+
+      {/* Stepper de estado */}
+      <PedidoStepper
+        estado={pedido.estado}
+        rol="comprador"
+        nombreProveedor={cotizacionAceptada?.proveedorNombre ?? cotizacionEnNegociacion?.proveedorNombre}
+        observacionBaja={pedido.observacionBaja}
+      />
 
       {/* Card de información */}
       <div className="bg-ep-surface border border-ep-border rounded-lg p-5 mb-6">
@@ -249,6 +289,23 @@ export default function DetallePedidoComprador() {
           </div>
         </div>
       </div>
+
+      {/* Acción: cancelar negociación si está en negociación */}
+      {pedidoEnNegociacion && cotizacionEnNegociacion && (
+        <div className="flex items-center justify-between bg-ep-amber-light border border-ep-amber rounded-lg px-4 py-3 mb-4">
+          <div className="flex items-start gap-2.5">
+            <IconHandStop size={16} stroke={1.5} className="text-ep-amber mt-0.5 shrink-0" />
+            <p className="text-sm text-ep-amber-dark">
+              Estás negociando con{' '}
+              <span className="font-semibold">{cotizacionEnNegociacion.proveedorNombre}</span>.
+              Podés adjudicar directamente o cancelar la negociación.
+            </p>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleCancelarNegociacion}>
+            Cancelar negociación
+          </Button>
+        </div>
+      )}
 
       {/* Sección cotizaciones */}
       <div>
@@ -321,7 +378,7 @@ export default function DetallePedidoComprador() {
                   <th className={`${TH} text-left`}>Entrega</th>
                   <th className={`${TH} text-left`}>Notas</th>
                   <th className={`${TH} text-right`}>Estado</th>
-                  {!pedidoAdjudicado && <th className={`${TH} text-right`}>Acciones</th>}
+                  {!pedidoBloqueado && <th className={`${TH} text-right`}>Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -333,21 +390,31 @@ export default function DetallePedidoComprador() {
                     cot.notas && cot.notas.length > 60
                       ? cot.notas.slice(0, 60) + '...'
                       : cot.notas;
+                  const esEnNegociacion = cot.estado === 'en_negociacion';
 
                   return (
                     <tr
                       key={cot.id}
                       className={[
                         'border-b border-ep-border last:border-0 transition-colors duration-150',
-                        esMejorPrecio ? 'bg-ep-green-light' : 'hover:bg-ep-surface-raised',
+                        esMejorPrecio && !esEnNegociacion
+                          ? 'bg-ep-green-light'
+                          : esEnNegociacion
+                            ? 'bg-ep-amber-light/40'
+                            : 'hover:bg-ep-surface-raised',
                       ].join(' ')}
                     >
                       <td className="px-3 py-2.5 font-medium text-ep-text-primary">
                         <span className="flex items-center gap-2">
                           {cot.proveedorNombre}
-                          {esMejorPrecio && (
+                          {esMejorPrecio && !esEnNegociacion && (
                             <span className="bg-ep-green text-white text-[10px] px-2 py-0.5 rounded-full">
                               Mejor precio
+                            </span>
+                          )}
+                          {esEnNegociacion && (
+                            <span className="bg-ep-amber text-white text-[10px] px-2 py-0.5 rounded-full">
+                              Negociando
                             </span>
                           )}
                         </span>
@@ -370,9 +437,9 @@ export default function DetallePedidoComprador() {
                           {COT_ESTADO_LABEL[cot.estado] ?? cot.estado}
                         </Badge>
                       </td>
-                      {!pedidoAdjudicado && (
+                      {!pedidoBloqueado && (
                         <td className="px-3 py-2.5 text-right">
-                          {cot.estado === 'pendiente' && (
+                          {(cot.estado === 'pendiente' || cot.estado === 'en_negociacion') && (
                             <span className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="primary"
@@ -381,13 +448,24 @@ export default function DetallePedidoComprador() {
                               >
                                 Adjudicar
                               </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setModalRechazar(cot)}
-                              >
-                                Rechazar
-                              </Button>
+                              {cot.estado === 'pendiente' && !pedidoEnNegociacion && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setModalNegociar(cot)}
+                                >
+                                  Negociar
+                                </Button>
+                              )}
+                              {cot.estado === 'pendiente' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setModalRechazar(cot)}
+                                >
+                                  Rechazar
+                                </Button>
+                              )}
                             </span>
                           )}
                         </td>
@@ -458,6 +536,34 @@ export default function DetallePedidoComprador() {
               </p>
             </div>
           </div>
+        )}
+      </Modal>
+
+      {/* Modal de confirmación: Iniciar negociación */}
+      <Modal
+        open={modalNegociar !== null}
+        onClose={() => setModalNegociar(null)}
+        title="Iniciar negociación"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="md" onClick={() => setModalNegociar(null)}>
+              Cancelar
+            </Button>
+            <Button variant="primary" size="md" onClick={handleConfirmarNegociacion}>
+              Iniciar negociación
+            </Button>
+          </>
+        }
+      >
+        {modalNegociar && (
+          <p className="text-sm text-ep-text-secondary leading-relaxed">
+            ¿Querés iniciar negociación con{' '}
+            <span className="font-semibold text-ep-text-primary">
+              {modalNegociar.proveedorNombre}
+            </span>
+            ? Podrás chatear antes de adjudicar.
+          </p>
         )}
       </Modal>
 

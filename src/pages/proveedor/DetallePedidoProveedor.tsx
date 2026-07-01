@@ -1,16 +1,18 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { IconArrowLeft, IconAlertCircle } from '@tabler/icons-react';
-import { Badge, Chat, EmptyState } from '../../components/ui';
+import { IconArrowLeft, IconAlertCircle, IconClock } from '@tabler/icons-react';
+import { Badge, Chat, EmptyState, PedidoStepper } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { formatFecha, formatARS } from '../../utils/formatters';
+import { PROV_IDS } from '../../utils/constants';
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
 const ESTADO_COLOR: Record<string, BadgeColor> = {
   abierto: 'green',
   en_cotizacion: 'blue',
+  en_negociacion: 'amber',
   adjudicado: 'gray',
   cancelado: 'red',
 };
@@ -18,6 +20,7 @@ const ESTADO_COLOR: Record<string, BadgeColor> = {
 const ESTADO_LABEL: Record<string, string> = {
   abierto: 'Abierto',
   en_cotizacion: 'En cotización',
+  en_negociacion: 'En negociación',
   adjudicado: 'Adjudicado',
   cancelado: 'Cancelado',
 };
@@ -35,6 +38,19 @@ export default function DetallePedidoProveedor() {
     () => cotizaciones.find((c) => c.pedidoId === (pedido?.id ?? '') && c.estado === 'aceptada') ?? null,
     [cotizaciones, pedido?.id],
   );
+
+  // Cotización del proveedor demo en este pedido
+  const miCotizacion = useMemo(
+    () =>
+      cotizaciones.find(
+        (c) =>
+          c.pedidoId === (pedido?.id ?? '') &&
+          (PROV_IDS as readonly string[]).includes(c.proveedorId),
+      ) ?? null,
+    [cotizaciones, pedido?.id],
+  );
+
+  const miCotizacionEnNegociacion = miCotizacion?.estado === 'en_negociacion';
 
   if (!pedido) {
     return (
@@ -55,6 +71,10 @@ export default function DetallePedidoProveedor() {
       </div>
     );
   }
+
+  const ganadorSoyYo =
+    cotizacionAceptada !== null &&
+    (PROV_IDS as readonly string[]).includes(cotizacionAceptada.proveedorId);
 
   return (
     <div>
@@ -79,6 +99,30 @@ export default function DetallePedidoProveedor() {
           {ESTADO_LABEL[pedido.estado] ?? pedido.estado}
         </Badge>
       </div>
+
+      {/* Stepper de estado */}
+      <PedidoStepper
+        estado={pedido.estado}
+        rol="proveedor"
+        nombreProveedor={ganadorSoyYo ? cotizacionAceptada?.proveedorNombre : undefined}
+        miCotizacionEnNegociacion={miCotizacionEnNegociacion}
+        observacionBaja={pedido.observacionBaja}
+      />
+
+      {/* Indicador "en negociación" para mi cotización */}
+      {miCotizacionEnNegociacion && (
+        <div className="flex items-start gap-2.5 bg-ep-amber-light border border-ep-amber rounded-lg px-4 py-3 mb-6">
+          <IconClock size={16} stroke={1.5} className="text-ep-amber mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-ep-amber-dark">
+              Tu cotización está siendo evaluada
+            </p>
+            <p className="text-xs text-ep-amber-dark/80 mt-0.5">
+              El comprador inició una negociación. Usá el chat para coordinar los detalles.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Resumen cotización aceptada */}
       {cotizacionAceptada && (

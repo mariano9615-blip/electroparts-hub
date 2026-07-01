@@ -8,6 +8,7 @@ import { useOrdenesStore } from '../store/useOrdenesStore';
 import { useNotificacionesStore } from '../store/useNotificacionesStore';
 import { useMensajesStore } from '../store/useMensajesStore';
 import { useRolStore } from '../store/useRolStore';
+import { PROV_IDS } from '../utils/constants';
 
 import Login from '../pages/Login';
 
@@ -49,31 +50,138 @@ function RutaLogin() {
 }
 
 export function AppRouter() {
-  // Ref que guarda los IDs de pedidos ya conocidos para detectar nuevos en cada ciclo de polling
+  // ── Snapshots para detección de cambios entre polls ──────────────────────────
   const pedidosConocidosRef = useRef<Set<string> | null>(null);
+  const pedidosEstadoRef = useRef<Map<string, string> | null>(null);
+  const cotizacionesEstadoRef = useRef<Map<string, string> | null>(null);
 
   useEffect(() => {
-    // Subscribe al store de pedidos: compara estado previo vs. actual en cada actualización
-    const desuscribir = usePedidosStore.subscribe((state, prevState) => {
-      // Primera carga: inicializar baseline sin disparar toasts
+    // ── Suscripción a cambios en pedidos ─────────────────────────────────────
+    const desubPedidos = usePedidosStore.subscribe((state, prevState) => {
+      // Primera inicialización: guardar baseline sin disparar toasts
       if (pedidosConocidosRef.current === null) {
         pedidosConocidosRef.current = new Set(prevState.pedidos.map((p) => p.id));
       }
+      if (pedidosEstadoRef.current === null) {
+        pedidosEstadoRef.current = new Map(state.pedidos.map((p) => [p.id, p.estado]));
+      }
 
       const rol = useRolStore.getState().rol;
-      if (rol !== 'proveedor') {
-        pedidosConocidosRef.current = new Set(state.pedidos.map((p) => p.id));
+
+      // Detectar pedidos nuevos (toast para proveedor)
+      if (rol === 'proveedor') {
+        const nuevosPedidos = state.pedidos.filter(
+          (p) => !pedidosConocidosRef.current!.has(p.id),
+        );
+        nuevosPedidos.forEach((pedido) => {
+          window.dispatchEvent(
+            new CustomEvent('nuevo-pedido-toast', {
+              detail: {
+                id: pedido.id,
+                titulo: `Nuevo pedido: ${pedido.titulo}`,
+                subtitulo: pedido.categoria,
+                navegarA: `/proveedor/pedidos/${pedido.id}`,
+              },
+            }),
+          );
+        });
+      }
+
+      pedidosConocidosRef.current = new Set(state.pedidos.map((p) => p.id));
+
+      // Detectar cambios de estado en pedidos
+      state.pedidos.forEach((p) => {
+        const estadoAnterior = pedidosEstadoRef.current!.get(p.id);
+        if (estadoAnterior && estadoAnterior !== p.estado) {
+          window.dispatchEvent(
+            new CustomEvent('estado-pedido-toast', {
+              detail: {
+                id: `${p.id}-estado-${p.estado}`,
+                titulo: `Pedido: ${p.estado.replace('_', ' ')}`,
+                subtitulo: p.titulo,
+              },
+            }),
+          );
+        }
+      });
+
+      pedidosEstadoRef.current = new Map(state.pedidos.map((p) => [p.id, p.estado]));
+    });
+
+    // ── Suscripción a cambios en cotizaciones ─────────────────────────────────
+    const desubCotizaciones = useCotizacionesStore.subscribe((state) => {
+      if (cotizacionesEstadoRef.current === null) {
+        cotizacionesEstadoRef.current = new Map(
+          state.cotizaciones.map((c) => [c.id, c.estado]),
+        );
         return;
       }
 
-      const nuevosPedidos = state.pedidos.filter(
-        (p) => !pedidosConocidosRef.current!.has(p.id),
-      );
-      nuevosPedidos.forEach((pedido) => {
-        window.dispatchEvent(new CustomEvent('nuevo-pedido-toast', { detail: pedido }));
+      const rol = useRolStore.getState().rol;
+
+      state.cotizaciones.forEach((c) => {
+        const estadoAnterior = cotizacionesEstadoRef.current!.get(c.id);
+
+        if (!estadoAnterior) {
+          // Cotización nueva: avisar al comprador
+          if (rol === 'comprador') {
+            window.dispatchEvent(
+              new CustomEvent('nueva-cotizacion-toast', {
+                detail: {
+                  id: c.id,
+                  titulo: 'Nueva cotización recibida',
+                  subtitulo: `${c.proveedorNombre} — $${c.precio.toLocaleString('es-AR')}`,
+                  navegarA: `/comprador/pedidos/${c.pedidoId}`,
+                },
+              }),
+            );
+          }
+          return;
+        }
+
+        if (estadoAnterior === c.estado) return;
+
+        // Cambio de estado detectado: solo avisar al proveedor si la cotizacion le pertenece
+        if (rol === 'proveedor' && (PROV_IDS as readonly string[]).includes(c.proveedorId)) {
+          if (c.estado === 'aceptada') {
+            window.dispatchEvent(
+              new CustomEvent('cotizacion-adjudicada-toast', {
+                detail: {
+                  id: c.id,
+                  titulo: '¡Tu cotización fue adjudicada!',
+                  subtitulo: c.proveedorNombre,
+                  navegarA: `/proveedor/pedidos/${c.pedidoId}`,
+                },
+              }),
+            );
+          } else if (c.estado === 'rechazada') {
+            window.dispatchEvent(
+              new CustomEvent('cotizacion-rechazada-toast', {
+                detail: {
+                  id: c.id,
+                  titulo: 'Cotización no seleccionada',
+                  subtitulo: 'Tu cotización fue rechazada',
+                },
+              }),
+            );
+          } else if (c.estado === 'en_negociacion') {
+            window.dispatchEvent(
+              new CustomEvent('cotizacion-negociacion-toast', {
+                detail: {
+                  id: c.id,
+                  titulo: 'El comprador quiere negociar',
+                  subtitulo: 'Tu cotización está siendo evaluada',
+                  navegarA: `/proveedor/pedidos/${c.pedidoId}`,
+                },
+              }),
+            );
+          }
+        }
       });
 
-      pedidosConocidosRef.current = new Set(state.pedidos.map((p) => p.id));
+      cotizacionesEstadoRef.current = new Map(
+        state.cotizaciones.map((c) => [c.id, c.estado]),
+      );
     });
 
     const cargarTodo = () => {
@@ -87,9 +195,11 @@ export function AppRouter() {
 
     cargarTodo();
     const intervalo = setInterval(cargarTodo, 5000);
+
     return () => {
       clearInterval(intervalo);
-      desuscribir();
+      desubPedidos();
+      desubCotizaciones();
     };
   }, []);
 

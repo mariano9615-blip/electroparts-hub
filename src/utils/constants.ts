@@ -30,6 +30,7 @@ export const PROVEEDORES_SIMULADOS = [
 ] as const;
 
 export const COMPRADOR_ID = 'comprador-demo-001';
+export const PROV_IDS = ['prov-1', 'prov-2', 'prov-3', 'prov-4', 'prov-demo-001'] as const;
 export const STORAGE_KEY_INITIALIZED = 'ep_initialized';
 export const STORAGE_KEY_PEDIDOS = 'ep_pedidos';
 export const STORAGE_KEY_COTIZACIONES = 'ep_cotizaciones';

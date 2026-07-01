@@ -21,6 +21,7 @@ export function Chat({ pedidoId, otroNombre }: ChatProps) {
   const cargarMensajes = useMensajesStore((s) => s.cargarMensajes);
   const enviarMensaje = useMensajesStore((s) => s.enviarMensaje);
   const limpiarMensajes = useMensajesStore((s) => s.limpiarMensajes);
+  const marcarMensajesLeidos = useMensajesStore((s) => s.marcarMensajesLeidos);
   const rol = useRolStore((s) => s.rol);
 
   const miRol = rol;
@@ -32,6 +33,13 @@ export function Chat({ pedidoId, otroNombre }: ChatProps) {
       limpiarMensajes();
     };
   }, [pedidoId]);
+
+  // Marcar mensajes del otro lado como leídos cada vez que llegan nuevos mensajes
+  useEffect(() => {
+    if (mensajes.length > 0) {
+      marcarMensajesLeidos(pedidoId, miRol);
+    }
+  }, [mensajes]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,13 +74,17 @@ export function Chat({ pedidoId, otroNombre }: ChatProps) {
           )}
           {mensajes.map((msg) => {
             const esMio = msg.autorRol === miRol;
+            const noLeido = !esMio && msg.leido === false;
             return (
               <div
                 key={msg.id}
                 className={`flex flex-col ${esMio ? 'items-end' : 'items-start'}`}
               >
-                <span className="text-[10px] text-ep-text-muted mb-1">
+                <span className="text-[10px] text-ep-text-muted mb-1 flex items-center gap-1.5">
                   {msg.autorNombre} · {formatHora(msg.timestamp)}
+                  {noLeido && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-ep-blue inline-block" title="No leído" />
+                  )}
                 </span>
                 <div
                   className={[
@@ -80,6 +92,7 @@ export function Chat({ pedidoId, otroNombre }: ChatProps) {
                     esMio
                       ? 'bg-ep-blue text-white rounded-2xl rounded-tr-sm'
                       : 'bg-ep-surface border border-ep-border text-ep-text-primary rounded-2xl rounded-tl-sm',
+                    noLeido ? 'ring-1 ring-ep-blue/30' : '',
                   ].join(' ')}
                 >
                   {msg.texto}

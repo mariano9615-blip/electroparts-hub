@@ -2,8 +2,8 @@
 
 export type Rol = 'comprador' | 'proveedor';
 
-export type EstadoPedido = 'abierto' | 'en_cotizacion' | 'adjudicado' | 'cancelado';
-export type EstadoCotizacion = 'pendiente' | 'aceptada' | 'rechazada';
+export type EstadoPedido = 'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado';
+export type EstadoCotizacion = 'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada';
 export type EstadoOrden = 'confirmada' | 'en_transito' | 'entregada' | 'disputada';
 
 export interface Pedido {
@@ -19,6 +19,9 @@ export interface Pedido {
   estado: EstadoPedido;
   cotizacionesRecibidas: number;
   fechaCreacion: string;
+  cotizacionEnNegociacionId?: string;
+  observacionBaja?: string;
+  fechaBaja?: string;
 }
 
 export interface Cotizacion {
@@ -63,6 +66,7 @@ export interface MensajePedido {
   autorNombre: string;
   texto: string;
   timestamp: string;
+  leido?: boolean;
 }
 
 export interface Proveedor {

@@ -12,3 +12,4 @@ export { PageHeader } from './PageHeader';
 export { Toast } from './Toast';
 export { ToastContainer } from './ToastContainer';
 export { Chat } from './Chat';
+export { PedidoStepper } from './PedidoStepper';

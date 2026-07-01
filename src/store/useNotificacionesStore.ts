@@ -6,7 +6,11 @@ export type TipoNotificacion =
   | 'pedido_adjudicado'
   | 'orden_confirmada'
   | 'nueva_orden'
-  | 'cotizacion_aceptada';
+  | 'cotizacion_aceptada'
+  | 'cotizacion_en_negociacion'
+  | 'cotizacion_rechazada'
+  | 'mensaje_nuevo'
+  | 'estado_pedido_cambio';
 
 export interface Notificacion {
   id: string;

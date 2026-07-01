@@ -239,6 +239,23 @@ export async function createMensaje(data: MensajePedido): Promise<MensajePedido 
   }
 }
 
+export async function updateMensaje(
+  id: string,
+  data: Partial<MensajePedido>,
+): Promise<MensajePedido | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/mensajes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (e) {
+    console.error('api.updateMensaje:', e);
+    return null;
+  }
+}
+
 // ─── Delete ──────────────────────────────────────────────────────────────────
 
 export async function deletePedido(id: string): Promise<boolean> {
