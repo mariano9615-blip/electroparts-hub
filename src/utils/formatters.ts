@@ -34,6 +34,46 @@ export function diasHasta(isoDate: string): number {
   return Math.ceil(diff / 86400000);
 }
 
+export function getLabelEstadoPedido(estado: string, rol: 'comprador' | 'proveedor'): string {
+  if (rol === 'comprador') {
+    const map: Record<string, string> = {
+      abierto: 'Abierto',
+      en_cotizacion: 'En cotización',
+      en_negociacion: 'En negociación',
+      adjudicado: 'Comprado',
+      cancelado: 'Cancelado',
+    };
+    return map[estado] ?? estado;
+  }
+  const map: Record<string, string> = {
+    abierto: 'Abierto',
+    en_cotizacion: 'En cotización',
+    en_negociacion: 'En negociación',
+    adjudicado: 'Vendido',
+    cancelado: 'Cancelado',
+  };
+  return map[estado] ?? estado;
+}
+
+export function getLabelEstadoCotizacion(estado: string, rol: 'comprador' | 'proveedor'): string {
+  if (rol === 'proveedor') {
+    const map: Record<string, string> = {
+      pendiente: 'Pendiente',
+      en_negociacion: 'En negociación',
+      aceptada: 'Ganada',
+      rechazada: 'Rechazada',
+    };
+    return map[estado] ?? estado;
+  }
+  const map: Record<string, string> = {
+    pendiente: 'Pendiente',
+    en_negociacion: 'En negociación',
+    aceptada: 'Aceptada',
+    rechazada: 'Rechazada',
+  };
+  return map[estado] ?? estado;
+}
+
 export function getColorEstadoPedido(estado: string): string {
   const map: Record<string, string> = {
     abierto:       'bg-ep-green-light text-ep-green-dark',

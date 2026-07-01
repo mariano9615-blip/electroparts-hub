@@ -6,6 +6,7 @@ import { PedidoCard } from '../../components/pedidos/PedidoCard';
 import { CotizacionForm } from '../../components/cotizaciones/CotizacionForm';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
+import { useMensajesStore } from '../../store/useMensajesStore';
 import { CATEGORIAS } from '../../utils/constants';
 import type { Pedido } from '../../types';
 
@@ -16,6 +17,29 @@ const CATEGORIA_OPTIONS = [
   ...CATEGORIAS.map((c) => ({ value: c, label: c })),
 ];
 
+function getActividadDot(
+  pedidoId: string,
+  cotizaciones: { pedidoId: string; fechaCreacion: string }[],
+  mensajesPorPedido: Record<string, { timestamp: string }[]>,
+): 'verde' | 'amber' | null {
+  const timestamps: number[] = [
+    ...cotizaciones.filter((c) => c.pedidoId === pedidoId).map((c) => new Date(c.fechaCreacion).getTime()),
+    ...(mensajesPorPedido[pedidoId] ?? []).map((m) => new Date(m.timestamp).getTime()),
+  ];
+  if (timestamps.length === 0) return null;
+  const diff = Date.now() - Math.max(...timestamps);
+  const horas = diff / (1000 * 60 * 60);
+  if (horas < 2) return 'verde';
+  if (horas < 24) return 'amber';
+  return null;
+}
+
+function getDiasColorClass(dias: number): string {
+  if (dias >= 14) return 'text-ep-red';
+  if (dias >= 7) return 'text-ep-amber';
+  return 'text-ep-text-muted';
+}
+
 export default function PedidosDisponibles() {
   const [pedidoACotizar, setPedidoACotizar] = useState<Pedido | null>(null);
   const [busqueda, setBusqueda] = useState('');
@@ -24,6 +48,7 @@ export default function PedidosDisponibles() {
 
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
+  const mensajesPorPedido = useMensajesStore((s) => s.mensajesPorPedido);
 
   const pedidosDisponibles = [...pedidos]
     .filter((p) => ['abierto', 'en_cotizacion'].includes(p.estado))
@@ -50,7 +75,7 @@ export default function PedidosDisponibles() {
   return (
     <div>
       <PageHeader
-        titulo="Pedidos disponibles"
+        titulo="Explorar pedidos"
         descripcion="Pedidos publicados por compradores esperando cotizaciones"
       />
 
@@ -83,17 +108,40 @@ export default function PedidosDisponibles() {
         <div className="flex flex-col gap-3">
           {pedidosFiltrados.map((pedido) => {
             const cotizado = yaCotize(pedido.id);
+            const actividadDot = getActividadDot(pedido.id, cotizaciones, mensajesPorPedido);
+            const diasPublicado = Math.floor(
+              (Date.now() - new Date(pedido.fechaCreacion ?? Date.now()).getTime()) /
+                (1000 * 60 * 60 * 24),
+            );
+            const diasColorClass = getDiasColorClass(diasPublicado);
+
             return (
               <div key={pedido.id} className="relative">
+                {/* Indicador de actividad */}
+                {actividadDot && (
+                  <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5">
+                    <span
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        actividadDot === 'verde' ? 'bg-ep-green animate-pulse' : 'bg-ep-amber'
+                      }`}
+                      title={actividadDot === 'verde' ? 'Actividad reciente (menos de 2h)' : 'Actividad en las últimas 24h'}
+                    />
+                  </div>
+                )}
                 <PedidoCard
                   pedido={pedido}
                   onCotizar={cotizado ? undefined : () => setPedidoACotizar(pedido)}
                 />
-                {cotizado && (
-                  <div className="absolute bottom-4 right-4">
-                    <Badge color="gray">Ya cotizaste</Badge>
-                  </div>
-                )}
+                <div className="flex items-center justify-between px-4 pb-3 -mt-1">
+                  <span className={`text-[11px] ${diasColorClass}`}>
+                    {diasPublicado === 0
+                      ? 'Publicado hoy'
+                      : `Publicado hace ${diasPublicado} día${diasPublicado !== 1 ? 's' : ''}`}
+                    {diasPublicado >= 14 && ' · Pedido antiguo'}
+                    {diasPublicado >= 7 && diasPublicado < 14 && ' · Lleva tiempo publicado'}
+                  </span>
+                  {cotizado && <Badge color="gray">Ya cotizaste</Badge>}
+                </div>
               </div>
             );
           })}

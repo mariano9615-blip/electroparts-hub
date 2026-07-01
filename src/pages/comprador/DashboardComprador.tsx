@@ -1,30 +1,35 @@
 import { useNavigate } from 'react-router-dom';
-import { IconPackage, IconFileInvoice, IconShoppingCart, IconPlus, IconInbox } from '@tabler/icons-react';
+import { IconPackage, IconFileInvoice, IconShoppingCart, IconPlus, IconInbox, IconCircleX } from '@tabler/icons-react';
 import { StatCard, PageHeader, EmptyState, Button } from '../../components/ui';
 import { PedidosTable } from '../../components/domain/PedidosTable';
 import { CotizacionesTable } from '../../components/domain/CotizacionesTable';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
-import { useOrdenesStore } from '../../store/useOrdenesStore';
 import { COMPRADOR_ID } from '../../utils/constants';
 
 export default function DashboardComprador() {
   const navigate = useNavigate();
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
-  const ordenes = useOrdenesStore((s) => s.ordenes);
 
   const misPedidos = pedidos.filter((p) => p.compradorId === COMPRADOR_ID);
   const pedidosActivos = misPedidos.filter((p) =>
     ['abierto', 'en_cotizacion'].includes(p.estado),
   );
+  const pedidosEnNegociacion = misPedidos.filter((p) => p.estado === 'en_negociacion');
+  const pedidosComprados = misPedidos.filter((p) => p.estado === 'adjudicado');
+  const pedidosCancelados = misPedidos.filter((p) => p.estado === 'cancelado');
+
   const misCotizaciones = cotizaciones.filter((c) =>
     misPedidos.some((p) => p.id === c.pedidoId),
   );
-  const misOrdenes = ordenes.filter((o) => o.compradorId === COMPRADOR_ID);
-  const ordenesEnCurso = misOrdenes.filter((o) =>
-    ['confirmada', 'en_transito'].includes(o.estado),
-  );
+
+  // Cotizaciones recibidas esta semana
+  const inicioSemana = new Date();
+  inicioSemana.setDate(inicioSemana.getDate() - 7);
+  const cotizacionesSemana = misCotizaciones.filter(
+    (c) => new Date(c.fechaCreacion) >= inicioSemana,
+  ).length;
 
   const ultimosPedidos = [...misPedidos]
     .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
@@ -47,24 +52,35 @@ export default function DashboardComprador() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-5">
         <StatCard
           label="Pedidos activos"
           value={pedidosActivos.length}
           icono={IconPackage}
           color="green"
+          sub={`Cotizaciones esta semana: ${cotizacionesSemana}`}
+          onClick={() => navigate('/comprador/pedidos?tab=activos')}
         />
         <StatCard
-          label="Cotizaciones recibidas"
-          value={misCotizaciones.length}
+          label="En negociación"
+          value={pedidosEnNegociacion.length}
           icono={IconFileInvoice}
-          color="blue"
+          color="amber"
+          onClick={() => navigate('/comprador/pedidos?tab=en_negociacion')}
         />
         <StatCard
-          label="Órdenes en curso"
-          value={ordenesEnCurso.length}
+          label="Mis compras"
+          value={pedidosComprados.length}
           icono={IconShoppingCart}
-          color="amber"
+          color="blue"
+          onClick={() => navigate('/comprador/pedidos?tab=comprados')}
+        />
+        <StatCard
+          label="Cancelados"
+          value={pedidosCancelados.length}
+          icono={IconCircleX}
+          color="red"
+          onClick={() => navigate('/comprador/pedidos?tab=cancelados')}
         />
       </div>
 
@@ -74,7 +90,7 @@ export default function DashboardComprador() {
             Últimos pedidos
           </span>
           <button
-            onClick={() => navigate('/comprador/publicar')}
+            onClick={() => navigate('/comprador/pedidos')}
             className="text-[11px] text-ep-blue font-medium hover:underline"
           >
             Ver todos →
@@ -88,7 +104,7 @@ export default function DashboardComprador() {
             accion={{ label: 'Publicar pedido', onClick: () => navigate('/comprador/publicar') }}
           />
         ) : (
-          <PedidosTable pedidos={ultimosPedidos} />
+          <PedidosTable pedidos={ultimosPedidos} rol="comprador" />
         )}
       </div>
 
@@ -98,7 +114,7 @@ export default function DashboardComprador() {
             Últimas cotizaciones
           </span>
           <button
-            onClick={() => navigate('/comprador/cotizaciones')}
+            onClick={() => navigate('/comprador/cotizaciones-recibidas')}
             className="text-[11px] text-ep-blue font-medium hover:underline"
           >
             Ver todas →

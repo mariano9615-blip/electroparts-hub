@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   IconClipboardList,
   IconAlertTriangle,
@@ -12,10 +12,19 @@ import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useMensajesStore } from '../../store/useMensajesStore';
 import { COMPRADOR_ID } from '../../utils/constants';
-import { formatFecha, diasHasta } from '../../utils/formatters';
+import { formatFecha, formatARS, diasHasta } from '../../utils/formatters';
 import type { Pedido } from '../../types';
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
+type Tab = 'todos' | 'activos' | 'en_negociacion' | 'comprados' | 'cancelados';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'activos', label: 'Activos' },
+  { id: 'en_negociacion', label: 'En negociación' },
+  { id: 'comprados', label: 'Comprados' },
+  { id: 'cancelados', label: 'Cancelados' },
+];
 
 const ESTADO_COLOR: Record<string, BadgeColor> = {
   abierto: 'green',
@@ -29,22 +38,45 @@ const ESTADO_LABEL: Record<string, string> = {
   abierto: 'Abierto',
   en_cotizacion: 'En cotización',
   en_negociacion: 'En negociación',
-  adjudicado: 'Adjudicado',
+  adjudicado: 'Comprado',
   cancelado: 'Cancelado',
 };
 
 const FILTRO_ESTADO_OPTIONS = [
-  { value: '', label: 'Todos' },
-  { value: 'pendiente', label: 'Pendiente' },
+  { value: '', label: 'Todos los estados' },
+  { value: 'abierto', label: 'Abierto' },
+  { value: 'en_cotizacion', label: 'En cotización' },
   { value: 'en_negociacion', label: 'En negociación' },
-  { value: 'adjudicado', label: 'Adjudicado' },
+  { value: 'adjudicado', label: 'Comprado' },
   { value: 'cancelado', label: 'Cancelado' },
 ];
 
 const TH =
   'px-3 py-2 text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.06em] border-b border-ep-border';
 
+function getActividadDot(
+  pedidoId: string,
+  cotizaciones: { pedidoId: string; fechaCreacion: string }[],
+  mensajesPorPedido: Record<string, { timestamp: string }[]>,
+): 'verde' | 'amber' | null {
+  const timestamps: number[] = [
+    ...cotizaciones.filter((c) => c.pedidoId === pedidoId).map((c) => new Date(c.fechaCreacion).getTime()),
+    ...(mensajesPorPedido[pedidoId] ?? []).map((m) => new Date(m.timestamp).getTime()),
+  ];
+  if (timestamps.length === 0) return null;
+  const diff = Date.now() - Math.max(...timestamps);
+  const horas = diff / (1000 * 60 * 60);
+  if (horas < 2) return 'verde';
+  if (horas < 24) return 'amber';
+  return null;
+}
+
 export default function ListaPedidosComprador() {
+  const [searchParams] = useSearchParams();
+  const tabInit = searchParams.get('tab') as Tab | null;
+  const [tabActiva, setTabActiva] = useState<Tab>(
+    tabInit && TABS.some((t) => t.id === tabInit) ? tabInit : 'todos',
+  );
   const [filtroEstado, setFiltroEstado] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
@@ -57,6 +89,7 @@ export default function ListaPedidosComprador() {
   const cancelarPedido = usePedidosStore((s) => s.cancelarPedido);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
   const pedidosConMensajeNuevo = useMensajesStore((s) => s.pedidosConMensajeNuevo);
+  const mensajesPorPedido = useMensajesStore((s) => s.mensajesPorPedido);
 
   const misPedidos = useMemo(
     () =>
@@ -76,31 +109,49 @@ export default function ListaPedidosComprador() {
     [misPedidos],
   );
 
-  // Conteo de cotizaciones por pedido
+  // Cotizaciones por pedido: count y mejor precio
   const cotizacionesPorPedido = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map: Record<string, { count: number; mejor: number | null }> = {};
     cotizaciones.forEach((c) => {
-      if (!map[c.pedidoId]) map[c.pedidoId] = 0;
-      map[c.pedidoId]++;
+      if (!map[c.pedidoId]) map[c.pedidoId] = { count: 0, mejor: null };
+      map[c.pedidoId].count++;
+      if (map[c.pedidoId].mejor === null || c.precio < map[c.pedidoId].mejor!) {
+        map[c.pedidoId].mejor = c.precio;
+      }
     });
     return map;
   }, [cotizaciones]);
 
-  const pedidosFiltrados = useMemo(() => {
+  // Conteos por tab
+  const tabCounts = useMemo(() => ({
+    todos: misPedidos.length,
+    activos: misPedidos.filter((p) => p.estado === 'abierto' || p.estado === 'en_cotizacion').length,
+    en_negociacion: misPedidos.filter((p) => p.estado === 'en_negociacion').length,
+    comprados: misPedidos.filter((p) => p.estado === 'adjudicado').length,
+    cancelados: misPedidos.filter((p) => p.estado === 'cancelado').length,
+  }), [misPedidos]);
+
+  const pedidosFiltradosPorTab = useMemo(() => {
     return misPedidos.filter((p) => {
-      if (filtroEstado) {
-        if (filtroEstado === 'pendiente') {
-          if (p.estado !== 'abierto' && p.estado !== 'en_cotizacion') return false;
-        } else {
-          if (p.estado !== filtroEstado) return false;
-        }
+      switch (tabActiva) {
+        case 'activos': return p.estado === 'abierto' || p.estado === 'en_cotizacion';
+        case 'en_negociacion': return p.estado === 'en_negociacion';
+        case 'comprados': return p.estado === 'adjudicado';
+        case 'cancelados': return p.estado === 'cancelado';
+        default: return true;
       }
+    });
+  }, [misPedidos, tabActiva]);
+
+  const pedidosFiltrados = useMemo(() => {
+    return pedidosFiltradosPorTab.filter((p) => {
+      if (filtroEstado && p.estado !== filtroEstado) return false;
       if (filtroCategoria && p.categoria !== filtroCategoria) return false;
       if (fechaDesde && new Date(p.fechaCreacion) < new Date(fechaDesde)) return false;
       if (fechaHasta && new Date(p.fechaCreacion) > new Date(fechaHasta + 'T23:59:59')) return false;
       return true;
     });
-  }, [misPedidos, filtroEstado, filtroCategoria, fechaDesde, fechaHasta]);
+  }, [pedidosFiltradosPorTab, filtroEstado, filtroCategoria, fechaDesde, fechaHasta]);
 
   const hayFiltros = filtroEstado || filtroCategoria || fechaDesde || fechaHasta;
 
@@ -126,6 +177,29 @@ export default function ListaPedidosComprador() {
   return (
     <div>
       <PageHeader titulo="Mis pedidos" descripcion="Pedidos que publicaste en el marketplace" />
+
+      {/* Tabs de filtro */}
+      <div className="flex gap-1 border-b border-ep-border mb-4">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setTabActiva(tab.id)}
+            className={[
+              'px-4 py-2.5 text-sm font-medium transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5',
+              tabActiva === tab.id
+                ? 'border-b-2 border-ep-blue text-ep-blue'
+                : 'text-ep-text-secondary hover:text-ep-text-primary border-b-2 border-transparent',
+            ].join(' ')}
+          >
+            {tab.label}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              tabActiva === tab.id ? 'bg-ep-blue text-white' : 'bg-ep-surface-raised text-ep-text-muted'
+            }`}>
+              {tabCounts[tab.id]}
+            </span>
+          </button>
+        ))}
+      </div>
 
       {/* Barra de filtros */}
       <div className="bg-ep-blue-light/10 border border-ep-border rounded-lg p-4 mb-5 flex flex-wrap items-end gap-3">
@@ -175,7 +249,7 @@ export default function ListaPedidosComprador() {
       </p>
 
       {pedidosFiltrados.length === 0 ? (
-        hayFiltros ? (
+        hayFiltros || tabActiva !== 'todos' ? (
           <p className="text-center py-10 text-sm text-ep-text-muted">
             No hay pedidos que coincidan con los filtros aplicados.
           </p>
@@ -194,7 +268,6 @@ export default function ListaPedidosComprador() {
                 <th className={`${TH} text-left`}>Producto</th>
                 <th className={`${TH} text-left`}>Categoría</th>
                 <th className={`${TH} text-left`}>Fecha límite</th>
-                <th className={`${TH} text-right`}>Cotizaciones</th>
                 <th className={`${TH} text-right`}>Estado</th>
                 <th className={`${TH} text-right`}>Acciones</th>
               </tr>
@@ -203,9 +276,16 @@ export default function ListaPedidosComprador() {
               {pedidosFiltrados.map((pedido) => {
                 const dias = diasHasta(pedido.fechaLimite);
                 const urgente = dias < 3;
-                const cantCot = cotizacionesPorPedido[pedido.id] ?? 0;
+                const cotData = cotizacionesPorPedido[pedido.id];
+                const cantCot = cotData?.count ?? 0;
+                const mejorPrecio = cotData?.mejor ?? null;
                 const tieneMensajeNuevo = pedidosConMensajeNuevo.includes(pedido.id);
                 const cancelado = pedido.estado === 'cancelado';
+                const diasPublicado = Math.floor(
+                  (Date.now() - new Date(pedido.fechaCreacion ?? Date.now()).getTime()) /
+                    (1000 * 60 * 60 * 24),
+                );
+                const actividadDot = getActividadDot(pedido.id, cotizaciones, mensajesPorPedido);
 
                 return (
                   <tr
@@ -213,7 +293,14 @@ export default function ListaPedidosComprador() {
                     className="border-b border-ep-border last:border-0 hover:bg-ep-surface-raised transition-colors duration-150"
                   >
                     <td className="px-3 py-2.5">
+                      {/* Línea 1: punto actividad + título + badge mensaje nuevo */}
                       <div className="flex items-center gap-2">
+                        {actividadDot === 'verde' && (
+                          <span className="w-2 h-2 rounded-full bg-ep-green flex-shrink-0 animate-pulse" title="Actividad reciente (menos de 2h)" />
+                        )}
+                        {actividadDot === 'amber' && (
+                          <span className="w-2 h-2 rounded-full bg-ep-amber flex-shrink-0" title="Actividad en las últimas 24h" />
+                        )}
                         <Link
                           to={`/comprador/pedidos/${pedido.id}`}
                           className="text-ep-blue hover:underline font-medium"
@@ -230,6 +317,24 @@ export default function ListaPedidosComprador() {
                           </span>
                         )}
                       </div>
+                      {/* Línea 2: resumen de cotizaciones + días publicado */}
+                      <div className="text-[11px] text-ep-text-muted mt-0.5 ml-0">
+                        {cantCot > 0 ? (
+                          <>
+                            <span className="font-mono">{cantCot}</span>{' '}
+                            {cantCot === 1 ? 'cotización' : 'cotizaciones'}
+                            {mejorPrecio !== null && (
+                              <> · Mejor precio: <span className="font-mono font-medium">{formatARS(mejorPrecio)}</span></>
+                            )}
+                          </>
+                        ) : (
+                          <span className="italic">Sin cotizaciones aún</span>
+                        )}
+                        {' · '}
+                        {diasPublicado === 0
+                          ? 'Publicado hoy'
+                          : `Publicado hace ${diasPublicado} día${diasPublicado !== 1 ? 's' : ''}`}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5 text-ep-text-secondary">{pedido.categoria}</td>
                     <td
@@ -239,15 +344,6 @@ export default function ListaPedidosComprador() {
                         {urgente && !cancelado && <IconAlertTriangle size={13} stroke={2} />}
                         {formatFecha(pedido.fechaLimite)}
                       </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      {cantCot === 0 ? (
-                        <span className="text-xs text-ep-text-muted font-mono">0</span>
-                      ) : (
-                        <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-ep-blue text-white text-[11px] font-bold font-mono">
-                          {cantCot}
-                        </span>
-                      )}
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -280,7 +376,7 @@ export default function ListaPedidosComprador() {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-right">
-                      {!cancelado && (
+                      {!cancelado && pedido.estado !== 'adjudicado' && (
                         <button
                           onClick={() => handleAbrirModalBaja(pedido)}
                           className="p-1.5 rounded hover:bg-ep-surface-raised transition-colors duration-150"

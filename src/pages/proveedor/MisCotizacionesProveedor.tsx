@@ -1,24 +1,34 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { IconInbox, IconFilter, IconTrash, IconMessageCircle } from '@tabler/icons-react';
-import { Button, EmptyState, Modal, PageHeader } from '../../components/ui';
-import { CotizacionCard } from '../../components/cotizaciones/CotizacionCard';
+import { useNavigate } from 'react-router-dom';
+import { IconInbox, IconFilter, IconTrash } from '@tabler/icons-react';
+import { Badge, Button, EmptyState, Modal, PageHeader } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
+import { formatARS, formatFechaRelativa, getLabelEstadoCotizacion } from '../../utils/formatters';
+import { useState } from 'react';
 import type { Cotizacion } from '../../types';
 
-type Tab = 'todas' | 'pendientes' | 'aceptadas' | 'rechazadas';
+type Tab = 'todas' | 'pendientes' | 'en_negociacion' | 'ganadas' | 'rechazadas';
+type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'todas', label: 'Todas' },
   { id: 'pendientes', label: 'Pendientes' },
-  { id: 'aceptadas', label: 'Aceptadas' },
+  { id: 'en_negociacion', label: 'En negociación' },
+  { id: 'ganadas', label: 'Ganadas' },
   { id: 'rechazadas', label: 'Rechazadas' },
 ];
+
+const ESTADO_COLOR: Record<string, BadgeColor> = {
+  pendiente: 'gray',
+  en_negociacion: 'amber',
+  aceptada: 'green',
+  rechazada: 'red',
+};
 
 const PROV_IDS = ['prov-1', 'prov-2', 'prov-3', 'prov-4', 'prov-demo-001'];
 
 export default function MisCotizacionesProveedor() {
+  const navigate = useNavigate();
   const [tabActiva, setTabActiva] = useState<Tab>('todas');
   const [cotizacionAEliminar, setCotizacionAEliminar] = useState<Cotizacion | null>(null);
 
@@ -30,24 +40,24 @@ export default function MisCotizacionesProveedor() {
     .filter((c) => PROV_IDS.includes(c.proveedorId))
     .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
 
-  const counts = {
+  const counts: Record<Tab, number> = {
     todas: misCotizaciones.length,
     pendientes: misCotizaciones.filter((c) => c.estado === 'pendiente').length,
-    aceptadas: misCotizaciones.filter((c) => c.estado === 'aceptada').length,
+    en_negociacion: misCotizaciones.filter((c) => c.estado === 'en_negociacion').length,
+    ganadas: misCotizaciones.filter((c) => c.estado === 'aceptada').length,
     rechazadas: misCotizaciones.filter((c) => c.estado === 'rechazada').length,
   };
 
   const filtradas = misCotizaciones.filter((c) => {
     if (tabActiva === 'todas') return true;
     if (tabActiva === 'pendientes') return c.estado === 'pendiente';
-    if (tabActiva === 'aceptadas') return c.estado === 'aceptada';
+    if (tabActiva === 'en_negociacion') return c.estado === 'en_negociacion';
+    if (tabActiva === 'ganadas') return c.estado === 'aceptada';
     if (tabActiva === 'rechazadas') return c.estado === 'rechazada';
     return true;
   });
 
   const pedidosMap = Object.fromEntries(pedidos.map((p) => [p.id, p]));
-
-  const pedidoIdsConCotizaciones = [...new Set(filtradas.map((c) => c.pedidoId))];
 
   return (
     <div>
@@ -56,19 +66,25 @@ export default function MisCotizacionesProveedor() {
         descripcion="Estado de las cotizaciones que enviaste"
       />
 
+      {/* Tabs */}
       <div className="flex gap-1 border-b border-ep-border mb-6">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setTabActiva(tab.id)}
             className={[
-              'px-4 py-2.5 text-sm font-medium transition-colors duration-150 whitespace-nowrap',
+              'px-4 py-2.5 text-sm font-medium transition-colors duration-150 whitespace-nowrap flex items-center gap-1.5',
               tabActiva === tab.id
                 ? 'border-b-2 border-ep-green text-ep-green'
                 : 'text-ep-text-secondary hover:text-ep-text-primary border-b-2 border-transparent',
             ].join(' ')}
           >
-            {tab.label} ({counts[tab.id]})
+            {tab.label}
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              tabActiva === tab.id ? 'bg-ep-green text-white' : 'bg-ep-surface-raised text-ep-text-muted'
+            }`}>
+              {counts[tab.id]}
+            </span>
           </button>
         ))}
       </div>
@@ -88,52 +104,59 @@ export default function MisCotizacionesProveedor() {
           />
         )
       ) : (
-        <div className="flex flex-col gap-6">
-          {pedidoIdsConCotizaciones.map((pedidoId) => {
-            const pedido = pedidosMap[pedidoId];
+        <div className="bg-ep-surface border border-ep-border rounded-lg overflow-hidden">
+          {filtradas.map((cot, idx) => {
+            const pedido = pedidosMap[cot.pedidoId];
+            const badgeColor = ESTADO_COLOR[cot.estado] ?? 'gray';
+            const label = getLabelEstadoCotizacion(cot.estado, 'proveedor');
+
             return (
-              <div key={pedidoId}>
-                <p className="text-xs font-semibold text-ep-text-muted uppercase tracking-wide mb-2">
-                  {pedido ? pedido.titulo : `Pedido ${pedidoId}`}
-                </p>
-                <div className="flex flex-col gap-2">
-                  {filtradas
-                    .filter((c) => c.pedidoId === pedidoId)
-                    .map((cot) => (
-                      <div key={cot.id} className="flex flex-col gap-1">
-                        <CotizacionCard cotizacion={cot} />
-                        <div className="flex justify-end items-center gap-2 pr-1">
-                          {cot.estado === 'aceptada' && (
-                            <Link
-                              to={`/proveedor/pedidos/${cot.pedidoId}`}
-                              className="flex items-center gap-1.5 text-xs font-medium text-ep-blue hover:text-ep-blue-dark transition-colors duration-150"
-                            >
-                              <div className="text-ep-blue">
-                                <IconMessageCircle size={13} stroke={2} />
-                              </div>
-                              Ver chat
-                            </Link>
-                          )}
-                          <button
-                            onClick={() => setCotizacionAEliminar(cot)}
-                            className="p-1.5 rounded hover:bg-ep-surface-raised transition-colors duration-150"
-                            title="Eliminar cotización"
-                          >
-                            <div className="text-red-500">
-                              <IconTrash size={13} stroke={2} />
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+              <div
+                key={cot.id}
+                className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ep-surface-raised transition-colors duration-150 ${
+                  idx < filtradas.length - 1 ? 'border-b border-ep-border' : ''
+                }`}
+                onClick={() => navigate(`/proveedor/pedidos/${cot.pedidoId}`)}
+              >
+                {/* Info principal */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-ep-text-primary truncate">
+                    {pedido ? pedido.titulo : `Pedido ${cot.pedidoId}`}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Badge color={badgeColor}>{label}</Badge>
+                    <span className="text-[11px] text-ep-text-muted">
+                      Mi precio:{' '}
+                      <span className="font-mono font-medium text-ep-text-secondary">
+                        {formatARS(cot.precio)}
+                      </span>
+                    </span>
+                    <span className="text-[11px] text-ep-text-muted">
+                      Enviada {formatFechaRelativa(cot.fechaCreacion)}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Acciones */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCotizacionAEliminar(cot);
+                  }}
+                  className="p-1.5 rounded hover:bg-ep-surface-raised transition-colors duration-150 flex-shrink-0"
+                  title="Eliminar cotización"
+                >
+                  <div className="text-ep-red">
+                    <IconTrash size={13} stroke={2} />
+                  </div>
+                </button>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Modal: confirmar eliminación de cotización */}
+      {/* Modal: confirmar eliminación */}
       <Modal
         open={cotizacionAEliminar !== null}
         onClose={() => setCotizacionAEliminar(null)}

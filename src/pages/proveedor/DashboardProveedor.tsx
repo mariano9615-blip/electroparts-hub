@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IconPackage, IconFileInvoice, IconShoppingCart } from '@tabler/icons-react';
+import { IconPackage, IconFileInvoice, IconShoppingCart, IconCircleX } from '@tabler/icons-react';
 import { StatCard, PageHeader, EmptyState } from '../../components/ui';
 import { Modal } from '../../components/ui/Modal';
 import { PedidosTable } from '../../components/domain/PedidosTable';
@@ -25,7 +25,13 @@ export default function DashboardProveedor() {
     ['abierto', 'en_cotizacion'].includes(p.estado),
   );
   const misCotizaciones = cotizaciones.filter((c) => PROV_IDS.includes(c.proveedorId));
-  const misOrdenes = ordenes.filter((o) => ['prov-4', 'prov-demo-001'].includes(o.proveedorId));
+  const misVentas = ordenes.filter((o) => ['prov-4', 'prov-demo-001'].includes(o.proveedorId));
+  const misRechazadas = misCotizaciones.filter((c) => c.estado === 'rechazada');
+
+  // Tasa de éxito: cotizaciones ganadas / total enviadas
+  const ganadas = misCotizaciones.filter((c) => c.estado === 'aceptada').length;
+  const total = misCotizaciones.length;
+  const tasaExito = total > 0 ? Math.round((ganadas / total) * 100) : 0;
 
   const ultimosPedidos = [...pedidosDisponibles]
     .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime())
@@ -41,24 +47,35 @@ export default function DashboardProveedor() {
     <div>
       <PageHeader titulo="Dashboard" descripcion="Tu actividad como proveedor" />
 
-      <div className="grid grid-cols-3 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-5">
         <StatCard
           label="Pedidos disponibles"
           value={pedidosDisponibles.length}
           icono={IconPackage}
           color="blue"
+          onClick={() => navigate('/proveedor/explorar')}
         />
         <StatCard
-          label="Cotizaciones enviadas"
+          label="Mis cotizaciones"
           value={misCotizaciones.length}
           icono={IconFileInvoice}
           color="green"
+          sub={`Tasa de éxito: ${tasaExito}%`}
+          onClick={() => navigate('/proveedor/cotizaciones')}
         />
         <StatCard
-          label="Órdenes confirmadas"
-          value={misOrdenes.length}
+          label="Mis ventas"
+          value={misVentas.length}
           icono={IconShoppingCart}
           color="amber"
+          onClick={() => navigate('/proveedor/mis-ventas')}
+        />
+        <StatCard
+          label="Rechazadas"
+          value={misRechazadas.length}
+          icono={IconCircleX}
+          color="red"
+          onClick={() => navigate('/proveedor/cotizaciones')}
         />
       </div>
 
@@ -68,7 +85,7 @@ export default function DashboardProveedor() {
             Pedidos recientes disponibles
           </span>
           <button
-            onClick={() => navigate('/proveedor/pedidos')}
+            onClick={() => navigate('/proveedor/explorar')}
             className="text-[11px] text-ep-blue font-medium hover:underline"
           >
             Ver todos →
@@ -83,6 +100,7 @@ export default function DashboardProveedor() {
         ) : (
           <PedidosTable
             pedidos={ultimosPedidos}
+            rol="proveedor"
             onCotizar={(pedido) => setPedidoSeleccionado(pedido)}
           />
         )}

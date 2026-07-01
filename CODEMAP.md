@@ -1,7 +1,31 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (fix v0.3.2 — loop infinito en Chat.tsx)
+Última actualización: 2026-07-01 (v0.5.0 — refactor sidebar, terminología comercial, tabs, métricas, actividad)
 Rama: mdemichelis
+
+---
+
+## RESUMEN v0.5.0 — Archivos clave modificados
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `src/utils/formatters.ts` | + `getLabelEstadoPedido(estado, rol)`, `getLabelEstadoCotizacion(estado, rol)` | 37–75 (nuevas funciones) |
+| `src/components/ui/StatCard.tsx` | + prop `onClick?: () => void` | 5–9 (interface), 25 (destructuring) |
+| `src/components/domain/PedidosTable.tsx` | + prop `rol?: Rol`; usa `getLabelEstadoPedido` | 8–11 (interface), 32 (default), 88 (badge) |
+| `src/components/cotizaciones/CotizacionCard.tsx` | + prop `rol?: Rol`; usa `getLabelEstadoCotizacion`; + color `en_negociacion` | 9–14 (interface), 46 (default), 73/95 (badges) |
+| `src/components/layout/Sidebar.tsx` | Refactor completo: botón destacado, sección MIS VISTAS, badges por rol, nuevas rutas | 1–170 (completo) |
+| `src/router/AppRouter.tsx` | + 4 rutas nuevas + 4 redirects + toast text changes | 144–152 (toasts), 213–232 (rutas) |
+| `src/pages/comprador/ListaPedidosComprador.tsx` | + tabs con URL param `?tab=`; resumen cotizaciones por fila; punto actividad; días publicado | 1–300 (refactor) |
+| `src/pages/comprador/DetallePedidoComprador.tsx` | ESTADO_LABEL `adjudicado`→"Comprado"; botón "Confirmar compra"; banner "Compra confirmada con" | 27, 354, 449, 487–494 |
+| `src/pages/comprador/MisOrdenesComprador.tsx` | PageHeader título → "Mis compras" | 21 |
+| `src/pages/comprador/MisCotizacionesComprador.tsx` | PageHeader → "Cotizaciones recibidas"; navigate → `/comprador/mis-compras` | 57, 109 |
+| `src/pages/comprador/DashboardComprador.tsx` | 4 StatCards clickeables; métrica semana; navigate actualizado | 1–120 (refactor) |
+| `src/pages/proveedor/PedidosDisponibles.tsx` | PageHeader → "Explorar pedidos"; punto actividad; días coloreados | 1–160 (refactor) |
+| `src/pages/proveedor/MisCotizacionesProveedor.tsx` | 5 tabs (incluye "Ganadas"); vista rápida por fila; usa `getLabelEstadoCotizacion` | 1–165 (refactor) |
+| `src/pages/proveedor/MisOrdenesProveedor.tsx` | PageHeader → "Mis ventas"; 4 tabs (Ganadas/En tránsito/Cerradas) | 1–105 (refactor) |
+| `src/pages/proveedor/DashboardProveedor.tsx` | 4 StatCards clickeables; tasa de éxito; navigate a rutas nuevas | 1–125 (refactor) |
+
+---
 
 ---
 

@@ -2,15 +2,16 @@ import { IconShieldCheck } from '@tabler/icons-react';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { formatARS, formatFechaRelativa } from '../../utils/formatters';
+import { formatARS, formatFechaRelativa, getLabelEstadoCotizacion } from '../../utils/formatters';
 import { PROVEEDORES_SIMULADOS } from '../../utils/constants';
-import type { Cotizacion } from '../../types';
+import type { Cotizacion, Rol } from '../../types';
 
 interface CotizacionCardProps {
   cotizacion: Cotizacion;
   onAceptar?: () => void;
   onRechazar?: () => void;
   compacto?: boolean;
+  rol?: Rol;
 }
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
@@ -18,19 +19,11 @@ type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 function estadoAColor(estado: string): BadgeColor {
   const map: Record<string, BadgeColor> = {
     pendiente: 'amber',
+    en_negociacion: 'amber',
     aceptada: 'green',
     rechazada: 'red',
   };
   return map[estado] ?? 'gray';
-}
-
-function estadoALabel(estado: string): string {
-  const map: Record<string, string> = {
-    pendiente: 'Pendiente',
-    aceptada: 'Aceptada',
-    rechazada: 'Rechazada',
-  };
-  return map[estado] ?? estado;
 }
 
 const Estrella = ({ llena }: { llena: boolean }) => (
@@ -48,6 +41,7 @@ export const CotizacionCard = ({
   onAceptar,
   onRechazar,
   compacto = false,
+  rol = 'comprador',
 }: CotizacionCardProps) => {
   const proveedor = PROVEEDORES_SIMULADOS.find((p) => p.id === cotizacion.proveedorId);
   const puedeAccionar =
@@ -69,7 +63,7 @@ export const CotizacionCard = ({
               <span className="text-xs text-ep-text-muted">{cotizacion.tiempoEntrega}</span>
             </div>
           </div>
-          <Badge color={estadoAColor(cotizacion.estado)}>{estadoALabel(cotizacion.estado)}</Badge>
+          <Badge color={estadoAColor(cotizacion.estado)}>{getLabelEstadoCotizacion(cotizacion.estado, rol)}</Badge>
         </div>
       </Card>
     );

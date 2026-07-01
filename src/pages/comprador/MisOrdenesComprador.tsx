@@ -19,8 +19,8 @@ export default function MisOrdenesComprador() {
   return (
     <div>
       <PageHeader
-        titulo="Mis órdenes"
-        descripcion="Operaciones confirmadas con proveedores"
+        titulo="Mis compras"
+        descripcion="Compras confirmadas con proveedores"
       />
 
       {misOrdenes.length === 0 ? (
@@ -30,7 +30,7 @@ export default function MisOrdenesComprador() {
           mensaje="Aceptá una cotización para generar tu primera orden"
           accion={{
             label: 'Ver cotizaciones',
-            onClick: () => navigate('/comprador/cotizaciones'),
+            onClick: () => navigate('/comprador/cotizaciones-recibidas'),
           }}
         />
       ) : (

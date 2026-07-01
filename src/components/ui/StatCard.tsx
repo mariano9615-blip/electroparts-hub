@@ -6,6 +6,7 @@ interface StatCardProps {
   icono: React.ComponentType<{ size?: number; stroke?: number }>;
   color: 'green' | 'blue' | 'amber' | 'red';
   sub?: string;
+  onClick?: () => void;
 }
 
 const ACCENT_BORDER: Record<string, string> = {
@@ -22,9 +23,13 @@ const ACCENT_COLOR: Record<string, string> = {
   red: 'text-ep-red',
 };
 
-export const StatCard = ({ label, value, icono: Icono, color, sub }: StatCardProps) => (
+export const StatCard = ({ label, value, icono: Icono, color, sub, onClick }: StatCardProps) => (
   <div
-    className={`bg-ep-surface border border-ep-border border-l-4 ${ACCENT_BORDER[color]} rounded-lg px-4 py-3`}
+    role={onClick ? 'button' : undefined}
+    tabIndex={onClick ? 0 : undefined}
+    onClick={onClick}
+    onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+    className={`bg-ep-surface border border-ep-border border-l-4 ${ACCENT_BORDER[color]} rounded-lg px-4 py-3 ${onClick ? 'cursor-pointer hover:bg-ep-surface-raised transition-colors duration-150' : ''}`}
   >
     <div className={`flex items-center gap-1.5 ${ACCENT_COLOR[color]}`}>
       <Icono size={13} stroke={1.75} />

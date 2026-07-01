@@ -91,12 +91,17 @@ export function AppRouter() {
       state.pedidos.forEach((p) => {
         const estadoAnterior = pedidosEstadoRef.current!.get(p.id);
         if (estadoAnterior && estadoAnterior !== p.estado) {
+          const rolActual = useRolStore.getState().rol;
+          const titulo =
+            p.estado === 'adjudicado' && rolActual === 'comprador'
+              ? `Compra confirmada para ${p.titulo}`
+              : `Pedido: ${p.estado.replace('_', ' ')}`;
           window.dispatchEvent(
             new CustomEvent('estado-pedido-toast', {
               detail: {
                 id: `${p.id}-estado-${p.estado}`,
-                titulo: `Pedido: ${p.estado.replace('_', ' ')}`,
-                subtitulo: p.titulo,
+                titulo,
+                subtitulo: p.estado === 'adjudicado' && rolActual === 'comprador' ? '' : p.titulo,
               },
             }),
           );
@@ -142,12 +147,14 @@ export function AppRouter() {
         // Cambio de estado detectado: solo avisar al proveedor si la cotizacion le pertenece
         if (rol === 'proveedor' && (PROV_IDS as readonly string[]).includes(c.proveedorId)) {
           if (c.estado === 'aceptada') {
+            const pedidoNombre =
+              usePedidosStore.getState().pedidos.find((p) => p.id === c.pedidoId)?.titulo ?? '';
             window.dispatchEvent(
               new CustomEvent('cotizacion-adjudicada-toast', {
                 detail: {
                   id: c.id,
-                  titulo: '¡Tu cotización fue adjudicada!',
-                  subtitulo: c.proveedorNombre,
+                  titulo: '¡Ganaste la venta!',
+                  subtitulo: pedidoNombre,
                   navegarA: `/proveedor/pedidos/${c.pedidoId}`,
                 },
               }),
@@ -212,16 +219,23 @@ export function AppRouter() {
 
           <Route path="/comprador" element={<DashboardComprador />} />
           <Route path="/comprador/publicar" element={<PublicarPedido />} />
-          <Route path="/comprador/cotizaciones" element={<MisCotizacionesComprador />} />
-          <Route path="/comprador/ordenes" element={<MisOrdenesComprador />} />
           <Route path="/comprador/pedidos" element={<ListaPedidosComprador />} />
           <Route path="/comprador/pedidos/:id" element={<DetallePedidoComprador />} />
+          {/* Rutas nuevas */}
+          <Route path="/comprador/cotizaciones-recibidas" element={<MisCotizacionesComprador />} />
+          <Route path="/comprador/mis-compras" element={<MisOrdenesComprador />} />
+          {/* Redirects desde rutas viejas */}
+          <Route path="/comprador/cotizaciones" element={<Navigate to="/comprador/cotizaciones-recibidas" replace />} />
+          <Route path="/comprador/ordenes" element={<Navigate to="/comprador/mis-compras" replace />} />
 
           <Route path="/proveedor" element={<DashboardProveedor />} />
-          <Route path="/proveedor/pedidos" element={<PedidosDisponibles />} />
+          <Route path="/proveedor/explorar" element={<PedidosDisponibles />} />
           <Route path="/proveedor/pedidos/:id" element={<DetallePedidoProveedor />} />
           <Route path="/proveedor/cotizaciones" element={<MisCotizacionesProveedor />} />
-          <Route path="/proveedor/ordenes" element={<MisOrdenesProveedor />} />
+          <Route path="/proveedor/mis-ventas" element={<MisOrdenesProveedor />} />
+          {/* Redirects desde rutas viejas */}
+          <Route path="/proveedor/pedidos" element={<Navigate to="/proveedor/explorar" replace />} />
+          <Route path="/proveedor/ordenes" element={<Navigate to="/proveedor/mis-ventas" replace />} />
         </Route>
 
         <Route

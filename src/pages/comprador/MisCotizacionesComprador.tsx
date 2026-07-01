@@ -55,8 +55,8 @@ export default function MisCotizacionesComprador() {
   return (
     <div>
       <PageHeader
-        titulo="Mis cotizaciones"
-        descripcion="Cotizaciones recibidas para tus pedidos publicados"
+        titulo="Cotizaciones recibidas"
+        descripcion="Cotizaciones de proveedores para tus pedidos publicados"
       />
 
       <div className="flex gap-1 border-b border-ep-border mb-6">
@@ -107,7 +107,7 @@ export default function MisCotizacionesComprador() {
                       cotizacion={cot}
                       onAceptar={() => {
                         useCotizacionesStore.getState().aceptarCotizacion(cot.id);
-                        navigate('/comprador/ordenes');
+                        navigate('/comprador/mis-compras');
                       }}
                       onRechazar={() => {
                         useCotizacionesStore.getState().rechazarCotizacion(cot.id);

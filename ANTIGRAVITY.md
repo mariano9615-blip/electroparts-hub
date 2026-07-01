@@ -130,24 +130,62 @@ Todos los stores (excepto Auth y Rol) arrancan vacíos y se pueblan con `cargarD
 
 ## 6. RUTAS
 
-| Ruta | Componente | Rol |
-|---|---|---|
-| `/login` | Login | — |
-| `/` | → Navigate `/comprador` | — |
-| `/comprador` | DashboardComprador | comprador |
-| `/comprador/publicar` | PublicarPedido | comprador |
-| `/comprador/pedidos` | ListaPedidosComprador | comprador |
-| `/comprador/pedidos/:id` | DetallePedidoComprador | comprador |
-| `/comprador/cotizaciones` | MisCotizacionesComprador | comprador |
-| `/comprador/ordenes` | MisOrdenesComprador | comprador |
-| `/proveedor` | DashboardProveedor | proveedor |
-| `/proveedor/pedidos` | PedidosDisponibles | proveedor |
-| `/proveedor/pedidos/:id` | DetallePedidoProveedor | proveedor |
-| `/proveedor/cotizaciones` | MisCotizacionesProveedor | proveedor |
-| `/proveedor/ordenes` | MisOrdenesProveedor | proveedor |
-| `*` | → Navigate `/comprador` | — |
+| Ruta | Componente | Rol | Nota |
+|---|---|---|---|
+| `/login` | Login | — | |
+| `/` | → Navigate `/comprador` | — | |
+| `/comprador` | DashboardComprador | comprador | |
+| `/comprador/publicar` | PublicarPedido | comprador | |
+| `/comprador/pedidos` | ListaPedidosComprador | comprador | soporta `?tab=` |
+| `/comprador/pedidos/:id` | DetallePedidoComprador | comprador | |
+| `/comprador/cotizaciones-recibidas` | MisCotizacionesComprador | comprador | |
+| `/comprador/mis-compras` | MisOrdenesComprador | comprador | |
+| `/comprador/cotizaciones` | → `/comprador/cotizaciones-recibidas` | — | redirect |
+| `/comprador/ordenes` | → `/comprador/mis-compras` | — | redirect |
+| `/proveedor` | DashboardProveedor | proveedor | |
+| `/proveedor/explorar` | PedidosDisponibles | proveedor | |
+| `/proveedor/pedidos/:id` | DetallePedidoProveedor | proveedor | |
+| `/proveedor/cotizaciones` | MisCotizacionesProveedor | proveedor | |
+| `/proveedor/mis-ventas` | MisOrdenesProveedor | proveedor | |
+| `/proveedor/pedidos` | → `/proveedor/explorar` | — | redirect |
+| `/proveedor/ordenes` | → `/proveedor/mis-ventas` | — | redirect |
+| `*` | → Navigate `/comprador` | — | |
 
 Chat vive dentro de `/comprador|proveedor/pedidos/:id` (componente `<Chat>`). Las rutas `/comprador/chat` y `/proveedor/chat` fueron eliminadas en v0.3.1.
+
+## 6b. TERMINOLOGÍA UI vs VALORES INTERNOS
+
+Los valores internos del store y db.json NO cambian. Solo cambia el texto visible.
+
+| Estado interno | Rol | Label UI |
+|---|---|---|
+| `pedido.estado = 'adjudicado'` | comprador | "Comprado" |
+| `pedido.estado = 'adjudicado'` | proveedor | "Vendido" |
+| `cotizacion.estado = 'aceptada'` | comprador | "Aceptada" |
+| `cotizacion.estado = 'aceptada'` | proveedor | "Ganada" |
+| Botón acción | comprador | "Confirmar compra" (antes "Adjudicar") |
+| Banner post-compra | comprador | "Compra confirmada con [proveedor]" |
+| Toast cotización ganada | proveedor | "¡Ganaste la venta! [nombre pedido]" |
+| Toast compra comprador | comprador | "Compra confirmada para [nombre pedido]" |
+
+Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol)`, `getLabelEstadoCotizacion(estado, rol)`.
+
+## 6c. SIDEBAR — ESTRUCTURA POR ROL
+
+**Comprador:**
+- Dashboard → `/comprador`
+- [Botón destacado verde] Publicar pedido → `/comprador/publicar`
+- [separador "MIS VISTAS"]
+- Mis pedidos → `/comprador/pedidos` · badge: pedidos abierto|en_negociacion
+- Cotizaciones recibidas → `/comprador/cotizaciones-recibidas` · badge: cotizaciones pendiente
+- Mis compras → `/comprador/mis-compras`
+
+**Proveedor:**
+- Dashboard → `/proveedor`
+- [separador "MIS VISTAS"]
+- Explorar pedidos → `/proveedor/explorar` · badge: pedidos disponibles
+- Mis cotizaciones → `/proveedor/cotizaciones` · badge: cotizaciones en_negociacion
+- Mis ventas → `/proveedor/mis-ventas`
 
 ---
 

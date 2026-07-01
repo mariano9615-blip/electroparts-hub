@@ -2,13 +2,14 @@ import { Link } from 'react-router-dom';
 import { IconAlertTriangle } from '@tabler/icons-react';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { formatFecha, diasHasta } from '../../utils/formatters';
-import type { Pedido } from '../../types';
+import { formatFecha, diasHasta, getLabelEstadoPedido } from '../../utils/formatters';
+import type { Pedido, Rol } from '../../types';
 
 interface PedidosTableProps {
   pedidos: Pedido[];
   onCotizar?: (pedido: Pedido) => void;
   linkeable?: boolean;
+  rol?: Rol;
 }
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
@@ -20,16 +21,9 @@ const ESTADO_COLOR: Record<string, BadgeColor> = {
   cancelado: 'red',
 };
 
-const ESTADO_LABEL: Record<string, string> = {
-  abierto: 'Abierto',
-  en_cotizacion: 'En cotización',
-  adjudicado: 'Adjudicado',
-  cancelado: 'Cancelado',
-};
-
 const TH = 'px-3 py-2 text-[10px] font-medium text-ep-text-muted uppercase tracking-[0.06em] border-b border-ep-border';
 
-export const PedidosTable = ({ pedidos, onCotizar, linkeable = true }: PedidosTableProps) => (
+export const PedidosTable = ({ pedidos, onCotizar, linkeable = true, rol = 'comprador' }: PedidosTableProps) => (
   <div className="bg-ep-surface border border-ep-border rounded-lg overflow-hidden">
     <table className="w-full text-sm">
       <thead>
@@ -86,7 +80,7 @@ export const PedidosTable = ({ pedidos, onCotizar, linkeable = true }: PedidosTa
               </td>
               <td className="px-3 py-2.5 text-right">
                 <Badge color={ESTADO_COLOR[pedido.estado] ?? 'gray'}>
-                  {ESTADO_LABEL[pedido.estado] ?? pedido.estado}
+                  {getLabelEstadoPedido(pedido.estado, rol)}
                 </Badge>
               </td>
               {onCotizar && (

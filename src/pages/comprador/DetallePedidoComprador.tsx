@@ -23,7 +23,7 @@ const ESTADO_LABEL: Record<string, string> = {
   abierto: 'Abierto',
   en_cotizacion: 'En cotización',
   en_negociacion: 'En negociación',
-  adjudicado: 'Adjudicado',
+  adjudicado: 'Comprado',
   cancelado: 'Cancelado',
 };
 
@@ -142,7 +142,7 @@ export default function DetallePedidoComprador() {
           icono={IconAlertCircle}
           titulo="Pedido no encontrado"
           mensaje="El pedido que buscás no existe o fue eliminado"
-          accion={{ label: 'Volver a cotizaciones', onClick: () => navigate('/comprador/cotizaciones') }}
+          accion={{ label: 'Volver a mis pedidos', onClick: () => navigate('/comprador/pedidos') }}
         />
       </div>
     );
@@ -348,10 +348,10 @@ export default function DetallePedidoComprador() {
           </div>
         )}
 
-        {/* Banner de adjudicación */}
+        {/* Banner de compra confirmada */}
         {pedidoAdjudicado && cotizacionAceptada && (
           <div className="bg-ep-green-light border border-ep-green rounded-lg px-4 py-3 text-sm text-ep-green-dark mb-4">
-            Pedido adjudicado a{' '}
+            Compra confirmada con{' '}
             <span className="font-semibold">{cotizacionAceptada.proveedorNombre}</span>
             {ordenAdjudicada && <> el {formatFecha(ordenAdjudicada.fechaConfirmacion)}</>}
           </div>
@@ -446,7 +446,7 @@ export default function DetallePedidoComprador() {
                                 size="sm"
                                 onClick={() => setModalAdjudicar(cot)}
                               >
-                                Adjudicar
+                                Confirmar compra
                               </Button>
                               {cot.estado === 'pendiente' && !pedidoEnNegociacion && (
                                 <Button
@@ -479,11 +479,11 @@ export default function DetallePedidoComprador() {
         )}
       </div>
 
-      {/* Modal de confirmación: Adjudicar */}
+      {/* Modal de confirmación: Confirmar compra */}
       <Modal
         open={modalAdjudicar !== null}
         onClose={() => setModalAdjudicar(null)}
-        title="Confirmar adjudicación"
+        title="Confirmar compra"
         size="md"
         footer={
           <>
@@ -491,7 +491,7 @@ export default function DetallePedidoComprador() {
               Cancelar
             </Button>
             <Button variant="primary" size="md" onClick={handleConfirmarAdjudicacion}>
-              Confirmar adjudicación
+              Confirmar compra
             </Button>
           </>
         }
@@ -531,7 +531,7 @@ export default function DetallePedidoComprador() {
                 className="text-ep-amber mt-0.5 shrink-0"
               />
               <p className="text-sm text-ep-amber-dark leading-relaxed">
-                Esta acción creará una orden de compra y notificará al proveedor. Las demás
+                Esto creará una orden de compra y notificará al proveedor. Las demás
                 cotizaciones de este pedido serán rechazadas automáticamente.
               </p>
             </div>

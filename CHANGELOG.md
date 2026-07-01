@@ -2,6 +2,27 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.5.0 — 2026-07-01
+#### Changed — Refactor sidebar, terminología comercial, tabs de filtro, métricas y actividad reciente
+
+- `src/utils/formatters.ts` *(modificado)* — agrega `getLabelEstadoPedido(estado, rol)` y `getLabelEstadoCotizacion(estado, rol)`: helpers centralizados para labels con conciencia de rol (comprador vs proveedor). Sin estos helpers, cada componente duplicaba el mapeo.
+- `src/components/ui/StatCard.tsx` *(modificado)* — agrega prop `onClick?: () => void`; el card se vuelve clickeable con hover si se provee.
+- `src/components/domain/PedidosTable.tsx` *(modificado)* — agrega prop `rol?: Rol` (default `'comprador'`); usa `getLabelEstadoPedido` para mostrar "Comprado"/"Vendido" según contexto.
+- `src/components/cotizaciones/CotizacionCard.tsx` *(modificado)* — agrega prop `rol?: Rol` (default `'comprador'`); usa `getLabelEstadoCotizacion` para mostrar "Ganada" en contexto proveedor; agrega color `en_negociacion` al badge.
+- `src/components/layout/Sidebar.tsx` *(refactorizado)* — nueva estructura por rol: "Publicar pedido" como botón destacado verde (solo comprador); separador "MIS VISTAS"; nuevos nombres de ítems (Cotizaciones recibidas, Mis compras, Explorar pedidos, Mis ventas); badges dinámicos por rol desde stores; activo detectado por `matchPrefix` para rutas con sub-páginas.
+- `src/router/AppRouter.tsx` *(modificado)* — nuevas rutas canónicas (`/comprador/cotizaciones-recibidas`, `/comprador/mis-compras`, `/proveedor/explorar`, `/proveedor/mis-ventas`); redirects desde rutas viejas; toast proveedor ahora dice "¡Ganaste la venta! [nombre pedido]"; toast comprador adjudicación dice "Compra confirmada para [nombre pedido]".
+- `src/pages/comprador/ListaPedidosComprador.tsx` *(refactorizado)* — sistema de tabs (Todos/Activos/En negociación/Comprados/Cancelados) con soporte de `?tab=` via URL; resumen por fila (count cotizaciones + mejor precio); indicador de actividad reciente (punto verde/ámbar basado en timestamps de cotizaciones y mensajes); "Publicado hace N días"; ESTADO_LABEL actualizado con "Comprado".
+- `src/pages/comprador/DetallePedidoComprador.tsx` *(modificado)* — botón "Adjudicar" → "Confirmar compra"; modal "Confirmar adjudicación" → "Confirmar compra"; banner "Pedido adjudicado a" → "Compra confirmada con"; ESTADO_LABEL `adjudicado` → "Comprado".
+- `src/pages/comprador/MisOrdenesComprador.tsx` *(modificado)* — PageHeader título "Mis órdenes" → "Mis compras"; navigate a `cotizaciones-recibidas`.
+- `src/pages/comprador/MisCotizacionesComprador.tsx` *(modificado)* — PageHeader título → "Cotizaciones recibidas"; navigate post-aceptar → `/comprador/mis-compras`.
+- `src/pages/comprador/DashboardComprador.tsx` *(refactorizado)* — 4 StatCards clickeables (Pedidos activos, En negociación, Mis compras, Cancelados); métrica secundaria "Cotizaciones esta semana"; navigate a "/comprador/cotizaciones-recibidas".
+- `src/pages/proveedor/PedidosDisponibles.tsx` *(modificado)* — PageHeader → "Explorar pedidos"; indicadores de actividad reciente (punto verde/ámbar); contador de días publicado con colores por antigüedad (<7d gris, 7-14d ámbar, >14d rojo).
+- `src/pages/proveedor/MisCotizacionesProveedor.tsx` *(refactorizado)* — tabs (Todas/Pendientes/En negociación/Ganadas/Rechazadas); vista rápida por fila (pedido, badge con label proveedor, precio, fecha relativa); click navega al detalle del pedido; usa `getLabelEstadoCotizacion`.
+- `src/pages/proveedor/MisOrdenesProveedor.tsx` *(modificado)* — PageHeader título "Mis órdenes" → "Mis ventas"; tabs (Todas/Ganadas/En tránsito/Cerradas).
+- `src/pages/proveedor/DashboardProveedor.tsx` *(refactorizado)* — 4 StatCards clickeables (Pedidos disponibles, Mis cotizaciones, Mis ventas, Rechazadas); tasa de éxito en StatCard secundario; navigate actualizado a rutas nuevas.
+
+---
+
 ### v0.4.0 — 2026-06-30
 #### Added
 - **Etapa 4 — Ciclo de vida completo, negociación, mensajes vistos, stepper, sonido y baja con observación**
