@@ -545,7 +545,7 @@ OrdenCard con onIrChat si chatHabilitado → navigate(`/proveedor/pedidos/${orde
 Click toggle Comprador/Proveedor en Sidebar → useRolStore.setRol() → navigate('/comprador'|'/proveedor')
 → Sidebar actualiza items y badge → TopBar actualiza badge de rol.
 
-## Chat por pedido (desde v0.3.0, segmentación corregida en v0.3.1)
+## Chat por pedido (desde v0.3.0, segmentación corregida en v0.3.1, loop infinito corregido en v0.3.2)
 
 Panel de mensajes accesible desde DetallePedidoComprador y DetallePedidoProveedor.
 Visible cuando el pedido está `en_negociacion` (para coordinar antes de adjudicar,
@@ -568,8 +568,22 @@ State:
   pedidoActivoId: string | null  — pedido cuyo Chat está montado actualmente.
   pedidosConMensajeNuevo: string[]  — pedidoIds con mensajes no leídos del otro rol detectados en la sesión;
     alimenta el badge del botón de chat en TopBar y el badge por item en ChatsActivosPanel.
+IMPORTANTE (v0.3.2) — regla de selectores Zustand: nunca usar `?? []` / `?? {}` inline dentro
+de un selector reactivo (`useMensajesStore((s) => ...)`). Cada llamada crearía una referencia
+nueva cuando la clave no existe en el Record, y `useSyncExternalStore` (que usa Zustand v5
+internamente) compara snapshots por referencia — rompe con "The result of getSnapshot should
+be cached" seguido de "Maximum update depth exceeded" (loop de renders). Regla: definir una
+constante módulo-level estable (p.ej. `const SIN_MENSAJES: MensajePedido[] = []`) y usarla como
+fallback. Tampoco agrupar múltiples campos en un objeto dentro del selector
+(`(s) => ({ mensajes: ..., enviarMensaje: ... })`) por la misma razón — cada acceso debe ser
+su propio hook (`useMensajesStore((s) => s.enviarMensaje)`, etc.), nunca combinados.
+Aplica tanto a `useMensajesStore.getMensajesDePedido` (usa `SIN_MENSAJES` internamente) como al
+selector inline de `Chat.tsx` (`s.mensajesPorPedido[pedidoId] ?? SIN_MENSAJES`, con su propia
+constante módulo-level). `ChatsActivosPanel.tsx` usa `?? []` pero DENTRO de un `useMemo`, no
+dentro del selector de Zustand — no tiene este problema porque no participa del snapshot.
+
 Selectores/acciones:
-  getMensajesDePedido(pedidoId) → mensajesPorPedido[pedidoId] ?? []
+  getMensajesDePedido(pedidoId) → mensajesPorPedido[pedidoId] ?? SIN_MENSAJES
   setMensajesPorPedido(pedidoId, mensajes) / agregarMensaje(mensaje) → mutan solo la entrada de ese pedidoId
   setPedidoActivo(pedidoId) / limpiarPedidoActivo()
   cargarMensajes(pedidoId) → GET /mensajes?pedidoId=X, guarda en mensajesPorPedido[pedidoId];
@@ -588,7 +602,8 @@ Selectores/acciones:
 
 ### Componente Chat (src/components/ui/Chat.tsx)
 Props: pedidoId: string, otroNombre: string, cotizacionId?: string
-  - Lee useMensajesStore(s => s.mensajesPorPedido[pedidoId] ?? []) — NUNCA un array global.
+  - Lee useMensajesStore(s => s.mensajesPorPedido[pedidoId] ?? SIN_MENSAJES) — NUNCA un array
+    global, y el fallback usa una constante módulo-level estable (no `?? []` inline, ver nota arriba).
   - Lee useRolStore para determinar miRol y miNombre
   - miNombre: 'Comprador Demo' (comprador) | 'Mi Empresa (Proveedor)' (proveedor)
   - Burbujas propias: derecha, bg-ep-blue text-white, rounded-2xl rounded-tr-sm
