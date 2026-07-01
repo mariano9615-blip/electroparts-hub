@@ -3,6 +3,11 @@ import type { MensajePedido, Rol } from '../types';
 import { useRolStore } from './useRolStore';
 import * as api from '../services/api';
 
+// Referencia estable para pedidos sin mensajes todavía. Un `?? []` inline crearía un array
+// nuevo en cada llamada, rompiendo la igualdad por referencia que espera useSyncExternalStore
+// (Zustand) y causando "getSnapshot should be cached" → loop infinito de renders.
+const SIN_MENSAJES: MensajePedido[] = [];
+
 interface MensajesState {
   mensajesPorPedido: Record<string, MensajePedido[]>;
   pedidoActivoId: string | null;
@@ -47,7 +52,7 @@ export const useMensajesStore = create<MensajesState>((set, get) => ({
     }));
   },
 
-  getMensajesDePedido: (pedidoId) => get().mensajesPorPedido[pedidoId] ?? [],
+  getMensajesDePedido: (pedidoId) => get().mensajesPorPedido[pedidoId] ?? SIN_MENSAJES,
 
   setPedidoActivo: (pedidoId) => set({ pedidoActivoId: pedidoId }),
 

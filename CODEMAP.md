@@ -1,6 +1,6 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (fix v0.3.1 — chat por pedido)
+Última actualización: 2026-07-01 (fix v0.3.2 — loop infinito en Chat.tsx)
 Rama: mdemichelis
 
 ---
@@ -731,3 +731,41 @@ en la tabla de `ListaPedidosComprador`.
 - `src/data/mockData.ts`, `src/utils/constants.ts` — quitan `MENSAJES_INICIALES` y `STORAGE_KEY_MENSAJES` (dependían del tipo/; store eliminados).
 - `db.json` — agrega 4 mensajes semilla con `pedidoId` + `cotizacionId` sobre `ped-003` y `8JQ-AEVQceg`.
 - `src/components/layout/NotificacionesPanel.tsx`, `src/components/ui/PedidoStepper.tsx` — fixes de compilación preexistentes (no relacionados al chat) detectados al correr `npm run build` durante esta tarea: mapas `ICONOS_TIPO`/`COLORES_ICONO` no cubrían las 4 variantes de `TipoNotificacion` agregadas en Etapa 4; variable `futuro` sin usar en uno de los dos `.map` de `PedidoStepper`.
+
+---
+
+## Fix v0.3.2 — Chat.tsx: loop infinito por selector de Zustand sin referencia estable
+
+Causa raíz: `Chat.tsx` (línea 21 en la versión previa a este fix) tenía
+`const mensajes = useMensajesStore((s) => s.mensajesPorPedido[pedidoId] ?? []);`.
+Cuando `pedidoId` todavía no existía como clave en `mensajesPorPedido` (chat recién montado,
+antes de que resuelva `cargarMensajes`, o un pedido sin mensajes), el `?? []` construía un
+array **literal nuevo** en cada invocación del selector. Zustand v5 usa `useSyncExternalStore`
+por debajo, que decide si re-renderizar comparando el snapshot devuelto por el selector con
+el anterior usando `Object.is` (igualdad por referencia) — al recibir una referencia distinta
+en cada llamada, React tira "The result of getSnapshot should be cached" y entra en un loop de
+renders que termina en "Maximum update depth exceeded".
+
+### src/store/useMensajesStore.ts
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 6–9 | `SIN_MENSAJES` | Nueva constante módulo-level: `const SIN_MENSAJES: MensajePedido[] = [];`. Es la única referencia usada como fallback en todo el store — nunca `?? []` inline en un getter expuesto como selector |
+| 55 | `getMensajesDePedido(pedidoId)` | `get().mensajesPorPedido[pedidoId] ?? SIN_MENSAJES` (antes `?? []`). No estaba en el camino del bug reportado (nada la llamaba de forma reactiva), pero se corrige por consistencia y porque es la función pensada para ser usada como selector en el futuro |
+
+### src/components/ui/Chat.tsx
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 5 | import `MensajePedido` | Nuevo, tipa la constante local |
+| 9 | `SIN_MENSAJES` | Constante módulo-level propia del componente (mismo patrón que en el store; no se comparte instancia entre archivos, cada uno define la suya) |
+| 26 | selector de mensajes | `useMensajesStore((s) => s.mensajesPorPedido[pedidoId] ?? SIN_MENSAJES)` — la línea que causaba el crash. Es el ÚNICO selector del archivo con lógica de fallback; el resto (`cargarMensajes`, `enviarMensaje`, `limpiarPedidoActivo`, `marcarMensajesLeidos` en las líneas siguientes, y `rol` de `useRolStore`) seleccionan una acción o un primitivo ya estables por diseño de Zustand (`create()` no recrea las funciones de las acciones entre renders) — no requerían cambios |
+
+### Verificación de que no hay otras instancias del patrón
+
+Se revisó el resto del código en busca de `Store((s) => ({...}))` (selector que agrupa campos en
+un objeto nuevo) y `Store((s) => ... ?? []` / `?? {}` (fallback inline dentro del selector):
+ningún otro archivo los tiene. `src/components/layout/ChatsActivosPanel.tsx` línea 63 usa
+`mensajesPorPedido[pedido.id] ?? []`, pero **dentro de un `useMemo`** que ya depende de
+`mensajesPorPedido` (seleccionado sin transformar en la línea 30) — no es el valor que Zustand
+usa para comparar snapshots, así que no tiene el mismo problema.

@@ -26,6 +26,13 @@
   - `src/pages/comprador/DetallePedidoComprador.tsx` *(modificado)* — agrega `PedidoStepper`; botón "Negociar" por cotizacion pendiente; modal de confirmación de negociación; banner amber con botón "Cancelar negociación" cuando `en_negociacion`; estados `en_negociacion` en color/label maps.
   - `src/pages/proveedor/DetallePedidoProveedor.tsx` *(modificado)* — agrega `PedidoStepper`; indicador amber "Tu cotización está siendo evaluada" cuando `miCotizacionEnNegociacion`; estados `en_negociacion` en maps.
 
+### v0.3.2 — 2026-07-01
+#### Fixed
+- **Loop infinito en Chat.tsx ("Maximum update depth exceeded")**: el selector de Zustand `useMensajesStore((s) => s.mensajesPorPedido[pedidoId] ?? [])` devolvía un array **nuevo** (`[]` literal) en cada render cuando el pedido todavía no tenía mensajes en el `Record`. Zustand v5 usa `useSyncExternalStore`, que compara el snapshot por referencia (`Object.is`) para decidir si re-renderizar; al recibir una referencia distinta en cada llamada, React lo detecta como "The result of getSnapshot should be cached" y entra en loop de renders hasta tirar "Maximum update depth exceeded".
+  - `src/store/useMensajesStore.ts` *(modificado)* — agrega constante módulo-level `SIN_MENSAJES: MensajePedido[] = []` como referencia estable; reemplaza el `?? []` de `getMensajesDePedido` por `?? SIN_MENSAJES`.
+  - `src/components/ui/Chat.tsx` *(modificado)* — mismo fix: agrega su propia constante `SIN_MENSAJES` y la usa como fallback del selector en la línea del `mensajes = useMensajesStore(...)`. Se revisaron el resto de selectores del archivo (`cargarMensajes`, `enviarMensaje`, `limpiarPedidoActivo`, `marcarMensajesLeidos`, `rol`) — todos seleccionan una acción o un primitivo ya estable, sin objetos/arrays computados inline, por lo que no requerían cambios.
+  - Se verificó que no exista el mismo patrón (`Store((s) => ({...}))` o `Store((s) => ... ?? []/{}`) en el resto del código — `ChatsActivosPanel.tsx` usa `?? []` pero dentro de un `useMemo`, no dentro del selector de Zustand, así que no tiene el mismo problema.
+
 ### v0.3.1 — 2026-07-01
 #### Fixed
 - **Chat "global" corregido — mensajes segmentados por pedido**: existía un chat legacy (`ChatComprador`/`ChatProveedor`, rutas `/comprador/chat` y `/proveedor/chat`) que usaba un store separado (`useChatStore`, array plano en `localStorage`) y solo mostraba la *primera* orden con `chatHabilitado`, sin forma de elegir otra — el síntoma de "todos los chats muestran los mismos mensajes". Se eliminó ese camino completo y se reforzó el store por-pedido (`useMensajesStore`, ya usado por el `<Chat>` de `DetallePedido*`) para que sea la única fuente de verdad.
