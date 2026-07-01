@@ -620,6 +620,120 @@ Ruta: /proveedor/pedidos/:id
   - Componente Chat cuando ganadorSoyYo (adjudicado) o miCotizacionEnNegociacion
 Navegacion: link "Ver chat" en MisCotizacionesProveedor para cotizaciones aceptadas.
 
+## Etapa 4 — Estados, negociación, mensajes vistos, stepper, sonido y toasts (desde v0.4.0)
+
+### Ciclo de vida completo del pedido
+
+EstadoPedido: 'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado'
+EstadoCotizacion: 'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada'
+
+Ciclo normal: abierto → en_cotizacion → en_negociacion → adjudicado
+Terminal alternativo: cancelado (desde cualquier estado no adjudicado)
+
+Campos nuevos en Pedido:
+  cotizacionEnNegociacionId?: string  — ID de la cotizacion en negociacion activa
+  observacionBaja?: string            — motivo obligatorio al cancelar
+  fechaBaja?: string                  — timestamp ISO del momento de cancelacion
+
+Campo nuevo en MensajePedido:
+  leido?: boolean  — false cuando se crea, true cuando el destinatario abre el chat
+
+### Constantes nuevas (src/utils/constants.ts)
+PROV_IDS = ['prov-1','prov-2','prov-3','prov-4','prov-demo-001'] — IDs de proveedores del sistema
+
+### usePedidosStore — acciones nuevas
+  iniciarNegociacion(pedidoId, cotizacionId) → PATCH pedido a {estado:'en_negociacion', cotizacionEnNegociacionId}
+  cancelarNegociacion(pedidoId) → PATCH pedido a {estado:'abierto', cotizacionEnNegociacionId:undefined}
+  cancelarPedido(id, observacion) → PATCH pedido a {estado:'cancelado', observacionBaja, fechaBaja}
+
+### useCotizacionesStore — acciones nuevas
+  iniciarNegociacionCotizacion(cotizacionId) → PATCH cotizacion a {estado:'en_negociacion'}
+  cancelarNegociacionCotizacion(cotizacionId) → PATCH cotizacion a {estado:'pendiente'}
+
+### useMensajesStore — campos y acciones nuevas
+State nuevo:
+  pedidosConMensajeNuevo: string[]  — pedidoIds con mensajes no leídos (tracking de sesion)
+
+Acciones nuevas:
+  marcarMensajesLeidos(pedidoId, miRol) → PATCH /mensajes/:id {leido:true} para mensajes del otro rol;
+    remueve pedidoId de pedidosConMensajeNuevo
+Behavior changes en cargarMensajes():
+  - Primera carga: detecta mensajes con leido===false del otro lado → agrega a pedidosConMensajeNuevo
+  - Polls subsiguientes: detecta IDs nuevos del otro lado → dispara CustomEvent 'mensaje-nuevo-toast'
+    + agrega a pedidosConMensajeNuevo
+
+api.ts nuevo:
+  updateMensaje(id, data) → PATCH /mensajes/:id
+
+### useNotificacionesStore — TipoNotificacion extendido
+Tipos nuevos: 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio'
+
+### Sistema de sonidos (src/utils/sounds.ts)
+Función exportada: playNotificationSound(tipo: 'pedido'|'cotizacion'|'mensaje')
+  pedido: 880Hz, 150ms
+  cotizacion: 660Hz → 880Hz, 100ms cada tono
+  mensaje: 440Hz, 80ms
+Lee localStorage 'ep_sonido_silenciado' antes de reproducir.
+AudioContext lazy: se crea la primera vez que se llama.
+
+### Hook useNotificationSound (src/hooks/useNotificationSound.ts)
+Expone: { silenciado: boolean, toggleSilencio: () => void }
+Persiste la preferencia en localStorage 'ep_sonido_silenciado'.
+Usado por TopBar para mostrar ícono de campana/mute.
+
+### Sistema de toasts extendido (desde v0.4.0)
+
+ToastTipo: 'pedido_nuevo' | 'cotizacion_nueva' | 'cotizacion_adjudicada' | 'cotizacion_rechazada'
+           | 'cotizacion_negociacion' | 'mensaje_nuevo' | 'estado_cambio'
+
+ToastPayload: { id, tipo, titulo, subtitulo?, navegarA? }
+
+Eventos CustomEvent escuchados por ToastContainer:
+  nuevo-pedido-toast          → tipo:pedido_nuevo,           sonido:cotizacion
+  nueva-cotizacion-toast      → tipo:cotizacion_nueva,       sonido:cotizacion
+  cotizacion-adjudicada-toast → tipo:cotizacion_adjudicada,  sonido:pedido       (8s, prominente)
+  cotizacion-rechazada-toast  → tipo:cotizacion_rechazada,   sonido:mensaje
+  cotizacion-negociacion-toast→ tipo:cotizacion_negociacion, sonido:cotizacion
+  mensaje-nuevo-toast         → tipo:mensaje_nuevo,          sonido:mensaje
+  estado-pedido-toast         → tipo:estado_cambio,          sin sonido
+
+Detección en AppRouter.tsx via suscripciones Zustand:
+  usePedidosStore.subscribe  → detecta pedidos nuevos (para proveedor) + cambios de estado
+  useCotizacionesStore.subscribe → detecta cotizaciones nuevas (para comprador) + cambios estado
+    (cotizaciones del proveedor: aceptada/rechazada/en_negociacion)
+
+### Componente PedidoStepper (src/components/ui/PedidoStepper.tsx)
+Props: { estado, rol, nombreProveedor?, miCotizacionEnNegociacion?, observacionBaja? }
+Pasos visuales: Abierto → En negociación → Adjudicado → Cerrado
+Estado cancelado: banner rojo con observacionBaja si existe.
+Texto contextual diferente por rol+estado.
+Montado en DetallePedidoComprador y DetallePedidoProveedor encima de la card de info.
+
+### Chat — mensajes leídos/no leídos
+Campo leido=false asignado al crear mensajes vía enviarMensaje().
+Chat.tsx llama marcarMensajesLeidos(pedidoId, miRol) en useEffect([mensajes]).
+Mensajes no leídos del otro lado: punto azul + ring-1 ring-ep-blue/30 en la burbuja.
+
+### DetallePedidoComprador — negociación
+Botón "Negociar" por cotizacion pendiente (solo si el pedido no está ya en_negociacion).
+Modal confirma → iniciarNegociacionCotizacion() + iniciarNegociacionPedido() + notificacion al proveedor.
+Banner amber con "Cancelar negociación" visible cuando pedido.estado==='en_negociacion'.
+cancelarNegociacion() → vuelve a {abierto, cotizacion→pendiente}.
+Adjudicar sigue disponible desde el estado en_negociacion.
+
+### ListaPedidosComprador — Feature 1 + Feature 7
+Badge circular azul con count de cotizaciones por pedido (0 → texto muted, >0 → badge).
+Badge "mensaje nuevo" si pedidosConMensajeNuevo incluye el pedidoId.
+Modal de baja reemplaza el anterior: textarea obligatoria (mínimo 10 chars), botón deshabilitado hasta cumplir.
+Al confirmar: cancelarPedido() hace PATCH (no DELETE) → estado:'cancelado' + observacionBaja + fechaBaja.
+Pedidos cancelados: badge rojo + ícono InfoCircle con tooltip mostrando observacionBaja.
+Botón de baja oculto para pedidos ya cancelados.
+
+### TopBar — toggle de silencio
+Nuevo botón IconBellOff/IconBell al lado del ícono de notificaciones.
+Click → toggleSilencio() del hook useNotificationSound.
+Ícono en gris muted cuando silenciado, normal cuando activo.
+
 ## Borrado de pedidos y cotizaciones (desde v0.3.0)
 
 ### Flujo de borrado en cascada

@@ -2,6 +2,30 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.4.0 — 2026-06-30
+#### Added
+- **Etapa 4 — Ciclo de vida completo, negociación, mensajes vistos, stepper, sonido y baja con observación**
+
+  - `src/types/index.ts` *(modificado)* — agrega `'en_negociacion'` a `EstadoPedido` y `EstadoCotizacion`; campos opcionales `cotizacionEnNegociacionId`, `observacionBaja`, `fechaBaja` en `Pedido`; campo `leido?: boolean` en `MensajePedido`.
+  - `src/utils/constants.ts` *(modificado)* — exporta `PROV_IDS` (`string[]` con IDs de todos los proveedores del sistema).
+  - `src/utils/sounds.ts` *(nuevo)* — Web Audio API sin dependencias externas. `playNotificationSound(tipo)`: pedido=880Hz/150ms, cotizacion=660→880Hz/100ms, mensaje=440Hz/80ms. Respeta `localStorage 'ep_sonido_silenciado'`.
+  - `src/services/api.ts` *(modificado)* — agrega `updateMensaje(id, data)` para PATCH /mensajes/:id (usado para marcar leído).
+  - `src/store/useNotificacionesStore.ts` *(modificado)* — extiende `TipoNotificacion` con: `'cotizacion_en_negociacion'`, `'cotizacion_rechazada'`, `'mensaje_nuevo'`, `'estado_pedido_cambio'`.
+  - `src/store/usePedidosStore.ts` *(modificado)* — agrega `iniciarNegociacion(pedidoId, cotizacionId)`, `cancelarNegociacion(pedidoId)`, `cancelarPedido(id, observacion)` con PATCH a API.
+  - `src/store/useCotizacionesStore.ts` *(modificado)* — agrega `iniciarNegociacionCotizacion(id)` y `cancelarNegociacionCotizacion(id)` con PATCH a API.
+  - `src/store/useMensajesStore.ts` *(modificado)* — agrega `pedidosConMensajeNuevo: string[]`, `marcarMensajesLeidos(pedidoId, miRol)`. `cargarMensajes` detecta mensajes no leídos en primera carga y nuevos mensajes en polls subsiguientes (dispara `CustomEvent 'mensaje-nuevo-toast'`).
+  - `src/hooks/useNotificationSound.ts` *(nuevo)* — hook `{ silenciado, toggleSilencio }`. Persiste en `localStorage 'ep_sonido_silenciado'`. Usado por TopBar para mostrar ícono de mute.
+  - `src/components/ui/Toast.tsx` *(refactorizado)* — soporte para 7 tipos de toast (`ToastTipo`), cada uno con color, ícono, duración propios. `cotizacion_adjudicada` dura 8s y usa `IconTrophy`.
+  - `src/components/ui/ToastContainer.tsx` *(refactorizado)* — escucha 7 CustomEvents, invoca `playNotificationSound` al recibir cada toast, máximo 4 toasts en cola.
+  - `src/components/ui/PedidoStepper.tsx` *(nuevo)* — stepper horizontal 4 pasos (Abierto → En negociación → Adjudicado → Cerrado). Estado `cancelado` muestra banner rojo con observacionBaja. Texto contextual diferente por rol+estado. Exportado desde `index.ts`.
+  - `src/components/ui/Chat.tsx` *(modificado)* — llama `marcarMensajesLeidos` en `useEffect([mensajes])`. Mensajes no leídos del otro lado muestran punto azul + ring.
+  - `src/components/ui/index.ts` *(modificado)* — exporta `PedidoStepper`.
+  - `src/components/layout/TopBar.tsx` *(modificado)* — agrega botón toggle mute (`IconBellOff`/`IconBell`) junto a notificaciones.
+  - `src/router/AppRouter.tsx` *(modificado)* — suscripciones Zustand para pedidos (nuevos + cambio estado) y cotizaciones (nuevas + cambio estado); despacha CustomEvents para todos los tipos de toast.
+  - `src/pages/comprador/ListaPedidosComprador.tsx` *(refactorizado)* — badge circular azul con count cotizaciones por pedido; badge "mensaje nuevo" desde `pedidosConMensajeNuevo`; modal de baja con textarea obligatoria (mínimo 10 chars, botón deshabilitado); `cancelarPedido` (PATCH, no DELETE); tooltip con `observacionBaja`; filtro "En negociación" en el select de estado.
+  - `src/pages/comprador/DetallePedidoComprador.tsx` *(modificado)* — agrega `PedidoStepper`; botón "Negociar" por cotizacion pendiente; modal de confirmación de negociación; banner amber con botón "Cancelar negociación" cuando `en_negociacion`; estados `en_negociacion` en color/label maps.
+  - `src/pages/proveedor/DetallePedidoProveedor.tsx` *(modificado)* — agrega `PedidoStepper`; indicador amber "Tu cotización está siendo evaluada" cuando `miCotizacionEnNegociacion`; estados `en_negociacion` en maps.
+
 ### v0.3.1 — 2026-07-01
 #### Fixed
 - **Chat "global" corregido — mensajes segmentados por pedido**: existía un chat legacy (`ChatComprador`/`ChatProveedor`, rutas `/comprador/chat` y `/proveedor/chat`) que usaba un store separado (`useChatStore`, array plano en `localStorage`) y solo mostraba la *primera* orden con `chatHabilitado`, sin forma de elegir otra — el síntoma de "todos los chats muestran los mismos mensajes". Se eliminó ese camino completo y se reforzó el store por-pedido (`useMensajesStore`, ya usado por el `<Chat>` de `DetallePedido*`) para que sea la única fuente de verdad.

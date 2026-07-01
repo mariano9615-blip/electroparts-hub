@@ -1,156 +1,62 @@
 {
   "pedidos": [
     {
-      "id": "ped-001",
+      "id": "GJuy_RyPuGA",
       "compradorId": "comprador-demo-001",
-      "titulo": "Cable UTP Cat6 x 500m",
-      "descripcion": "Necesito 500 metros de cable UTP Cat6 exterior, en bobina. Marca reconocida.",
-      "cantidad": 500,
-      "unidad": "metros",
-      "categoria": "Cables y Conectores",
-      "presupuestoMax": 180000,
-      "fechaLimite": "2026-07-07T12:00:00.000Z",
-      "estado": "en_cotizacion",
-      "cotizacionesRecibidas": 3,
-      "fechaCreacion": "2026-06-29T12:00:00.000Z"
-    },
-    {
-      "id": "ped-002",
-      "compradorId": "comprador-demo-001",
-      "titulo": "Resistencias 10k x 1000 unidades",
-      "descripcion": "Resistencias 10k 1/4W, tolerancia 5%, empaque de 1000 unidades.",
-      "cantidad": 1000,
-      "unidad": "unidades",
-      "categoria": "Resistencias y Capacitores",
-      "presupuestoMax": 25000,
-      "fechaLimite": "2026-07-03T12:00:00.000Z",
-      "estado": "abierto",
-      "cotizacionesRecibidas": 0,
-      "fechaCreacion": "2026-06-30T12:00:00.000Z"
-    },
-    {
-      "id": "ped-003",
-      "compradorId": "comprador-demo-001",
-      "titulo": "Fuente switching 12V 10A x 20 unidades",
-      "descripcion": "Fuentes de alimentacion switching 12V 10A con certificacion. Para instalaciones industriales.",
-      "cantidad": 20,
-      "unidad": "unidades",
-      "categoria": "Fuentes de Alimentacion",
-      "presupuestoMax": 320000,
-      "fechaLimite": "2026-07-07T12:00:00.000Z",
-      "estado": "adjudicado",
-      "cotizacionesRecibidas": 4,
-      "fechaCreacion": "2026-06-29T12:00:00.000Z"
-    },
-    {
-      "id": "qZv-z55dZo0",
-      "compradorId": "comprador-demo-001",
-      "titulo": "prueba",
-      "descripcion": "prueba",
-      "cantidad": 10,
+      "titulo": "prueba 30/6",
+      "descripcion": "iluminacion LED foco E27",
+      "cantidad": 40,
       "unidad": "unidades",
       "categoria": "Iluminacion LED",
-      "presupuestoMax": 20000,
-      "fechaLimite": "2026-07-03T00:00:00.000Z",
-      "estado": "abierto",
-      "cotizacionesRecibidas": 0,
-      "fechaCreacion": "2026-07-01T00:35:35.642Z"
-    },
-    {
-      "id": "mmQtOgiGKug",
-      "compradorId": "comprador-demo-001",
-      "titulo": "prueba franco",
-      "descripcion": "prueba",
-      "cantidad": 10000,
-      "unidad": "unidades",
-      "categoria": "Semiconductores",
-      "presupuestoMax": 100000,
-      "fechaLimite": "2026-07-03T00:00:00.000Z",
-      "estado": "abierto",
-      "cotizacionesRecibidas": 0,
-      "fechaCreacion": "2026-07-01T00:42:49.956Z"
-    },
-    {
-      "id": "8JQ-AEVQceg",
-      "compradorId": "comprador-demo-001",
-      "titulo": "PRUEBA ULTIMA",
-      "descripcion": "PRUEBA ULTIMA",
-      "cantidad": 10,
-      "unidad": "unidades",
-      "categoria": "Iluminacion LED",
-      "presupuestoMax": 10000,
       "fechaLimite": "2026-07-03T00:00:00.000Z",
       "estado": "adjudicado",
       "cotizacionesRecibidas": 0,
-      "fechaCreacion": "2026-07-01T00:48:44.848Z"
+      "fechaCreacion": "2026-07-01T02:02:45.723Z"
+    },
+    {
+      "id": "zXd6KeZ-Ci0",
+      "compradorId": "comprador-demo-001",
+      "titulo": "PRUEBA ULTIMA 2",
+      "descripcion": "SADFDS",
+      "cantidad": 111,
+      "unidad": "unidades",
+      "categoria": "Iluminacion LED",
+      "fechaLimite": "2026-07-03T00:00:00.000Z",
+      "estado": "adjudicado",
+      "cotizacionesRecibidas": 0,
+      "fechaCreacion": "2026-07-01T02:26:28.199Z"
     }
   ],
   "cotizaciones": [
     {
-      "id": "cot-001",
-      "pedidoId": "ped-001",
-      "proveedorId": "prov-1",
-      "proveedorNombre": "ElectroMayorista Once",
-      "precio": 165000,
-      "tiempoEntrega": "2 dias habiles",
-      "notas": "Stock disponible. Incluye IVA. Entrega en puerta.",
-      "calificacionProveedor": 4.7,
-      "estado": "rechazada",
-      "fechaCreacion": "2026-06-30T12:00:00.000Z"
-    },
-    {
-      "id": "cot-002",
-      "pedidoId": "ped-001",
-      "proveedorId": "prov-2",
-      "proveedorNombre": "TecnoSuministros SA",
-      "precio": 158000,
-      "tiempoEntrega": "3 dias habiles",
-      "notas": "Precio sin IVA. El flete se cotiza aparte segun destino.",
-      "calificacionProveedor": 4.2,
-      "estado": "rechazada",
-      "fechaCreacion": "2026-06-30T12:00:00.000Z"
-    },
-    {
-      "id": "cot-003",
-      "pedidoId": "ped-003",
-      "proveedorId": "prov-4",
-      "proveedorNombre": "DistribuidoraElec AR",
-      "precio": 298000,
-      "tiempoEntrega": "5 dias habiles",
-      "notas": "Marca Meanwell. Garantia 1 año. Factura A.",
-      "calificacionProveedor": 4.5,
-      "estado": "aceptada",
-      "fechaCreacion": "2026-06-29T12:00:00.000Z"
-    },
-    {
-      "id": "cot-004",
-      "pedidoId": "ped-003",
-      "proveedorId": "prov-3",
-      "proveedorNombre": "ComponentesBA",
-      "precio": 285000,
-      "tiempoEntrega": "7 dias habiles",
-      "notas": "Marca importada sin certificacion local.",
-      "calificacionProveedor": 3.9,
-      "estado": "rechazada",
-      "fechaCreacion": "2026-06-29T12:00:00.000Z"
-    },
-    {
-      "id": "5zWDO7x0T2E",
-      "pedidoId": "8JQ-AEVQceg",
+      "id": "UnHDIG2NNp8",
+      "pedidoId": "GJuy_RyPuGA",
       "proveedorId": "prov-demo-001",
       "proveedorNombre": "Mi Empresa (Proveedor)",
-      "precio": 50000,
-      "tiempoEntrega": "2",
-      "notas": "simulacro",
+      "precio": 175000,
+      "tiempoEntrega": "4",
+      "notas": "prueba chat",
       "calificacionProveedor": 4,
       "estado": "aceptada",
-      "fechaCreacion": "2026-07-01T00:55:18.178Z"
+      "fechaCreacion": "2026-07-01T02:03:16.232Z"
+    },
+    {
+      "id": "00nIT4FmezU",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "precio": 900000,
+      "tiempoEntrega": "5",
+      "notas": "hola",
+      "calificacionProveedor": 4,
+      "estado": "aceptada",
+      "fechaCreacion": "2026-07-01T02:27:25.485Z"
     }
   ],
   "ordenes": [
     {
       "id": "ord-001",
-      "pedidoId": "ped-003",
+      "pedidoId": null,
       "cotizacionId": "cot-003",
       "compradorId": "comprador-demo-001",
       "proveedorId": "prov-4",
@@ -162,7 +68,7 @@
     },
     {
       "id": "S9tPX_rQyB8",
-      "pedidoId": "8JQ-AEVQceg",
+      "pedidoId": null,
       "cotizacionId": "5zWDO7x0T2E",
       "compradorId": "comprador-demo-001",
       "proveedorId": "prov-demo-001",
@@ -170,6 +76,42 @@
       "monto": 50000,
       "estado": "confirmada",
       "fechaConfirmacion": "2026-07-01T00:56:24.332Z",
+      "chatHabilitado": true
+    },
+    {
+      "id": "FucvOO-HMjo",
+      "pedidoId": null,
+      "cotizacionId": "CmfmQ35C8Xs",
+      "compradorId": "comprador-demo-001",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "monto": 500000,
+      "estado": "confirmada",
+      "fechaConfirmacion": "2026-07-01T01:53:12.484Z",
+      "chatHabilitado": true
+    },
+    {
+      "id": "QgvK8Nhj9Fo",
+      "pedidoId": "GJuy_RyPuGA",
+      "cotizacionId": "UnHDIG2NNp8",
+      "compradorId": "comprador-demo-001",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "monto": 175000,
+      "estado": "confirmada",
+      "fechaConfirmacion": "2026-07-01T02:03:26.044Z",
+      "chatHabilitado": true
+    },
+    {
+      "id": "2SE7_C8JPPQ",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "cotizacionId": "00nIT4FmezU",
+      "compradorId": "comprador-demo-001",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "monto": 900000,
+      "estado": "confirmada",
+      "fechaConfirmacion": "2026-07-01T02:27:40.204Z",
       "chatHabilitado": true
     }
   ],
@@ -202,48 +144,185 @@
       "id": "Xh7w_KoKmAU",
       "fecha": "2026-07-01T00:56:24.372Z",
       "leida": true
+    },
+    {
+      "tipo": "nueva_cotizacion",
+      "rolDestino": "comprador",
+      "titulo": "Nueva cotización recibida",
+      "mensaje": "Mi Empresa (Proveedor) cotizó $500000 para tu pedido",
+      "id": "zbOP8zJV2MY",
+      "fecha": "2026-07-01T01:52:59.711Z",
+      "leida": false
+    },
+    {
+      "tipo": "orden_confirmada",
+      "rolDestino": "comprador",
+      "titulo": "Orden confirmada",
+      "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
+      "entidadId": "71002a58-7d3e-4acf-9ef0-9a844e731cc9",
+      "id": "fY9sVXCguR4",
+      "fecha": "2026-07-01T01:53:12.522Z",
+      "leida": false
+    },
+    {
+      "tipo": "cotizacion_aceptada",
+      "rolDestino": "proveedor",
+      "titulo": "Cotización aceptada",
+      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
+      "entidadId": "CmfmQ35C8Xs",
+      "id": "CVRkVBWnkE4",
+      "fecha": "2026-07-01T01:53:12.523Z",
+      "leida": false
+    },
+    {
+      "tipo": "nueva_orden",
+      "rolDestino": "proveedor",
+      "titulo": "Nuevo pedido disponible",
+      "mensaje": "prueba 30/6",
+      "entidadId": "4acfd7f8-3887-4809-978f-97398734891e",
+      "id": "iuWDz05ecjs",
+      "fecha": "2026-07-01T02:02:45.748Z",
+      "leida": false
+    },
+    {
+      "tipo": "nueva_cotizacion",
+      "rolDestino": "comprador",
+      "titulo": "Nueva cotización recibida",
+      "mensaje": "Mi Empresa (Proveedor) cotizó $175000 para tu pedido",
+      "id": "wRgNFxGtLOQ",
+      "fecha": "2026-07-01T02:03:16.268Z",
+      "leida": false
+    },
+    {
+      "tipo": "orden_confirmada",
+      "rolDestino": "comprador",
+      "titulo": "Orden confirmada",
+      "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
+      "entidadId": "12a20b1f-b324-4d97-bceb-bd59ee125d82",
+      "id": "cuBIbxq1ZNc",
+      "fecha": "2026-07-01T02:03:26.076Z",
+      "leida": false
+    },
+    {
+      "tipo": "cotizacion_aceptada",
+      "rolDestino": "proveedor",
+      "titulo": "Cotización aceptada",
+      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
+      "entidadId": "UnHDIG2NNp8",
+      "id": "J4NtVjV6_xU",
+      "fecha": "2026-07-01T02:03:26.076Z",
+      "leida": false
+    },
+    {
+      "tipo": "nueva_orden",
+      "rolDestino": "proveedor",
+      "titulo": "Nuevo pedido disponible",
+      "mensaje": "PRUEBA ULTIMA 2",
+      "entidadId": "40350977-515d-486c-87ba-9708e1031a24",
+      "id": "YovyG5DYSEg",
+      "fecha": "2026-07-01T02:26:28.223Z",
+      "leida": false
+    },
+    {
+      "tipo": "nueva_cotizacion",
+      "rolDestino": "comprador",
+      "titulo": "Nueva cotización recibida",
+      "mensaje": "Mi Empresa (Proveedor) cotizó $900000 para tu pedido",
+      "id": "fKH8-m-6OvI",
+      "fecha": "2026-07-01T02:27:25.521Z",
+      "leida": false
+    },
+    {
+      "tipo": "orden_confirmada",
+      "rolDestino": "comprador",
+      "titulo": "Orden confirmada",
+      "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
+      "entidadId": "b588e4fb-86e6-47a3-86c3-73c7d8a510a5",
+      "id": "mslfyD4f37g",
+      "fecha": "2026-07-01T02:27:40.258Z",
+      "leida": false
+    },
+    {
+      "tipo": "cotizacion_aceptada",
+      "rolDestino": "proveedor",
+      "titulo": "Cotización aceptada",
+      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
+      "entidadId": "00nIT4FmezU",
+      "id": "I_Kwk7QR8y0",
+      "fecha": "2026-07-01T02:27:40.258Z",
+      "leida": false
     }
   ],
   "mensajes": [
     {
-      "id": "msg-001",
-      "pedidoId": "ped-003",
-      "cotizacionId": "cot-003",
-      "autorRol": "proveedor",
-      "autorNombre": "DistribuidoraElec AR",
-      "texto": "Hola! Recibimos la confirmación de tu orden. ¿Coordinamos los detalles del envío?",
-      "timestamp": "2026-06-29T13:05:00.000Z",
-      "leido": true
-    },
-    {
-      "id": "msg-002",
-      "pedidoId": "ped-003",
-      "cotizacionId": "cot-003",
+      "id": "1mH1o37HqTY",
+      "pedidoId": "GJuy_RyPuGA",
       "autorRol": "comprador",
       "autorNombre": "Comprador Demo",
-      "texto": "Sí, dale. La dirección de entrega es Av. Corrientes 1234, CABA. ¿Cuándo sale?",
-      "timestamp": "2026-06-29T13:10:00.000Z",
+      "texto": "HOLA",
+      "timestamp": "2026-07-01T02:06:30.467Z"
+    },
+    {
+      "id": "o6yugGDpxbw",
+      "pedidoId": "GJuy_RyPuGA",
+      "autorRol": "comprador",
+      "autorNombre": "Comprador Demo",
+      "texto": "como estas",
+      "timestamp": "2026-07-01T02:06:32.183Z"
+    },
+    {
+      "id": "rVkdULB2d2w",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "autorRol": "proveedor",
+      "autorNombre": "Mi Empresa (Proveedor)",
+      "texto": "hola",
+      "timestamp": "2026-07-01T02:28:24.996Z",
       "leido": true
     },
     {
-      "id": "msg-003",
-      "pedidoId": "ped-003",
-      "cotizacionId": "cot-003",
-      "autorRol": "proveedor",
-      "autorNombre": "DistribuidoraElec AR",
-      "texto": "Mañana a primera hora. El transportista te va a contactar para coordinar el horario.",
-      "timestamp": "2026-06-30T09:00:00.000Z",
-      "leido": false
+      "id": "h55-Ss2CwZ0",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "autorRol": "comprador",
+      "autorNombre": "Comprador Demo",
+      "texto": "HOLA COMO ESTAS",
+      "timestamp": "2026-07-01T02:28:38.043Z",
+      "leido": true
     },
     {
-      "id": "msg-004",
-      "pedidoId": "8JQ-AEVQceg",
-      "cotizacionId": "5zWDO7x0T2E",
+      "id": "qEXTX7oFrWw",
+      "pedidoId": "zXd6KeZ-Ci0",
       "autorRol": "proveedor",
       "autorNombre": "Mi Empresa (Proveedor)",
-      "texto": "Confirmado, arrancamos con la preparación del pedido.",
-      "timestamp": "2026-07-01T01:00:00.000Z",
-      "leido": false
+      "texto": "pollo te lo envio en 3 dias",
+      "timestamp": "2026-07-01T02:28:55.222Z",
+      "leido": true
+    },
+    {
+      "id": "WBvdBK2L3D8",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "autorRol": "comprador",
+      "autorNombre": "Comprador Demo",
+      "texto": "lo necesito para ayer",
+      "timestamp": "2026-07-01T02:29:00.253Z",
+      "leido": true
+    },
+    {
+      "id": "Ok11ZWSbvuM",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "autorRol": "proveedor",
+      "autorNombre": "Mi Empresa (Proveedor)",
+      "texto": "gggg",
+      "timestamp": "2026-07-01T02:29:10.576Z",
+      "leido": true
+    },
+    {
+      "id": "5Q2hl4HdpzU",
+      "pedidoId": "zXd6KeZ-Ci0",
+      "autorRol": "comprador",
+      "autorNombre": "Comprador Demo",
+      "texto": "hola",
+      "timestamp": "2026-07-01T02:29:27.979Z",
+      "leido": true
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
