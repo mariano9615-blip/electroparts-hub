@@ -39,7 +39,11 @@ export default function MisOrdenesComprador() {
             <OrdenCard
               key={orden.id}
               orden={orden}
-              onIrChat={orden.chatHabilitado ? () => navigate('/comprador/chat') : undefined}
+              onIrChat={
+                orden.chatHabilitado
+                  ? () => navigate(`/comprador/pedidos/${orden.pedidoId}`)
+                  : undefined
+              }
             />
           ))}
         </div>

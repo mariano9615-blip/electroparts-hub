@@ -2,6 +2,26 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.3.1 — 2026-07-01
+#### Fixed
+- **Chat "global" corregido — mensajes segmentados por pedido**: existía un chat legacy (`ChatComprador`/`ChatProveedor`, rutas `/comprador/chat` y `/proveedor/chat`) que usaba un store separado (`useChatStore`, array plano en `localStorage`) y solo mostraba la *primera* orden con `chatHabilitado`, sin forma de elegir otra — el síntoma de "todos los chats muestran los mismos mensajes". Se eliminó ese camino completo y se reforzó el store por-pedido (`useMensajesStore`, ya usado por el `<Chat>` de `DetallePedido*`) para que sea la única fuente de verdad.
+  - `src/store/useChatStore.ts` *(eliminado)* — store legacy basado en `ordenId` y `localStorage`.
+  - `src/pages/comprador/ChatComprador.tsx`, `src/pages/proveedor/ChatProveedor.tsx` *(eliminados)* — páginas del chat global; solo mostraban la primera orden con chat habilitado, ignorando el resto.
+  - `src/types/index.ts` *(modificado)* — elimina la interfaz `Mensaje` (basada en `ordenId`, sin uso); agrega `cotizacionId?: string` a `MensajePedido`.
+  - `src/store/useMensajesStore.ts` *(reescrito)* — pasa de un array plano `mensajes[]` a `mensajesPorPedido: Record<string, MensajePedido[]>` con `getMensajesDePedido(pedidoId)`, `setMensajesPorPedido`, `agregarMensaje`, `setPedidoActivo`. Nueva acción `cargarTodosLosMensajes()`: trae **todos** los mensajes (`GET /mensajes`), los agrupa por `pedidoId` y dispara `mensaje-nuevo-toast` (toast + sonido, vía `ToastContainer` existente) comparando contra el snapshot previo de *cada* pedido — ya no solo el pedido abierto. `enviarMensaje` ahora acepta `cotizacionId` opcional y lo persiste en el mensaje.
+  - `src/services/api.ts` *(modificado)* — agrega `getMensajes()` (GET /mensajes sin filtro, usado por el polling agrupador).
+  - `src/components/ui/Chat.tsx` *(modificado)* — lee de `mensajesPorPedido[pedidoId]` en vez del array global; acepta prop `cotizacionId` y la pasa a `enviarMensaje`.
+  - `src/router/AppRouter.tsx` *(modificado)* — el polling de 5s ya no restringe la sincronización de mensajes al `pedidoActivoId`; llama `cargarTodosLosMensajes()` en cada ciclo para detectar mensajes nuevos en cualquier pedido (necesario para el badge del menú de chats activos). Se eliminan las rutas `/comprador/chat` y `/proveedor/chat`.
+  - `src/pages/comprador/DetallePedidoComprador.tsx`, `src/pages/proveedor/DetallePedidoProveedor.tsx` *(modificados)* — el `<Chat>` ahora recibe `cotizacionId`; se habilita también durante `en_negociacion` (antes solo aparecía con el pedido `adjudicado`, aunque la UI ya invitaba a "usar el chat" durante la negociación).
+  - `src/components/layout/ChatsActivosPanel.tsx` *(nuevo)* — panel lateral "Chats activos" (mismo patrón visual que `NotificacionesPanel`): lista pedidos en `en_negociacion` o `adjudicado` con chat habilitado, mostrando el otro participante, el último mensaje truncado y un badge de no leídos por pedido (`mensajesPorPedido[pedidoId].filter(m => !m.leido && m.autorRol !== rolActual).length`). Al hacer click navega a `/comprador|proveedor/pedidos/:pedidoId`.
+  - `src/components/layout/TopBar.tsx` *(modificado)* — agrega botón `IconMessage` con badge (`pedidosConMensajeNuevo.length`) que abre `ChatsActivosPanel`; quita el breadcrumb del chat viejo.
+  - `src/components/layout/Sidebar.tsx` *(modificado)* — quita el ítem "Chat activo" (`/comprador/chat`, `/proveedor/chat`).
+  - `src/pages/comprador/MisOrdenesComprador.tsx`, `src/pages/proveedor/MisOrdenesProveedor.tsx` *(modificados)* — el botón de chat de cada orden navega a `/comprador|proveedor/pedidos/:pedidoId` (detalle del pedido) en vez de la ruta de chat global eliminada.
+  - `src/data/mockData.ts` *(modificado)* — elimina `MENSAJES_INICIALES` (dependía del tipo `Mensaje` eliminado).
+  - `src/utils/constants.ts` *(modificado)* — elimina `STORAGE_KEY_MENSAJES` (sin uso tras retirar `useChatStore`).
+  - `db.json` *(modificado)* — agrega 4 mensajes de prueba con `pedidoId` y `cotizacionId` sobre los dos pedidos adjudicados existentes (`ped-003`, `8JQ-AEVQceg`), incluyendo un mensaje `leido: false` en cada uno para poder validar el badge de no leídos.
+  - `src/components/layout/NotificacionesPanel.tsx`, `src/components/ui/PedidoStepper.tsx` *(modificados)* — fix de errores de compilación preexistentes (`TipoNotificacion` con variantes sin ícono/color mapeado; variable `futuro` sin usar) encontrados al correr `npm run build` durante esta tarea; no relacionados al chat pero bloqueaban el build.
+
 ### v0.3.0 — 2026-06-30
 #### Added
 - **Chat por pedido adjudicado**: panel de mensajes en tiempo real accesible desde el detalle de pedido del comprador y del proveedor. Solo visible cuando `pedido.estado === 'adjudicado'`.

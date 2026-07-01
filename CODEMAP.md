@@ -1,6 +1,6 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-06-30 (v0.4.0)
+Última actualización: 2026-07-01 (fix v0.3.1 — chat por pedido)
 Rama: mdemichelis
 
 ---
@@ -645,3 +645,89 @@ Rama: mdemichelis
 | 75–77 | `ganadorSoyYo` | `cotizacionAceptada !== null && PROV_IDS.includes(cotizacionAceptada.proveedorId)` — determina si mostrar nombre en stepper y si el chat debe abrirse |
 | 104–110 | `<PedidoStepper>` | `estado`, `rol="proveedor"`, `nombreProveedor` solo cuando `ganadorSoyYo` (muestra "¡Tu cotización fue adjudicada!"), `miCotizacionEnNegociacion`, `observacionBaja` |
 | 113–125 | banner amber negociación proveedor | Visible cuando `miCotizacionEnNegociacion`. Icono `IconClock`, texto "Tu cotización está siendo evaluada" con subtexto "Usá el chat para coordinar" |
+
+---
+
+## Fix v0.3.1 — Chat segmentado por pedido (eliminación del chat global)
+
+Contexto del bug: convivían dos sistemas de chat. El nuevo (`useMensajesStore` + `Chat.tsx`,
+montado en `DetallePedido*`) ya filtraba por `pedidoId`, pero en paralelo seguía activo un chat
+"global" (`useChatStore`, páginas `ChatComprador.tsx`/`ChatProveedor.tsx`, rutas `/comprador/chat`
+y `/proveedor/chat`, enlazadas desde `Sidebar` y desde el botón "Ir al chat" de `OrdenCard`) que
+guardaba un array plano de mensajes en `localStorage` y solo mostraba la *primera* orden con
+`chatHabilitado=true` — si el usuario tenía más de una orden con chat, nunca podía ver la otra.
+Ese camino fue eliminado por completo; `useMensajesStore` pasa a ser la única fuente de mensajes.
+
+### src/store/useMensajesStore.ts (reescrito — 158 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 6–29 | `MensajesState` | Reemplaza el array plano `mensajes: MensajePedido[]` por `mensajesPorPedido: Record<string, MensajePedido[]>`. Agrega `getMensajesDePedido`, `setMensajesPorPedido`, `agregarMensaje`, `setPedidoActivo`, `cargarTodosLosMensajes`, `limpiarPedidoActivo` (reemplaza a `limpiarMensajes`) |
+| 33–41 | `setMensajesPorPedido` / `agregarMensaje` | Mutan únicamente la entrada `mensajesPorPedido[pedidoId]` — nunca reemplazan el Record completo, así los demás pedidos ya cargados no se pierden |
+| 45 | `getMensajesDePedido(pedidoId)` | `get().mensajesPorPedido[pedidoId] ?? []` |
+| 51–68 | `cargarMensajes(pedidoId)` | Llamado por `Chat.tsx` al montar. `GET /mensajes?pedidoId=X` (filtro server-side), guarda el resultado en el slot de ese pedido y marca `pedidosConMensajeNuevo` si hay mensajes no leídos del otro rol |
+| 72–105 | `cargarTodosLosMensajes()` | Llamado por el polling de 5 s en `AppRouter.tsx` (ya no solo cuando hay un pedido activo). `GET /mensajes` sin filtro, agrupa por `pedidoId`, y por cada pedido **ya visto antes en la sesión** (`prevMensajes !== undefined`, evita toasts retroactivos en la primera carga) compara IDs contra el snapshot previo para detectar mensajes nuevos del otro rol. Por cada uno despacha `window.dispatchEvent(new CustomEvent('mensaje-nuevo-toast', { detail: msg }))` — el mismo evento que `ToastContainer.tsx` ya escuchaba, así que el toast + sonido 'mensaje' (`utils/sounds.ts`) siguen funcionando sin tocar ese componente |
+| 118–133 | `enviarMensaje(pedidoId, texto, autorRol, autorNombre, cotizacionId?)` | Nuevo parámetro opcional `cotizacionId`, incluido en el objeto `MensajePedido` solo si viene definido (spread condicional) antes del `POST /mensajes` |
+| 139–157 | `marcarMensajesLeidos(pedidoId, miRol)` | Igual lógica que antes pero opera sobre `mensajesPorPedido[pedidoId]` en vez del array global |
+
+### src/services/api.ts (+8 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 218–226 | `getMensajes()` | Nueva función, `GET /mensajes` sin query — usada exclusivamente por `cargarTodosLosMensajes()` del store para el polling agrupador |
+
+### src/types/index.ts
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 53 (eliminada) | interfaz `Mensaje` | Removida — era el tipo del chat legacy basado en `ordenId`, sin más referencias tras borrar `useChatStore` |
+| 62–70 | `MensajePedido` | Agrega `cotizacionId?: string` |
+
+### src/components/ui/Chat.tsx (128 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 6–9 | `ChatProps` | Agrega `cotizacionId?: string` |
+| 16, 20 | selector de mensajes | `useMensajesStore((s) => s.mensajesPorPedido[pedidoId] ?? [])` — reemplaza la lectura del array global `s.mensajes` |
+| 30–35 | `useEffect([pedidoId])` | Al desmontar llama `limpiarPedidoActivo()` (antes `limpiarMensajes()`, que además vaciaba el Record entero) |
+| 48–52 | `handleEnviar()` | Pasa `cotizacionId` como quinto argumento a `enviarMensaje` |
+
+### src/router/AppRouter.tsx (238 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 19, 27 (eliminadas) | imports `ChatComprador`/`ChatProveedor` | Removidos junto con las rutas |
+| 187–194 | `cargarTodo()` | Ya no lee `pedidoActivoId` para decidir si sincronizar mensajes. Llama directamente `useMensajesStore.getState().cargarTodosLosMensajes()` en cada tick del `setInterval` de 5 s, agrupando por `pedidoId` para todos los pedidos con mensajes, no solo el abierto |
+| 209–224 (rutas) | `/comprador/chat`, `/proveedor/chat` | Eliminadas del `<Routes>` |
+
+### src/components/layout/ChatsActivosPanel.tsx (nuevo — 162 líneas)
+
+Menú de "chats activos" pedido en el diseño original — antes no existía, solo un punto indicador
+en la tabla de `ListaPedidosComprador`.
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 26–34 | `pedidosConChat` (comprador) | `pedidos.filter(p => p.compradorId === COMPRADOR_ID && (p.estado === 'en_negociacion' \|\| p.estado === 'adjudicado'))` |
+| 35–40 | `pedidosConChat` (proveedor) | Para cada pedido busca mi cotización (`PROV_IDS.includes(proveedorId)`) y exige `estado en ('en_negociacion','aceptada')` |
+| 42–68 | `chatsActivos` (`useMemo`) | Por cada pedido: resuelve `otroNombre` (proveedor o "Comprador Demo"), `ultimoMensaje = mensajes[mensajes.length-1]`, `noLeidos = mensajes.filter(m => !m.leido && m.autorRol !== rol).length` — lee `mensajesPorPedido` de `useMensajesStore`, poblado por el polling aunque el chat nunca se haya abierto |
+| 70–75 | orden de la lista | Por `timestamp` del último mensaje desc (fallback `pedido.fechaCreacion`) |
+| 77–80 | `irAChat(pedidoId)` | `navigate(`/${rol}/pedidos/${pedidoId}`)` + cierra el panel — nunca abre una ruta de chat genérica |
+
+### src/components/layout/TopBar.tsx (135 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 15–26 | `BREADCRUMB_MAP` | Quita las entradas `/comprador/chat` y `/proveedor/chat` |
+| 38 | `cantidadChatsNoLeidos` | `useMensajesStore((s) => s.pedidosConMensajeNuevo.length)` |
+| botón `IconMessage` | nuevo | Abre `ChatsActivosPanel`; badge rojo igual al de notificaciones pero con `cantidadChatsNoLeidos` |
+
+### Archivos eliminados
+`src/store/useChatStore.ts`, `src/pages/comprador/ChatComprador.tsx`, `src/pages/proveedor/ChatProveedor.tsx`.
+
+### Otros archivos tocados (navegación y datos)
+- `src/components/layout/Sidebar.tsx` — quita el ítem "Chat activo" de `NAV_COMPRADOR`/`NAV_PROVEEDOR`.
+- `src/pages/comprador/MisOrdenesComprador.tsx`, `src/pages/proveedor/MisOrdenesProveedor.tsx` — `onIrChat` navega a `/comprador\|proveedor/pedidos/${orden.pedidoId}` en vez de la ruta de chat global.
+- `src/pages/comprador/DetallePedidoComprador.tsx`, `src/pages/proveedor/DetallePedidoProveedor.tsx` — `<Chat>` recibe `cotizacionId`; se agrega un segundo `<Chat>` condicional para el estado `en_negociacion` (antes solo aparecía adjudicado, aunque el banner de negociación del proveedor ya invitaba a "usar el chat").
+- `src/data/mockData.ts`, `src/utils/constants.ts` — quitan `MENSAJES_INICIALES` y `STORAGE_KEY_MENSAJES` (dependían del tipo/; store eliminados).
+- `db.json` — agrega 4 mensajes semilla con `pedidoId` + `cotizacionId` sobre `ped-003` y `8JQ-AEVQceg`.
+- `src/components/layout/NotificacionesPanel.tsx`, `src/components/ui/PedidoStepper.tsx` — fixes de compilación preexistentes (no relacionados al chat) detectados al correr `npm run build` durante esta tarea: mapas `ICONOS_TIPO`/`COLORES_ICONO` no cubrían las 4 variantes de `TipoNotificacion` agregadas en Etapa 4; variable `futuro` sin usar en uno de los dos `.map` de `PedidoStepper`.

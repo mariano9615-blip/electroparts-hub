@@ -1,6 +1,6 @@
 // Datos iniciales de ejemplo para poblar localStorage en el primer arranque
 
-import type { Pedido, Cotizacion, Orden, Mensaje } from '../types';
+import type { Pedido, Cotizacion, Orden } from '../types';
 
 const hoy = new Date().toISOString();
 const ayer = new Date(Date.now() - 86400000).toISOString();
@@ -115,32 +115,5 @@ export const ORDENES_INICIALES: Orden[] = [
     estado: 'en_transito',
     fechaConfirmacion: ayer,
     chatHabilitado: true,
-  },
-];
-
-export const MENSAJES_INICIALES: Mensaje[] = [
-  {
-    id: 'msg-001',
-    ordenId: 'ord-001',
-    autorRol: 'proveedor',
-    autorNombre: 'DistribuidoraElec AR',
-    texto: 'Hola! Recibi la confirmacion de tu orden. Queres coordinar los detalles del envio?',
-    timestamp: ayer,
-  },
-  {
-    id: 'msg-002',
-    ordenId: 'ord-001',
-    autorRol: 'comprador',
-    autorNombre: 'Mi Empresa',
-    texto: 'Si, perfectamente. La direccion de entrega es Av. Corrientes 1234, CABA. Cuando sale?',
-    timestamp: ayer,
-  },
-  {
-    id: 'msg-003',
-    ordenId: 'ord-001',
-    autorRol: 'proveedor',
-    autorNombre: 'DistribuidoraElec AR',
-    texto: 'Manana a primera hora. El transportista te va a contactar para coordinar el horario.',
-    timestamp: hoy,
   },
 ];

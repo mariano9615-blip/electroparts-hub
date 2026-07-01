@@ -567,9 +567,20 @@ export default function DetallePedidoComprador() {
         )}
       </Modal>
 
-      {/* Chat por pedido adjudicado */}
+      {/* Chat por pedido: habilitado en negociación (para coordinar antes de adjudicar) y adjudicado */}
       {pedidoAdjudicado && cotizacionAceptada && (
-        <Chat pedidoId={pedido.id} otroNombre={cotizacionAceptada.proveedorNombre} />
+        <Chat
+          pedidoId={pedido.id}
+          otroNombre={cotizacionAceptada.proveedorNombre}
+          cotizacionId={cotizacionAceptada.id}
+        />
+      )}
+      {pedidoEnNegociacion && cotizacionEnNegociacion && (
+        <Chat
+          pedidoId={pedido.id}
+          otroNombre={cotizacionEnNegociacion.proveedorNombre}
+          cotizacionId={cotizacionEnNegociacion.id}
+        />
       )}
 
       {/* Modal de confirmación: Rechazar cotización individual */}

@@ -94,7 +94,6 @@ export function PedidoStepper({
             {PASOS.map((paso, idx) => {
               const pasado = idx < pasoActual;
               const activo = idx === pasoActual;
-              const futuro = idx > pasoActual;
               return (
                 <div key={paso} className="flex items-center flex-1 last:flex-none">
                   {/* Círculo */}

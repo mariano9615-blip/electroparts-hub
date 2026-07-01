@@ -7,6 +7,10 @@ import {
   IconCircleCheck,
   IconThumbUp,
   IconAward,
+  IconHandStop,
+  IconThumbDown,
+  IconMessage,
+  IconRefresh,
 } from '@tabler/icons-react';
 import { EmptyState } from '../ui';
 import { useNotificacionesStore, type TipoNotificacion, type Notificacion } from '../../store/useNotificacionesStore';
@@ -19,6 +23,10 @@ const ICONOS_TIPO: Record<TipoNotificacion, ComponentType<{ size?: number; strok
   orden_confirmada: IconCircleCheck,
   nueva_orden: IconPackage,
   cotizacion_aceptada: IconThumbUp,
+  cotizacion_en_negociacion: IconHandStop,
+  cotizacion_rechazada: IconThumbDown,
+  mensaje_nuevo: IconMessage,
+  estado_pedido_cambio: IconRefresh,
 };
 
 const COLORES_ICONO: Record<TipoNotificacion, string> = {
@@ -27,6 +35,10 @@ const COLORES_ICONO: Record<TipoNotificacion, string> = {
   orden_confirmada: 'bg-ep-green-light text-ep-green',
   nueva_orden: 'bg-ep-blue-light text-ep-blue',
   cotizacion_aceptada: 'bg-ep-green-light text-ep-green',
+  cotizacion_en_negociacion: 'bg-ep-amber-light text-ep-amber',
+  cotizacion_rechazada: 'bg-ep-red-light text-ep-red',
+  mensaje_nuevo: 'bg-ep-blue-light text-ep-blue',
+  estado_pedido_cambio: 'bg-ep-blue-light text-ep-blue',
 };
 
 interface NotificacionesPanelProps {

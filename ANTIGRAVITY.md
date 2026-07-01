@@ -113,9 +113,10 @@ Patron comun a todos los stores:
 | usePedidosStore.ts         | Pedido[]          | — (API)               | useNotificacionesStore, useCotizacionesStore (cascade)  |
 | useOrdenesStore.ts         | Orden[]           | — (API)               | —                                                       |
 | useCotizacionesStore.ts    | Cotizacion[]      | — (API)               | useOrdenesStore, usePedidosStore, useNotificacionesStore |
-| useChatStore.ts            | Mensaje[]         | ep_mensajes           | —                                                       |
-| useMensajesStore.ts        | MensajePedido[]   | — (API /mensajes)     | —                                                       |
+| useMensajesStore.ts        | mensajesPorPedido: Record<pedidoId, MensajePedido[]> | — (API /mensajes) | useRolStore |
 | useNotificacionesStore.ts  | Notificacion[]    | — (API)               | —                                                       |
+
+> Nota: `useChatStore.ts` (chat "global" por `ordenId`, persistido en `localStorage` bajo `ep_mensajes`) fue **eliminado**. Mostraba solo la primera orden con `chatHabilitado=true`, sin poder elegir otra — de ahí el bug de "todos los chats muestran los mismos mensajes". `useMensajesStore` (ver más abajo) es ahora la única fuente de mensajes, ya segmentada por `pedidoId`.
 
 ### useNotificacionesStore (src/store/useNotificacionesStore.ts)
 Tipos exportados:
@@ -181,34 +182,35 @@ Todas las rutas estan envueltas en AppShell (layout wrapper).
 | /comprador/cotizaciones     | MisCotizacionesComprador     |
 | /comprador/pedidos/:id      | DetallePedidoComprador       |
 | /comprador/ordenes          | MisOrdenesComprador          |
-| /comprador/chat             | ChatComprador                |
 | /proveedor                  | DashboardProveedor           |
 | /proveedor/pedidos          | PedidosDisponibles           |
 | /proveedor/pedidos/:id      | DetallePedidoProveedor       |
 | /proveedor/cotizaciones     | MisCotizacionesProveedor     |
 | /proveedor/ordenes          | MisOrdenesProveedor          |
-| /proveedor/chat             | ChatProveedor                |
 | *                           | → Navigate /comprador        |
+
+`/comprador/chat` y `/proveedor/chat` (ChatComprador/ChatProveedor) fueron **eliminadas**. El chat vive dentro del detalle de cada pedido (`/comprador|proveedor/pedidos/:id`, componente `<Chat pedidoId cotizacionId otroNombre>`) y se accede también desde el panel "Chats activos" (`ChatsActivosPanel`, ícono de mensaje en el TopBar).
 
 ## Inicializacion (src/main.tsx)
 
 Flujo al arrancar la app:
   1. initializarDatos(): si 'ep_initialized' no existe en localStorage,
-     escribe PEDIDOS_INICIALES, COTIZACIONES_INICIALES, ORDENES_INICIALES,
-     MENSAJES_INICIALES y marca 'ep_initialized'='true'
+     escribe PEDIDOS_INICIALES, COTIZACIONES_INICIALES, ORDENES_INICIALES
+     y marca 'ep_initialized'='true'
+     (los mensajes ya no se siembran acá: viven en db.json → colección "mensajes",
+     servida por JSON Server y consumida por useMensajesStore)
   2. Los stores leen localStorage al instanciarse — ya encuentran datos en el primer arranque
   3. Monta <StrictMode><AppRouter /></StrictMode>
 
 Claves localStorage del sistema:
-  ep_initialized, ep_auth, ep_rol, ep_pedidos, ep_cotizaciones, ep_ordenes, ep_mensajes
+  ep_initialized, ep_auth, ep_rol, ep_pedidos, ep_cotizaciones, ep_ordenes
 
 ## IDs de sesion demo
 
   COMPRADOR_ID = 'comprador-demo-001'   → importar de src/utils/constants.ts
   Proveedores mock: 'prov-1', 'prov-2', 'prov-3', 'prov-4'
   Proveedor demo logueado: 'prov-demo-001'
-  PROV_IDS (para filtrar mis cotizaciones proveedor): ['prov-1','prov-2','prov-3','prov-4','prov-demo-001']
-  PROV_CHAT_IDS (para filtrar ordenes de chat proveedor): ['prov-4','prov-demo-001']
+  PROV_IDS (para filtrar mis cotizaciones/ordenes/chats proveedor): ['prov-1','prov-2','prov-3','prov-4','prov-demo-001']
 
 ## Estructura de carpetas
 src/
@@ -216,24 +218,24 @@ src/
   components/
     ui/            -- componentes base: Button, Badge, Card, Input, TextArea, Select,
                       Modal, Spinner, StatCard, EmptyState, PageHeader (barrel: index.ts)
-    layout/        -- AppShell, Sidebar, TopBar, NotificacionesPanel
+    layout/        -- AppShell, Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel
     pedidos/       -- PedidoCard
     cotizaciones/  -- CotizacionCard, CotizacionForm
     ordenes/       -- OrdenCard
     domain/        -- PedidosTable, CotizacionesTable (tablas para dashboards)
-    chat/          -- (reservado para extraccion futura)
+    ui/Chat.tsx    -- panel de chat por pedido (ver sección "Chat por pedido" más abajo)
   pages/
     comprador/     -- DashboardComprador, PublicarPedido, ListaPedidosComprador,
                       MisCotizacionesComprador, DetallePedidoComprador,
-                      MisOrdenesComprador, ChatComprador
+                      MisOrdenesComprador
     proveedor/     -- DashboardProveedor, PedidosDisponibles, MisCotizacionesProveedor,
-                      MisOrdenesProveedor, ChatProveedor
+                      MisOrdenesProveedor, DetallePedidoProveedor
   store/           -- useRolStore, usePedidosStore, useOrdenesStore,
-                      useCotizacionesStore, useChatStore, useNotificacionesStore
-  types/           -- index.ts: Rol, Pedido, Cotizacion, Orden, Mensaje, Proveedor,
+                      useCotizacionesStore, useMensajesStore, useNotificacionesStore
+  types/           -- index.ts: Rol, Pedido, Cotizacion, Orden, MensajePedido, Proveedor,
                       EstadoPedido, EstadoCotizacion, EstadoOrden
   data/            -- mockData.ts: PEDIDOS_INICIALES, COTIZACIONES_INICIALES,
-                      ORDENES_INICIALES, MENSAJES_INICIALES
+                      ORDENES_INICIALES
   hooks/           -- useLocalStorage.ts, useSimuladorCotizaciones.ts
   utils/           -- constants.ts (CATEGORIAS, UNIDADES, PROVEEDORES_SIMULADOS,
                       COMPRADOR_ID, STORAGE_KEY_*), formatters.ts
@@ -340,14 +342,25 @@ Mobile: sidebar como drawer con overlay semitransparente al tocar hamburger en T
 Lee useRolStore y useCotizacionesStore directamente.
 Secciones: Branding (IconBolt) → Toggle rol → Etiqueta seccion → Navegacion por rol → Footer v0.1.0.
 Badge amber sobre "Cotizaciones" = count cotizaciones con estado='pendiente'.
-Items comprador: Dashboard, Publicar pedido, Mis pedidos, Cotizaciones (badge), Mis ordenes, Chat activo.
+Items comprador: Dashboard, Publicar pedido, Mis pedidos, Cotizaciones (badge), Mis ordenes.
   "Mis pedidos" (IconClipboardList) → /comprador/pedidos; se marca activo también cuando pathname empieza con /comprador/pedidos/ (detalle).
-Items proveedor: Dashboard, Pedidos disponibles, Mis cotizaciones (badge), Mis ordenes, Chat activo.
+Items proveedor: Dashboard, Pedidos disponibles, Mis cotizaciones (badge), Mis ordenes.
+  (El ítem "Chat activo" fue removido junto con las rutas /comprador/chat y /proveedor/chat — el chat ahora se accede desde el detalle de pedido o desde el panel "Chats activos" del TopBar.)
 
 ### TopBar (TopBar.tsx)
 Props: onToggleSidebar: () => void
 Mobile: IconMenu2 → onToggleSidebar. Desktop: nombre seccion activa via BREADCRUMB_MAP[pathname].
-Slot derecho: IconBell con badge rojo de no-leidas (max "9+") + Badge rol + avatar "ME" + "Mi Empresa".
+Slot derecho: IconMessage con badge rojo (`pedidosConMensajeNuevo.length`) que abre ChatsActivosPanel + IconBell con badge rojo de no-leidas (max "9+") que abre NotificacionesPanel + Badge rol + avatar "ME" + "Mi Empresa".
+
+### ChatsActivosPanel (ChatsActivosPanel.tsx)
+Mismo patrón visual que NotificacionesPanel (drawer lateral derecho, `w-80`, overlay + `translate-x-full`).
+Fuente de datos: usePedidosStore + useCotizacionesStore + useMensajesStore(mensajesPorPedido).
+  Comprador: pedidos con compradorId=COMPRADOR_ID y estado en ('en_negociacion','adjudicado').
+  Proveedor: pedidos donde mi cotización (proveedorId in PROV_IDS) está en ('en_negociacion','aceptada').
+Cada item muestra: título del pedido, otro participante (proveedorNombre o "Comprador Demo"),
+  último mensaje truncado a 48 chars, badge de no leídos = mensajes.filter(m => !m.leido && m.autorRol !== rolActual).length.
+Ordenado por timestamp del último mensaje (o fechaCreacion del pedido si no hay mensajes) desc.
+Click en un item → navigate(`/${rol}/pedidos/${pedidoId}`) + cierra el panel.
 Estado local: panelAbierto (useState) — controla visibilidad de NotificacionesPanel.
 Renderiza NotificacionesPanel fuera del <header> dentro de un Fragment.
 
@@ -465,17 +478,9 @@ EmptyState segun tab activa.
 
 ### MisOrdenesComprador.tsx · /comprador/ordenes
 Filtra ordenes por compradorId=COMPRADOR_ID, ordena por fechaConfirmacion desc.
-Lista de OrdenCard con onIrChat si chatHabilitado → navigate('/comprador/chat').
-
-### ChatComprador.tsx · /comprador/chat
-ordenActiva: primera orden con compradorId=COMPRADOR_ID y chatHabilitado=true.
-Mensajes del comprador alineados a la DERECHA (bg-ep-green text-white, rounded-tr-sm).
-Mensajes del proveedor alineados a la IZQUIERDA (bg-ep-surface-raised, rounded-tl-sm).
-enviarMensaje(): crea msg comprador → limpiar input → setEscribiendo(true) →
-  setTimeout 1800ms → respuesta automatica rotativa (4 frases) → msg proveedor → setEscribiendo(false).
-Indicador "escribiendo": 3 puntos animados con @keyframes typing-dot (delays 0/150/300ms).
-Auto-scroll al ultimo mensaje via useEffect sobre mensajesOrden/escribiendo.
-Textarea auto-resize hasta 4 lineas; Enter sin Shift envia.
+Lista de OrdenCard con onIrChat si chatHabilitado → navigate(`/comprador/pedidos/${orden.pedidoId}`)
+  (antes navegaba a la ruta de chat global eliminada `/comprador/chat`; ahora abre el detalle
+  del pedido, donde vive el componente Chat segmentado por pedidoId).
 
 ## Paginas proveedor (src/pages/proveedor/)
 
@@ -502,15 +507,8 @@ Sin botones de accion (solo visualizacion). Agrupa por pedido con titulo del ped
 
 ### MisOrdenesProveedor.tsx · /proveedor/ordenes
 Filtra ordenes donde proveedorId in ['prov-4','prov-demo-001'].
-OrdenCard con onIrChat si chatHabilitado → navigate('/proveedor/chat').
-
-### ChatProveedor.tsx · /proveedor/chat
-Igual que ChatComprador con logica invertida:
-  ordenActiva: primera orden con proveedorId in ['prov-4','prov-demo-001'] y chatHabilitado=true.
-  Mensajes del PROVEEDOR alineados a la DERECHA (burbuja verde).
-  Mensajes del COMPRADOR alineados a la IZQUIERDA (burbuja gris).
-  Mensajes enviados: autorRol='proveedor', autorNombre='DistribuidoraElec AR'.
-  Respuestas automaticas del comprador (4 frases distintas).
+OrdenCard con onIrChat si chatHabilitado → navigate(`/proveedor/pedidos/${orden.pedidoId}`)
+  (misma migración que en MisOrdenesComprador: la ruta `/proveedor/chat` fue eliminada).
 
 ## Flujos de negocio implementados
 
@@ -531,8 +529,8 @@ Igual que ChatComprador con logica invertida:
     → Confirmar → notifica rechazados + aceptarCotizacion(id) → pedido pasa a 'adjudicado'
     → banner verde aparece en la página, columna Acciones desaparece.
     También disponible: "Rechazar" cotización individual sin adjudicar otra.
-6. MisOrdenesComprador: lista la orden con boton "Ir al chat"
-7. ChatComprador: conversacion bidireccional con respuestas automaticas del proveedor
+6. MisOrdenesComprador: lista la orden con boton "Ir al chat" → detalle del pedido
+7. DetallePedidoComprador: chat segmentado por pedidoId (ver sección "Chat por pedido")
 
 ### Flujo proveedor completo
 1. Toggle sidebar → rol proveedor → navigate('/proveedor')
@@ -541,52 +539,85 @@ Igual que ChatComprador con logica invertida:
 4. CotizacionForm: completar precio/tiempoEntrega/notas → enviar
    agregarCotizacion() via getState(), badge "Ya cotizaste" en el pedido
 5. MisCotizacionesProveedor: ver estado de todas las cotizaciones enviadas
-6. ChatProveedor: conversacion bidireccional con respuestas automaticas del comprador
+6. DetallePedidoProveedor: chat segmentado por pedidoId (ver sección "Chat por pedido")
 
 ### Flujo de cambio de rol
 Click toggle Comprador/Proveedor en Sidebar → useRolStore.setRol() → navigate('/comprador'|'/proveedor')
 → Sidebar actualiza items y badge → TopBar actualiza badge de rol.
 
-## Chat por pedido adjudicado (desde v0.3.0)
+## Chat por pedido (desde v0.3.0, segmentación corregida en v0.3.1)
 
 Panel de mensajes accesible desde DetallePedidoComprador y DetallePedidoProveedor.
-Solo visible cuando pedido.estado === 'adjudicado'.
+Visible cuando el pedido está `en_negociacion` (para coordinar antes de adjudicar,
+usando la cotización en negociación) o `adjudicado` (usando la cotización aceptada).
+
+IMPORTANTE — esta es la ÚNICA implementación de chat de la app. Hasta v0.3.0 convivía
+en paralelo un chat "global" (`useChatStore`, páginas `ChatComprador`/`ChatProveedor` en
+`/comprador/chat` y `/proveedor/chat`) que persistía un array plano en `localStorage`
+indexado por `ordenId` y solo mostraba la *primera* orden con `chatHabilitado=true` sin
+forma de elegir otra. Ese camino fue eliminado en v0.3.1 por ser la causa del bug
+"todos los chats muestran los mismos mensajes".
 
 ### Colección API: /mensajes
-Cada MensajePedido tiene: { id, pedidoId, autorRol: 'comprador'|'proveedor', autorNombre, texto, timestamp }
-JSON Server expone: GET /mensajes?pedidoId=X, POST /mensajes.
+Cada MensajePedido tiene: { id, pedidoId, cotizacionId?, autorRol: 'comprador'|'proveedor', autorNombre, texto, timestamp, leido? }
+JSON Server expone: GET /mensajes (todos), GET /mensajes?pedidoId=X, POST /mensajes, PATCH /mensajes/:id.
 
 ### useMensajesStore (src/store/useMensajesStore.ts)
-State: mensajes: MensajePedido[], pedidoActivoId: string | null
-  - pedidoActivoId: setado por cargarMensajes(); usado por el polling en AppRouter
-    para sincronizar solo cuando hay un chat activo.
-Actions:
-  cargarMensajes(pedidoId) → setea pedidoActivoId, llama GET /mensajes?pedidoId=X
-  enviarMensaje(pedidoId, texto, autorRol, autorNombre) → crea MensajePedido con crypto.randomUUID(),
-    POST /mensajes, agrega al estado local
-  limpiarMensajes() → resetea mensajes=[] y pedidoActivoId=null (llamado al desmontar Chat)
+State:
+  mensajesPorPedido: Record<pedidoId, MensajePedido[]>  — nunca un array plano global.
+  pedidoActivoId: string | null  — pedido cuyo Chat está montado actualmente.
+  pedidosConMensajeNuevo: string[]  — pedidoIds con mensajes no leídos del otro rol detectados en la sesión;
+    alimenta el badge del botón de chat en TopBar y el badge por item en ChatsActivosPanel.
+Selectores/acciones:
+  getMensajesDePedido(pedidoId) → mensajesPorPedido[pedidoId] ?? []
+  setMensajesPorPedido(pedidoId, mensajes) / agregarMensaje(mensaje) → mutan solo la entrada de ese pedidoId
+  setPedidoActivo(pedidoId) / limpiarPedidoActivo()
+  cargarMensajes(pedidoId) → GET /mensajes?pedidoId=X, guarda en mensajesPorPedido[pedidoId];
+    llamado al montar <Chat>, marca pedidoId en pedidosConMensajeNuevo si trae no leídos del otro rol.
+  cargarTodosLosMensajes() → GET /mensajes (SIN filtrar), agrupa por pedidoId con Object.groupBy manual,
+    y por cada pedido compara contra el snapshot previo en mensajesPorPedido para detectar mensajes
+    nuevos del otro rol — sin importar si ese pedido tiene el chat abierto o no. Por cada mensaje nuevo
+    despacha `window.dispatchEvent(new CustomEvent('mensaje-nuevo-toast', {...}))`, que ToastContainer
+    ya escucha para mostrar el toast y reproducir el sonido 'mensaje' (utils/sounds.ts).
+    Es la función que llama el polling de 5s en AppRouter — reemplaza el viejo comportamiento que
+    solo refrescaba pedidoActivoId.
+  enviarMensaje(pedidoId, texto, autorRol, autorNombre, cotizacionId?) → POST /mensajes con
+    cotizacionId incluido cuando está disponible; agrega al slot de mensajesPorPedido[pedidoId].
+  marcarMensajesLeidos(pedidoId, miRol) → PATCH /mensajes/:id en paralelo (leido:true) para los mensajes
+    del otro rol; al resolver, limpia pedidoId de pedidosConMensajeNuevo.
 
 ### Componente Chat (src/components/ui/Chat.tsx)
-Props: pedidoId: string, otroNombre: string
+Props: pedidoId: string, otroNombre: string, cotizacionId?: string
+  - Lee useMensajesStore(s => s.mensajesPorPedido[pedidoId] ?? []) — NUNCA un array global.
   - Lee useRolStore para determinar miRol y miNombre
   - miNombre: 'Comprador Demo' (comprador) | 'Mi Empresa (Proveedor)' (proveedor)
   - Burbujas propias: derecha, bg-ep-blue text-white, rounded-2xl rounded-tr-sm
   - Burbujas del otro: izquierda, bg-ep-surface border border-ep-border, rounded-2xl rounded-tl-sm
   - Auto-scroll al último mensaje via useRef + scrollIntoView en useEffect([mensajes])
-  - useEffect([pedidoId]): monta → cargarMensajes(pedidoId); desmonta → limpiarMensajes()
-  - Enter (sin Shift) envía; botón send con IconSend deshabilitado si texto vacío
+  - useEffect([pedidoId]): monta → cargarMensajes(pedidoId) (fetch inicial filtrado por pedidoId);
+    desmonta → limpiarPedidoActivo()
+  - useEffect([mensajes]): marcarMensajesLeidos(pedidoId, miRol) cada vez que cambia la lista
+  - Enter (sin Shift) envía; botón send con IconSend deshabilitado si texto vacío;
+    handleEnviar() pasa cotizacionId al enviarMensaje del store
   - Panel h-96 overflow-y-auto bg-ep-blue-dark/5
 
 ### Integración en páginas
-  DetallePedidoComprador: <Chat pedidoId={pedido.id} otroNombre={cotizacionAceptada.proveedorNombre} />
-  DetallePedidoProveedor: <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" />
+  DetallePedidoComprador: <Chat pedidoId={pedido.id} otroNombre={cotizacion.proveedorNombre} cotizacionId={cotizacion.id} />
+    (cotizacion = cotizacionAceptada si adjudicado, cotizacionEnNegociacion si en_negociacion)
+  DetallePedidoProveedor: <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" cotizacionId={miCotizacion.id} />
+    (solo si ganadorSoyYo && cotizacionAceptada, o si miCotizacionEnNegociacion)
+
+### ChatsActivosPanel (src/components/layout/ChatsActivosPanel.tsx)
+Ver sección "Layout principal" más arriba. Es el "menú de chats" que reemplaza a las rutas de chat global:
+lista todos los pedidos con chat habilitado (propios, filtrados por rol) con último mensaje y badge de
+no leídos, y navega al detalle del pedido correspondiente al hacer click — nunca abre un chat genérico.
 
 ### DetallePedidoProveedor (src/pages/proveedor/DetallePedidoProveedor.tsx)
 Ruta: /proveedor/pedidos/:id
   - Lee pedidoId de useParams
   - Muestra resumen del pedido (título, categoría, estado, badge)
   - Card con datos de la cotizacion aceptada: precio, tiempoEntrega, fechaCreacion
-  - Componente Chat (solo si pedido.estado === 'adjudicado')
+  - Componente Chat cuando ganadorSoyYo (adjudicado) o miCotizacionEnNegociacion
 Navegacion: link "Ver chat" en MisCotizacionesProveedor para cotizaciones aceptadas.
 
 ## Borrado de pedidos y cotizaciones (desde v0.3.0)
@@ -706,15 +737,17 @@ Cada store ahora:
 | usePedidosStore          | api.getPedidos()     | agregarPedido→createPedido, actualizarEstadoPedido→updatePedido, incrementarCotizaciones→updatePedido, eliminarPedido→deletePedido (+ cascade) |
 | useCotizacionesStore     | api.getCotizaciones()| agregarCotizacion→createCotizacion, aceptarCotizacion→updateCotizacion×N, rechazarCotizacion→updateCotizacion, eliminarCotizacion→deleteCotizacion, eliminarCotizacionesByPedidoId→deleteCotizacion×N |
 | useOrdenesStore          | api.getOrdenes()     | agregarOrden→createOrden, actualizarEstadoOrden→updateOrden           |
-| useMensajesStore         | api.getMensajesByPedidoId() | enviarMensaje→createMensaje; limpiarMensajes resetea estado local |
+| useMensajesStore         | api.getMensajesByPedidoId() (chat abierto) + api.getMensajes() (polling global, agrupado por pedidoId) | enviarMensaje→createMensaje; marcarMensajesLeidos→updateMensaje×N |
 | useNotificacionesStore   | api.getNotificaciones()| agregarNotificacion→createNotificacion, marcarLeida→updateNotificacion, marcarTodasLeidas→updateNotificacion×N, eliminarNotificacion→deleteNotificacion, limpiarTodas→deleteNotificacion×N |
 
 ### Inicializacion al montar la app
 AppRouter.tsx (el componente raiz) llama cargarDatos() de los 4 stores en un useEffect([], []).
 Los datos llegan asincrónicamente; los componentes re-renderizan via suscripcion Zustand cuando el store se actualiza.
 main.tsx ya no llama initializarDatos() — los datos iniciales viven en db.json, no en localStorage.
-El polling de 5s en AppRouter también llama useMensajesStore.getState().cargarMensajes(pedidoActivoId)
-si hay un pedidoActivoId activo (lo setea el componente Chat al montarse).
+El polling de 5s en AppRouter también llama useMensajesStore.getState().cargarTodosLosMensajes(),
+que trae TODOS los mensajes y actualiza mensajesPorPedido para cada pedido (no solo el que tiene
+el chat abierto) — necesario para que ChatsActivosPanel y el badge del TopBar reflejen mensajes
+nuevos aunque el usuario no haya abierto ese chat todavía.
 
 ### Variables de entorno
 VITE_API_URL  URL base del servidor JSON Server

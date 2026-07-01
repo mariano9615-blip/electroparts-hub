@@ -215,6 +215,16 @@ export async function deleteNotificacion(id: string): Promise<boolean> {
 
 // ─── Mensajes de pedido ──────────────────────────────────────────────────────
 
+export async function getMensajes(): Promise<MensajePedido[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/mensajes`);
+    return await res.json();
+  } catch (e) {
+    console.error('api.getMensajes:', e);
+    return [];
+  }
+}
+
 export async function getMensajesByPedidoId(pedidoId: string): Promise<MensajePedido[]> {
   try {
     const res = await fetch(`${BASE_URL}/mensajes?pedidoId=${pedidoId}`);

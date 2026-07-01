@@ -151,9 +151,12 @@ export default function DetallePedidoProveedor() {
         </div>
       )}
 
-      {/* Chat solo cuando el pedido está adjudicado */}
-      {pedido.estado === 'adjudicado' && (
-        <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" />
+      {/* Chat: habilitado en negociación (mi cotización) y cuando el pedido está adjudicado a mí */}
+      {ganadorSoyYo && cotizacionAceptada && (
+        <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" cotizacionId={cotizacionAceptada.id} />
+      )}
+      {miCotizacionEnNegociacion && miCotizacion && (
+        <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" cotizacionId={miCotizacion.id} />
       )}
     </div>
   );

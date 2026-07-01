@@ -6,6 +6,7 @@ import { useRolStore } from '../../store/useRolStore';
 interface ChatProps {
   pedidoId: string;
   otroNombre: string;
+  cotizacionId?: string;
 }
 
 function formatHora(timestamp: string): string {
@@ -13,14 +14,14 @@ function formatHora(timestamp: string): string {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
-export function Chat({ pedidoId, otroNombre }: ChatProps) {
+export function Chat({ pedidoId, otroNombre, cotizacionId }: ChatProps) {
   const [texto, setTexto] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const mensajes = useMensajesStore((s) => s.mensajes);
+  const mensajes = useMensajesStore((s) => s.mensajesPorPedido[pedidoId] ?? []);
   const cargarMensajes = useMensajesStore((s) => s.cargarMensajes);
   const enviarMensaje = useMensajesStore((s) => s.enviarMensaje);
-  const limpiarMensajes = useMensajesStore((s) => s.limpiarMensajes);
+  const limpiarPedidoActivo = useMensajesStore((s) => s.limpiarPedidoActivo);
   const marcarMensajesLeidos = useMensajesStore((s) => s.marcarMensajesLeidos);
   const rol = useRolStore((s) => s.rol);
 
@@ -30,7 +31,7 @@ export function Chat({ pedidoId, otroNombre }: ChatProps) {
   useEffect(() => {
     cargarMensajes(pedidoId);
     return () => {
-      limpiarMensajes();
+      limpiarPedidoActivo();
     };
   }, [pedidoId]);
 
@@ -47,7 +48,7 @@ export function Chat({ pedidoId, otroNombre }: ChatProps) {
 
   const handleEnviar = () => {
     if (!texto.trim()) return;
-    enviarMensaje(pedidoId, texto.trim(), miRol, miNombre);
+    enviarMensaje(pedidoId, texto.trim(), miRol, miNombre, cotizacionId);
     setTexto('');
   };
 

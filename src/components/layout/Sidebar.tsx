@@ -6,7 +6,6 @@ import {
   IconPlus,
   IconFileInvoice,
   IconShoppingCart,
-  IconMessage,
   IconPackage,
   IconClipboardList,
 } from '@tabler/icons-react';
@@ -27,7 +26,6 @@ const NAV_COMPRADOR: NavItem[] = [
   { label: 'Mis pedidos', ruta: '/comprador/pedidos', icono: IconClipboardList },
   { label: 'Cotizaciones', ruta: '/comprador/cotizaciones', icono: IconFileInvoice },
   { label: 'Mis órdenes', ruta: '/comprador/ordenes', icono: IconShoppingCart },
-  { label: 'Chat activo', ruta: '/comprador/chat', icono: IconMessage },
 ];
 
 const NAV_PROVEEDOR: NavItem[] = [
@@ -35,7 +33,6 @@ const NAV_PROVEEDOR: NavItem[] = [
   { label: 'Pedidos disponibles', ruta: '/proveedor/pedidos', icono: IconPackage },
   { label: 'Mis cotizaciones', ruta: '/proveedor/cotizaciones', icono: IconFileInvoice },
   { label: 'Mis órdenes', ruta: '/proveedor/ordenes', icono: IconShoppingCart },
-  { label: 'Chat activo', ruta: '/proveedor/chat', icono: IconMessage },
 ];
 
 export const Sidebar = () => {

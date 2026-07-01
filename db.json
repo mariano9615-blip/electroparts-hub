@@ -204,6 +204,47 @@
       "leida": true
     }
   ],
-  "mensajes": [],
+  "mensajes": [
+    {
+      "id": "msg-001",
+      "pedidoId": "ped-003",
+      "cotizacionId": "cot-003",
+      "autorRol": "proveedor",
+      "autorNombre": "DistribuidoraElec AR",
+      "texto": "Hola! Recibimos la confirmación de tu orden. ¿Coordinamos los detalles del envío?",
+      "timestamp": "2026-06-29T13:05:00.000Z",
+      "leido": true
+    },
+    {
+      "id": "msg-002",
+      "pedidoId": "ped-003",
+      "cotizacionId": "cot-003",
+      "autorRol": "comprador",
+      "autorNombre": "Comprador Demo",
+      "texto": "Sí, dale. La dirección de entrega es Av. Corrientes 1234, CABA. ¿Cuándo sale?",
+      "timestamp": "2026-06-29T13:10:00.000Z",
+      "leido": true
+    },
+    {
+      "id": "msg-003",
+      "pedidoId": "ped-003",
+      "cotizacionId": "cot-003",
+      "autorRol": "proveedor",
+      "autorNombre": "DistribuidoraElec AR",
+      "texto": "Mañana a primera hora. El transportista te va a contactar para coordinar el horario.",
+      "timestamp": "2026-06-30T09:00:00.000Z",
+      "leido": false
+    },
+    {
+      "id": "msg-004",
+      "pedidoId": "8JQ-AEVQceg",
+      "cotizacionId": "5zWDO7x0T2E",
+      "autorRol": "proveedor",
+      "autorNombre": "Mi Empresa (Proveedor)",
+      "texto": "Confirmado, arrancamos con la preparación del pedido.",
+      "timestamp": "2026-07-01T01:00:00.000Z",
+      "leido": false
+    }
+  ],
   "$schema": "./node_modules/json-server/schema.json"
 }

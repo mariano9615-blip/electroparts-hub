@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { IconMenu2, IconLogout, IconBell, IconBellOff } from '@tabler/icons-react';
+import { IconMenu2, IconLogout, IconBell, IconBellOff, IconMessage } from '@tabler/icons-react';
 import { Badge, Button } from '../ui';
 import { useRolStore } from '../../store/useRolStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificacionesStore } from '../../store/useNotificacionesStore';
+import { useMensajesStore } from '../../store/useMensajesStore';
 import { useNotificationSound } from '../../hooks/useNotificationSound';
 import { NotificacionesPanel } from './NotificacionesPanel';
+import { ChatsActivosPanel } from './ChatsActivosPanel';
 
 interface TopBarProps {
   onToggleSidebar: () => void;
@@ -18,12 +20,10 @@ const BREADCRUMB_MAP: Record<string, string> = {
   '/comprador/pedidos': 'Mis pedidos',
   '/comprador/cotizaciones': 'Cotizaciones',
   '/comprador/ordenes': 'Mis órdenes',
-  '/comprador/chat': 'Chat activo',
   '/proveedor': 'Dashboard',
   '/proveedor/pedidos': 'Pedidos disponibles',
   '/proveedor/cotizaciones': 'Mis cotizaciones',
   '/proveedor/ordenes': 'Mis órdenes',
-  '/proveedor/chat': 'Chat activo',
 };
 
 export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
@@ -32,11 +32,13 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const rol = useRolStore((s) => s.rol);
   const seccion = BREADCRUMB_MAP[pathname] ?? 'ElectroParts Hub';
   const [panelAbierto, setPanelAbierto] = useState(false);
+  const [panelChatsAbierto, setPanelChatsAbierto] = useState(false);
   const { silenciado, toggleSilencio } = useNotificationSound();
 
   const cantidadNoLeidas = useNotificacionesStore(
     (s) => s.notificaciones.filter((n) => n.rolDestino === rol && !n.leida).length,
   );
+  const cantidadChatsNoLeidos = useMensajesStore((s) => s.pedidosConMensajeNuevo.length);
 
   const handleLogout = () => {
     useAuthStore.getState().logout();
@@ -71,6 +73,22 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
               <IconBell size={18} stroke={1.5} className="text-ep-text-secondary" />
             )}
           </button>
+
+          {/* Botón de chats activos con badge */}
+          <div className="relative">
+            <button
+              className="p-1.5 rounded-lg text-ep-text-secondary hover:bg-ep-surface-raised transition-colors duration-150"
+              onClick={() => setPanelChatsAbierto((v) => !v)}
+              aria-label="Chats activos"
+            >
+              <IconMessage size={20} />
+              {cantidadChatsNoLeidos > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 bg-ep-red text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                  {cantidadChatsNoLeidos > 9 ? '9+' : cantidadChatsNoLeidos}
+                </span>
+              )}
+            </button>
+          </div>
 
           {/* Botón de notificaciones con badge */}
           <div className="relative">
@@ -111,6 +129,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
       </header>
 
       <NotificacionesPanel abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} />
+      <ChatsActivosPanel abierto={panelChatsAbierto} onCerrar={() => setPanelChatsAbierto(false)} />
     </>
   );
 };

@@ -50,18 +50,10 @@ export interface Orden {
   chatHabilitado: boolean;
 }
 
-export interface Mensaje {
-  id: string;
-  ordenId: string;
-  autorRol: Rol;
-  autorNombre: string;
-  texto: string;
-  timestamp: string;
-}
-
 export interface MensajePedido {
   id: string;
   pedidoId: string;
+  cotizacionId?: string;
   autorRol: Rol;
   autorNombre: string;
   texto: string;

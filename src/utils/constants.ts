@@ -35,6 +35,5 @@ export const STORAGE_KEY_INITIALIZED = 'ep_initialized';
 export const STORAGE_KEY_PEDIDOS = 'ep_pedidos';
 export const STORAGE_KEY_COTIZACIONES = 'ep_cotizaciones';
 export const STORAGE_KEY_ORDENES = 'ep_ordenes';
-export const STORAGE_KEY_MENSAJES = 'ep_mensajes';
 export const STORAGE_KEY_ROL = 'ep_rol';
 export const STORAGE_KEY_NOTIFICACIONES = 'ep_notificaciones';
