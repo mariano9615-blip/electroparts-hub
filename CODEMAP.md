@@ -256,10 +256,10 @@ Rama: mdemichelis
 
 ---
 
-## src/router/AppRouter.tsx (cambios v0.1.9)
+## src/router/AppRouter.tsx (cambios v0.2.0)
 
 | Líneas | Nombre | Descripción |
 |--------|--------|-------------|
-| 1 | import `useEffect` | Nuevo import de `react` para el efecto de carga inicial |
-| 5–8 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore` — usados solo para disparar `cargarDatos()` al montar |
-| 49–54 | `useEffect` en `AppRouter` | `useEffect(() => { cargarDatos() × 4 }, [])` — dispara la carga inicial de todas las entidades al montar la app por primera vez |
+| 1 | import `useEffect` | Import de `react` para el efecto de carga y polling |
+| 5–8 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore` — usados solo para disparar `cargarDatos()` |
+| 49–60 | `useEffect` en `AppRouter` | Define `cargarTodo()` que llama `cargarDatos()` en los 4 stores; la llama inmediatamente al montar y la registra en un `setInterval` de 5000ms. Retorna `() => clearInterval(intervalo)` para evitar memory leaks al desmontar. Mantiene los datos sincronizados en tiempo real entre usuarios en red local. |

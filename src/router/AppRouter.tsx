@@ -47,10 +47,16 @@ function RutaLogin() {
 
 export function AppRouter() {
   useEffect(() => {
-    usePedidosStore.getState().cargarDatos();
-    useCotizacionesStore.getState().cargarDatos();
-    useOrdenesStore.getState().cargarDatos();
-    useNotificacionesStore.getState().cargarDatos();
+    const cargarTodo = () => {
+      usePedidosStore.getState().cargarDatos();
+      useCotizacionesStore.getState().cargarDatos();
+      useOrdenesStore.getState().cargarDatos();
+      useNotificacionesStore.getState().cargarDatos();
+    };
+
+    cargarTodo();
+    const intervalo = setInterval(cargarTodo, 5000);
+    return () => clearInterval(intervalo);
   }, []);
 
   return (
