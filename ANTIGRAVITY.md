@@ -1,893 +1,200 @@
-# ANTIGRAVITY.md -- ElectroParts Hub
-## Fuente de verdad arquitectonica. Leer completo antes de cualquier cambio.
+# ANTIGRAVITY.md — ElectroParts Hub
+Referencia técnica densa. Leer antes de cualquier cambio. Detalles narrativos en CODEMAP.md.
 
-## Stack y versiones (package.json exacto)
-- react: ^19.2.7
-- react-dom: ^19.2.7
-- react-router-dom: ^7.18.0
-- zustand: ^5.0.14
-- @tabler/icons-react: ^3.44.0
-- tailwindcss: ^4.3.1  (v4 — configuracion via @theme en CSS, NO tailwind.config.js)
-- @tailwindcss/postcss: ^4.x  (plugin PostCSS requerido por v4, distinto de v3)
-- vite: ^8.1.0
-- typescript: ~6.0.2
-- @vitejs/plugin-react: ^6.0.2
-- autoprefixer: ^10.5.2
-- prettier: ^3.8.5
-- oxlint: ^1.69.0
+---
 
-## Sistema de diseno — Tailwind v4 + Paleta EP
+## 1. PROYECTO
+- **Nombre:** ElectroParts Hub — marketplace B2B de compras de componentes eléctricos
+- **Stack:** React 19.2 · React Router 7.18 · Zustand 5.0 · TypeScript 6.0 · Vite 8.1 · Tailwind CSS 4.3 (config vía `@theme` en CSS, sin `tailwind.config.js`) · `@tailwindcss/postcss` (PostCSS plugin v4) · `@tabler/icons-react` 3.44
+- **Dev deps:** oxlint 1.69 · prettier 3.8 · `@vitejs/plugin-react` 6.0 · autoprefixer 10.5
+- **Repo/rama activa:** `mdemichelis`
+- **Ruta local:** `c:\Proyectos\electroparts-hub`
+- **Backend:** JSON Server en `db.json` (puerto 3001) · Vite en puerto 5173
 
-Tailwind v4 NO usa tailwind.config.js para colores custom. Los tokens se definen
-con la directiva @theme dentro del CSS.
+---
 
-Archivo: src/index.css  (unica fuente de verdad del sistema de diseno)
-
-Configuracion PostCSS: postcss.config.js usa '@tailwindcss/postcss' (no 'tailwindcss').
-
-Paleta EP disponible como clases Tailwind:
-  bg-ep-green         #16a34a  (verde primario de marca)
-  bg-ep-green-light   #dcfce7
-  bg-ep-green-dark    #14532d
-  bg-ep-green-hover   #15803d
-  bg-ep-blue          #2563eb
-  bg-ep-blue-light    #dbeafe
-  bg-ep-blue-dark     #1e3a8a
-  bg-ep-amber         #d97706
-  bg-ep-amber-light   #fef3c7
-  bg-ep-amber-dark    #92400e
-  bg-ep-red           #dc2626
-  bg-ep-red-light     #fee2e2
-  bg-ep-red-dark      #991b1b
-  bg-ep-bg            #f8fafc  (fondo global)
-  bg-ep-surface       #ffffff
-  bg-ep-surface-raised #f1f5f9
-  bg-ep-border        #e2e8f0
-  bg-ep-border-strong #cbd5e1
-  text-ep-text-primary   #0f172a
-  text-ep-text-secondary #475569
-  text-ep-text-muted     #94a3b8
-  text-ep-text-disabled  #cbd5e1
-
-Tipografias: --font-sans (Inter) / --font-mono (JetBrains Mono), importadas desde Google Fonts.
-Prefijos aplicables: bg-*, text-*, border-*, ring-*, etc.
-
-Animacion CSS global: @keyframes typing-dot (pulsacion para indicador de "escribiendo" en chat)
-  0%, 60%, 100% { opacity: 0.2; transform: scale(0.8); }
-  30%            { opacity: 1;   transform: scale(1); }
-
-## Autenticacion
-
-Sistema de login del lado del cliente para proteger acceso en demos/presentaciones.
-No hay backend — las credenciales son hardcodeadas.
-
-Credenciales demo: usuario = 'admin', password = '123456'
-Clave localStorage: 'ep_auth' (valor 'true' cuando hay sesion activa)
-
-### useAuthStore (src/store/useAuthStore.ts)
-State: autenticado: boolean, usuario: string | null
-Inicializacion: lee localStorage['ep_auth']; si es 'true' arranca autenticado=true, usuario='admin'
-
-Actions:
-  login(usuario, password) → boolean
-    Valida credenciales hardcodeadas. Si coinciden: setState autenticado=true,
-    persiste ep_auth='true', retorna true. Si no: retorna false sin mutar estado.
-  logout() → void
-    setState autenticado=false/usuario=null, elimina ep_auth de localStorage.
-
-### RutaProtegida / LayoutProtegido (src/router/AppRouter.tsx)
-LayoutProtegido: layout route (sin path) que envuelve AppShell con <Outlet />.
-  Lee useAuthStore.autenticado; si es false redirige a /login con Navigate replace.
-  Todas las rutas de negocio son hijas de este layout — AppShell se monta una sola vez.
-
-RutaProtegida: componente wrapper simple (usado solo en el catch-all *).
-  Igual logica: si no autenticado → Navigate to="/login".
-
-RutaLogin: componente que envuelve la ruta /login.
-  Si ya autenticado → Navigate to="/comprador" (evita que usuario logueado vea el login).
-
-### Pagina Login (src/pages/Login.tsx)
-Fullscreen centrada, sin AppShell. Campos: usuario + password.
-Flujo de submit: setTimeout 600ms simula verificacion → llama login() via getState().
-  Si ok: el store muta autenticado=true → LayoutProtegido deja pasar → router redirige.
-  Si falla: muestra mensaje de error + animacion shake en el card.
-Animacion shake: clase CSS .shake definida en index.css (@keyframes shake, 0.4s).
-  Se agrega/remueve via DOM ref para poder repetirse en intentos sucesivos.
-
-### Logout
-Boton "Salir" en TopBar: llama useAuthStore.getState().logout() + navigate('/login').
-LayoutProtegido detecta autenticado=false y redirige automaticamente a /login.
-
-## Stores Zustand (src/store/)
-
-Patron comun a todos los stores:
-  - Persistencia manual en localStorage (sin middleware persist de Zustand)
-  - Lee localStorage al inicializarse; si no existe usa datos mock de src/data/mockData.ts
-  - Cada action que muta estado persiste inmediatamente
-  - Para llamar otros stores desde una action: useXxxStore.getState().action()
-
-| Store                      | Entidad           | Clave localStorage    | Depende de                                              |
-|----------------------------|-------------------|-----------------------|---------------------------------------------------------|
-| useAuthStore.ts            | Auth              | ep_auth               | —                                                       |
-| useRolStore.ts             | Rol               | ep_rol                | —                                                       |
-| usePedidosStore.ts         | Pedido[]          | — (API)               | useNotificacionesStore, useCotizacionesStore (cascade)  |
-| useOrdenesStore.ts         | Orden[]           | — (API)               | —                                                       |
-| useCotizacionesStore.ts    | Cotizacion[]      | — (API)               | useOrdenesStore, usePedidosStore, useNotificacionesStore |
-| useMensajesStore.ts        | mensajesPorPedido: Record<pedidoId, MensajePedido[]> | — (API /mensajes) | useRolStore |
-| useNotificacionesStore.ts  | Notificacion[]    | — (API)               | —                                                       |
-
-> Nota: `useChatStore.ts` (chat "global" por `ordenId`, persistido en `localStorage` bajo `ep_mensajes`) fue **eliminado**. Mostraba solo la primera orden con `chatHabilitado=true`, sin poder elegir otra — de ahí el bug de "todos los chats muestran los mismos mensajes". `useMensajesStore` (ver más abajo) es ahora la única fuente de mensajes, ya segmentada por `pedidoId`.
-
-### useNotificacionesStore (src/store/useNotificacionesStore.ts)
-Tipos exportados:
-  TipoNotificacion: 'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada'
-  Notificacion: { id, tipo, titulo, mensaje, fecha, leida, rolDestino: 'comprador'|'proveedor', entidadId? }
-
-State: notificaciones: Notificacion[]  (más reciente primero — nuevas se agregan al frente del array)
-
-Actions:
-  agregarNotificacion(n: Omit<Notificacion, 'id'|'fecha'|'leida'>) → asigna UUID, fecha ISO y leida=false; prepend al array
-  marcarLeida(id) → muta leida=true para el id dado
-  marcarTodasLeidas() → muta leida=true en todas
-  eliminarNotificacion(id) → filtra el id del array
-  limpiarTodas() → array vacío
-
-Selectores (no son reactive hooks — llaman a get() internamente):
-  getNoLeidas(rol) → filtra por rolDestino===rol y leida=false
-  getTodas(rol) → filtra por rolDestino===rol
-
-Persistencia: 'ep_notificaciones' en localStorage (JSON.stringify/parse manual, sin middleware).
-Inicializa vacío si no hay clave guardada (sin datos mock).
-
-Flujo de notificaciones por acción de negocio:
-  usePedidosStore.agregarPedido() → notifica rolDestino='proveedor', tipo='nueva_orden', mensaje=pedido.titulo
-  useCotizacionesStore.agregarCotizacion() → notifica rolDestino='comprador', tipo='nueva_cotizacion', mensaje con proveedor y precio
-  useCotizacionesStore.aceptarCotizacion() → notifica rolDestino='comprador' (orden_confirmada) + rolDestino='proveedor' (cotizacion_aceptada)
-
-Flujo critico en useCotizacionesStore.aceptarCotizacion():
-  1. Cambia cotizacion seleccionada a 'aceptada'
-  2. Cambia todas las demas cotizaciones del mismo pedido a 'rechazada'
-  3. Construye objeto Orden con crypto.randomUUID()
-  4. Llama useOrdenesStore.getState().agregarOrden(orden)
-  5. Llama usePedidosStore.getState().actualizarEstadoPedido(pedidoId, 'adjudicado')
-  6. Persiste cotizaciones en localStorage
-
-## Hooks custom (src/hooks/)
-
-useLocalStorage<T>(key, initialValue) → [T, setter]
-  - Lee y parsea JSON de localStorage al montar
-  - Setter persiste en localStorage automaticamente
-  - Para uso en componentes con preferencias de UI (no en stores)
-
-useSimuladorCotizaciones(pedidoId: string | null, presupuestoMax?: number) → { simulando: boolean }
-  - Simula llegada de 4 cotizaciones de PROVEEDORES_SIMULADOS
-  - Delays: 5s, 12s, 22s, 35s
-  - Cada cotizacion llama agregarCotizacion() e incrementarCotizaciones() via getState()
-  - simulando=true hasta que se dispara la ultima cotizacion
-  - Cuando pedidoId es null el hook no hace nada
-  - Cleanup de timeouts en desmontaje (evita memory leaks)
-  - Se activa en PublicarPedido despues de crear el pedido: setPedidoIdSimulado(pedido.id)
-
-## Router (src/router/AppRouter.tsx)
-
-BrowserRouter + Routes + Route (API de React Router v7).
-Todas las rutas estan envueltas en AppShell (layout wrapper).
-
-| Ruta                        | Componente destino           |
-|-----------------------------|------------------------------|
-| /                           | → Navigate /comprador        |
-| /comprador                  | DashboardComprador           |
-| /comprador/publicar         | PublicarPedido               |
-| /comprador/pedidos          | ListaPedidosComprador        |
-| /comprador/cotizaciones     | MisCotizacionesComprador     |
-| /comprador/pedidos/:id      | DetallePedidoComprador       |
-| /comprador/ordenes          | MisOrdenesComprador          |
-| /proveedor                  | DashboardProveedor           |
-| /proveedor/pedidos          | PedidosDisponibles           |
-| /proveedor/pedidos/:id      | DetallePedidoProveedor       |
-| /proveedor/cotizaciones     | MisCotizacionesProveedor     |
-| /proveedor/ordenes          | MisOrdenesProveedor          |
-| *                           | → Navigate /comprador        |
-
-`/comprador/chat` y `/proveedor/chat` (ChatComprador/ChatProveedor) fueron **eliminadas**. El chat vive dentro del detalle de cada pedido (`/comprador|proveedor/pedidos/:id`, componente `<Chat pedidoId cotizacionId otroNombre>`) y se accede también desde el panel "Chats activos" (`ChatsActivosPanel`, ícono de mensaje en el TopBar).
-
-## Inicializacion (src/main.tsx)
-
-Flujo al arrancar la app:
-  1. initializarDatos(): si 'ep_initialized' no existe en localStorage,
-     escribe PEDIDOS_INICIALES, COTIZACIONES_INICIALES, ORDENES_INICIALES
-     y marca 'ep_initialized'='true'
-     (los mensajes ya no se siembran acá: viven en db.json → colección "mensajes",
-     servida por JSON Server y consumida por useMensajesStore)
-  2. Los stores leen localStorage al instanciarse — ya encuentran datos en el primer arranque
-  3. Monta <StrictMode><AppRouter /></StrictMode>
-
-Claves localStorage del sistema:
-  ep_initialized, ep_auth, ep_rol, ep_pedidos, ep_cotizaciones, ep_ordenes
-
-## IDs de sesion demo
-
-  COMPRADOR_ID = 'comprador-demo-001'   → importar de src/utils/constants.ts
-  Proveedores mock: 'prov-1', 'prov-2', 'prov-3', 'prov-4'
-  Proveedor demo logueado: 'prov-demo-001'
-  PROV_IDS (para filtrar mis cotizaciones/ordenes/chats proveedor): ['prov-1','prov-2','prov-3','prov-4','prov-demo-001']
-
-## Estructura de carpetas
+## 2. ESTRUCTURA DE CARPETAS
+```
 src/
-  assets/          -- recursos estaticos
+  assets/
   components/
-    ui/            -- componentes base: Button, Badge, Card, Input, TextArea, Select,
-                      Modal, Spinner, StatCard, EmptyState, PageHeader (barrel: index.ts)
-    layout/        -- AppShell, Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel
-    pedidos/       -- PedidoCard
-    cotizaciones/  -- CotizacionCard, CotizacionForm
-    ordenes/       -- OrdenCard
-    domain/        -- PedidosTable, CotizacionesTable (tablas para dashboards)
-    ui/Chat.tsx    -- panel de chat por pedido (ver sección "Chat por pedido" más abajo)
+    ui/          # Button, Badge, Card, Input, TextArea, Select, Modal,
+                 # Spinner, StatCard, EmptyState, PageHeader, Chat, Toast,
+                 # ToastContainer, PedidoStepper  (barrel: index.ts)
+    layout/      # AppShell, Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel
+    pedidos/     # PedidoCard
+    cotizaciones/# CotizacionCard, CotizacionForm
+    ordenes/     # OrdenCard
+    domain/      # PedidosTable, CotizacionesTable
   pages/
-    comprador/     -- DashboardComprador, PublicarPedido, ListaPedidosComprador,
-                      MisCotizacionesComprador, DetallePedidoComprador,
-                      MisOrdenesComprador
-    proveedor/     -- DashboardProveedor, PedidosDisponibles, MisCotizacionesProveedor,
-                      MisOrdenesProveedor, DetallePedidoProveedor
-  store/           -- useRolStore, usePedidosStore, useOrdenesStore,
-                      useCotizacionesStore, useMensajesStore, useNotificacionesStore
-  types/           -- index.ts: Rol, Pedido, Cotizacion, Orden, MensajePedido, Proveedor,
-                      EstadoPedido, EstadoCotizacion, EstadoOrden
-  data/            -- mockData.ts: PEDIDOS_INICIALES, COTIZACIONES_INICIALES,
-                      ORDENES_INICIALES
-  hooks/           -- useLocalStorage.ts, useSimuladorCotizaciones.ts
-  utils/           -- constants.ts (CATEGORIAS, UNIDADES, PROVEEDORES_SIMULADOS,
-                      COMPRADOR_ID, STORAGE_KEY_*), formatters.ts
-  router/          -- AppRouter.tsx
-
-## Componentes UI base (src/components/ui/)
-
-Todos se exportan desde `src/components/ui/index.ts`.
-
-| Componente   | Props clave                                              | Variantes / notas |
-|--------------|----------------------------------------------------------|-------------------|
-| Button       | variant, size, loading, fullWidth, onClick, type         | primary/secondary/danger/ghost · sm/md/lg |
-| Badge        | color, dot                                               | green/blue/amber/red/gray |
-| Card         | padding, hoverable                                       | none/sm/md/lg padding |
-| Input        | label, error, hint, required, type, min, max, step       | estados: normal/focus/error/disabled |
-| TextArea     | label, error, hint, rows                                 | igual que Input |
-| Select       | options [{value,label}], placeholder, error, required    | igual que Input |
-| Modal        | open, onClose, title, size, footer                       | sm/md/lg · portal a document.body · trap foco + Escape |
-| Spinner      | size, color                                              | sm/md/lg · dentro de Button cuando loading=true |
-| StatCard     | label, value, icono, color, sub?                         | color: green/blue/amber/red · SIN badge (eliminado en v0.1.5) |
-| EmptyState   | icono, titulo, mensaje, accion?                          | accion: {label, onClick} muestra Button primary |
-| PageHeader   | titulo, descripcion?, accion?                            | flex justify-between · accion alineado a la derecha |
-
-IMPORTANTE: el tipo de icono es React.ComponentType<{ size?: number; stroke?: number }>.
-NO acepta className directamente — envolver en un div para aplicar color.
-
-### Convenciones de diseno (aplican a todos los componentes)
-- Colores: siempre clases ep-*. Nunca gray-* ni variables CSS del sistema.
-- Bordes: border-ep-border para superficies, border-ep-border-strong para enfasis.
-- Texto: text-ep-text-primary → titulos/datos; text-ep-text-secondary → descripcion/metadatos;
-  text-ep-text-muted → labels/fechas; text-ep-text-disabled → campos inactivos.
-- Border radius: rounded-lg inputs/botones, rounded-xl cards, rounded-2xl modales.
-- Sombras: shadow-sm SIEMPRE en Card y superficies elevadas. Nunca shadow-lg en elementos inline.
-- Transiciones: transition-colors duration-150 en todos los elementos interactivos.
-- Tipografia numerica: font-mono (JetBrains Mono) para precios, IDs y cantidades.
-- Headers de seccion: text-xs font-bold text-ep-text-muted uppercase tracking-widest + border-b border-ep-border pb-2.5 mb-4
-- Separadores internos de card (footer): border-t border-ep-border mt-3 pt-3
-- StatCard layout: border-l-4 con color del stat como acento, icono 13px inline junto al label, ambos coloreados con el color del stat (no text-ep-text-muted). Valor text-[26px] font-medium font-mono leading-none mt-1. Label text-[10px] font-medium uppercase tracking-[0.06em]. Sub text-[11px] text-ep-text-muted mt-0.5. Sin badge de pendientes — ese dato ya no se muestra en StatCard. Sin Card wrapper — div propio con bg-ep-surface border border-ep-border rounded-lg (no rounded-xl, no shadow-sm).
-- PageHeader: titulo text-2xl font-bold leading-tight + border-b border-ep-border pb-5 mb-6
-- EmptyState: contenedor con bg-ep-surface border shadow-sm rounded-xl, icono text-ep-text-disabled
-- Sidebar activo: stripe absoluta left-0 h-6 w-[3px] bg-ep-green rounded-r-full + bg-ep-green-light text-ep-green-dark font-semibold
-- Sidebar branding: icono en pill verde (w-8 h-8 bg-ep-green rounded-lg) + texto bold tracking-tight
-- TopBar: shadow-sm z-10 + breadcrumb font-semibold
-
-### Color de Badge por estado
-| Color | Usar para |
-|-------|-----------|
-| green | Activo/positivo, rol comprador, pedido abierto, cotizacion aceptada, orden entregada |
-| blue  | En proceso, rol proveedor, pedido en_cotizacion, orden confirmada |
-| amber | Pendiente de accion, orden en_transito, cotizacion pendiente |
-| red   | Error/rechazo, pedido cancelado, cotizacion rechazada, orden disputada |
-| gray  | Finalizado neutro, pedido adjudicado, "Ya cotizaste" |
-
-## Componentes de dominio
-
-### PedidoCard (src/components/pedidos/PedidoCard.tsx)
-Props: pedido: Pedido, compacto?: boolean, onCotizar?: () => void
-- Normal: titulo, badge estado, metadatos (cantidad, unidad, categoria, fecha), descripcion,
-  presupuesto max, contador cotizaciones. Fecha urgente (< 3 dias) en rojo + IconAlertTriangle.
-  Boton "Cotizar" (IconSend) si onCotizar definido.
-- Compacto: titulo + badge, categoria + fecha, contador cotizaciones.
-Sin dependencias de store — recibe el pedido por prop.
-
-### CotizacionCard (src/components/cotizaciones/CotizacionCard.tsx)
-Props: cotizacion: Cotizacion, onAceptar?: () => void, onRechazar?: () => void, compacto?: boolean
-- Normal: nombre proveedor, badge estado, zona, badge "Verificado", estrellas, precio (font-mono),
-  tiempo entrega, notas en box destacada, fecha relativa, botones si estado=pendiente y ambos callbacks.
-- Compacto: nombre, precio, badge estado, tiempo entrega.
-Depende de PROVEEDORES_SIMULADOS de constants.ts para zona/verificado.
-
-### OrdenCard (src/components/ordenes/OrdenCard.tsx)
-Props: orden: Orden, onIrChat?: () => void
-Muestra: ID abreviado (font-mono), badge estado, nombre proveedor con IconBuilding,
-monto (font-mono), fecha confirmacion. Boton "Ir al chat" si onIrChat definido.
-
-### PedidosTable (src/components/domain/PedidosTable.tsx)
-Props: pedidos: Pedido[], onCotizar?: (pedido: Pedido) => void, linkeable?: boolean (default true)
-Tabla HTML con columnas: Producto | Categoría | Fecha límite | Cotizaciones | Estado | (Acción).
-Columna Acción (Button "Cotizar") solo aparece cuando onCotizar está definido.
-Columna Producto: cuando linkeable=true (default), el título es un <Link> a /comprador/pedidos/${pedido.id}
-  con estilo text-ep-blue hover:underline font-medium. Pasar linkeable={false} en contexto proveedor.
-Fecha urgente (< 3 dias) en rojo con IconAlertTriangle. divide-y divide-ep-border + hover:bg-ep-surface-raised.
-
-### CotizacionesTable (src/components/domain/CotizacionesTable.tsx)
-Props: cotizaciones: Cotizacion[], pedidos: Pedido[]
-Tabla HTML con columnas: Proveedor | Pedido | Precio | Entrega | Estado.
-Resuelve el título del pedido internamente via pedidos[]. Precio en font-mono. divide-y divide-ep-border.
-
-### CotizacionForm (src/components/cotizaciones/CotizacionForm.tsx)
-Props: pedidoId: string, onSuccess: () => void
-Campos: precio (number, min=1, step=100), tiempoEntrega (text), notas (textarea, opcional).
-Al enviar: valida precio > 0 y tiempoEntrega no vacio; si valido, crea Cotizacion con
-  proveedorId='prov-demo-001', proveedorNombre='Mi Empresa (Proveedor)', estado='pendiente',
-  calificacion=4.0; llama agregarCotizacion() via getState(); setTimeout 600ms → onSuccess().
-
-## Layout principal (src/components/layout/)
-
-### AppShell (AppShell.tsx)
-Gestiona sidebarAbierto (useState) para mobile.
-Desktop (≥ md): div.hidden.md:flex (w-64) con Sidebar + div.flex-1 con TopBar + main p-6.
-Mobile: sidebar como drawer con overlay semitransparente al tocar hamburger en TopBar.
-
-### Sidebar (Sidebar.tsx)
-Lee useRolStore y useCotizacionesStore directamente.
-Secciones: Branding (IconBolt) → Toggle rol → Etiqueta seccion → Navegacion por rol → Footer v0.1.0.
-Badge amber sobre "Cotizaciones" = count cotizaciones con estado='pendiente'.
-Items comprador: Dashboard, Publicar pedido, Mis pedidos, Cotizaciones (badge), Mis ordenes.
-  "Mis pedidos" (IconClipboardList) → /comprador/pedidos; se marca activo también cuando pathname empieza con /comprador/pedidos/ (detalle).
-Items proveedor: Dashboard, Pedidos disponibles, Mis cotizaciones (badge), Mis ordenes.
-  (El ítem "Chat activo" fue removido junto con las rutas /comprador/chat y /proveedor/chat — el chat ahora se accede desde el detalle de pedido o desde el panel "Chats activos" del TopBar.)
-
-### TopBar (TopBar.tsx)
-Props: onToggleSidebar: () => void
-Mobile: IconMenu2 → onToggleSidebar. Desktop: nombre seccion activa via BREADCRUMB_MAP[pathname].
-Slot derecho: IconMessage con badge rojo (`pedidosConMensajeNuevo.length`) que abre ChatsActivosPanel + IconBell con badge rojo de no-leidas (max "9+") que abre NotificacionesPanel + Badge rol + avatar "ME" + "Mi Empresa".
-
-### ChatsActivosPanel (ChatsActivosPanel.tsx)
-Mismo patrón visual que NotificacionesPanel (drawer lateral derecho, `w-80`, overlay + `translate-x-full`).
-Fuente de datos: usePedidosStore + useCotizacionesStore + useMensajesStore(mensajesPorPedido).
-  Comprador: pedidos con compradorId=COMPRADOR_ID y estado en ('en_negociacion','adjudicado').
-  Proveedor: pedidos donde mi cotización (proveedorId in PROV_IDS) está en ('en_negociacion','aceptada').
-Cada item muestra: título del pedido, otro participante (proveedorNombre o "Comprador Demo"),
-  último mensaje truncado a 48 chars, badge de no leídos = mensajes.filter(m => !m.leido && m.autorRol !== rolActual).length.
-Ordenado por timestamp del último mensaje (o fechaCreacion del pedido si no hay mensajes) desc.
-Click en un item → navigate(`/${rol}/pedidos/${pedidoId}`) + cierra el panel.
-Estado local: panelAbierto (useState) — controla visibilidad de NotificacionesPanel.
-Renderiza NotificacionesPanel fuera del <header> dentro de un Fragment.
-
-### NotificacionesPanel (NotificacionesPanel.tsx)
-Props: abierto: boolean, onCerrar: () => void
-Panel lateral derecho fixed, w-80, h-full, z-50, bg-ep-surface, border-l, shadow-2xl.
-Animación: translate-x-full (cerrado) → translate-x-0 (abierto) con transition-transform duration-200.
-Overlay transparente fixed inset-0 z-40 activo cuando abierto=true — click cierra el panel.
-Lee useRolStore para filtrar notificaciones por rol activo.
-Header h-14: título "Notificaciones" + botón "Marcar todas como leídas" (solo si hay no-leídas) + botón X.
-Lista: divide-y divide-ep-border; cada ítem muestra ícono coloreado según tipo, título (bold si no-leída),
-  mensaje en text-xs text-ep-text-secondary, fecha relativa (formatFechaRelativa), punto verde si no-leída,
-  botón X pequeño para eliminar (stopPropagation — no marca como leída).
-Click en ítem → marcarLeida(id).
-No-leídas: bg-ep-surface-raised como fondo; leídas: sin fondo especial.
-Estado vacío: EmptyState con IconBell cuando no hay notificaciones.
-Íconos por tipo: nueva_cotizacion→IconFileInvoice(blue), pedido_adjudicado→IconAward(amber),
-  orden_confirmada→IconCircleCheck(green), nueva_orden→IconPackage(blue), cotizacion_aceptada→IconThumbUp(green).
-
-## Sistema de filtros (Etapa 3)
-
-Todas las páginas de listas principales tienen una barra de filtros encima de la tabla/lista.
-
-### Convenciones del sistema de filtros
-- Contenedor: `bg-ep-blue-light/10 border border-ep-border rounded-lg p-4 flex flex-wrap items-end gap-3`
-- Controles: componente `Select` con label (estado, categoría, proveedor, orden) e inputs `<input type="date">` para rangos de fecha
-- Lógica: `useMemo` local sobre datos del store — nunca modifica el store
-- Botón "Limpiar filtros": `Button variant="secondary" size="sm"`, visible solo cuando `hayFiltros` es truthy
-- Sin resultados tras filtrar: `<p className="text-center py-10 text-sm text-ep-text-muted">No hay ... que coincidan con los filtros aplicados.</p>`
-- Estado de filtros: `useState` local de UI — no persiste en store ni en URL
-
-### ListaPedidosComprador.tsx · /comprador/pedidos
-Stores leidos: usePedidosStore
-Filtra pedidos donde compradorId === COMPRADOR_ID, ordenados por fechaCreacion desc.
-Filtros disponibles:
-  - Estado: "Todos" / "Pendiente" (mapea a 'abierto'+'en_cotizacion') / "Adjudicado" / "Cancelado"
-  - Categoría: select dinámico con categorías presentes en los pedidos del comprador
-  - Fecha desde/hasta: inputs date filtran por fechaCreacion del pedido
-Tabla: Producto (Link a /comprador/pedidos/:id, text-ep-blue) | Categoría | Fecha límite (urgente<3d en rojo) | Cotizaciones (font-mono) | Estado (Badge)
-Sin resultados con filtros activos: mensaje centrado.
-Sin pedidos publicados (hayFiltros=false): EmptyState con IconClipboardList.
-
-### DetallePedidoComprador.tsx — filtros de cotizaciones
-Agregados sobre la tabla de cotizaciones (solo visible cuando todasCotizacionesPedido.length > 0):
-  Filtro estado cotización: "Todas" / "Pendiente" / "Aceptada" / "Rechazada"
-  Filtro proveedor: select dinámico construido desde los proveedores que cotizaron en este pedido
-  Orden precio: "Sin orden" (precio asc, default) / "Menor a mayor" / "Mayor a menor"
-useMemo split en dos arrays: todasCotizacionesPedido (sin filtrar, para count y precioMinimo) y cotizacionesPedido (filtrado+ordenado, para la tabla).
-precioMinimo siempre calculado sobre TODAS las cotizaciones del pedido.
-Sin resultados con filtros activos: `<p>No hay cotizaciones que coincidan con los filtros aplicados.</p>`
-
-## Paginas comprador (src/pages/comprador/)
-
-### DashboardComprador.tsx · /comprador
-Stores leidos: usePedidosStore, useCotizacionesStore, useOrdenesStore
-Calcula: misPedidos (compradorId=COMPRADOR_ID), pedidosActivos (abierto|en_cotizacion),
-  misCotizaciones (pedidoId en misPedidos), cotizacionesPendientes (estado=pendiente),
-  misOrdenes (compradorId=COMPRADOR_ID), ordenesEnCurso (confirmada|en_transito).
-Layout: PageHeader con boton "Publicar pedido" → navigate('/comprador/publicar')
-  Grid 3-col de StatCards (Pedidos activos green, Cotizaciones recibidas blue+badge, Ordenes en curso amber)
-  Seccion "Ultimos pedidos" — 3 mas recientes, PedidoCard compacto=true
-  Seccion "Ultimas cotizaciones" — 3 mas recientes, CotizacionCard compacto=true
-
-### PublicarPedido.tsx · /comprador/publicar
-Estado local: titulo, descripcion, cantidad, unidad, categoria, presupuestoMax, fechaLimite,
-  errores, enviando, exitoso, pedidoIdSimulado.
-Hook: useSimuladorCotizaciones(pedidoIdSimulado, presupuestoMax) — se activa cuando pedidoIdSimulado != null.
-handleSubmit(): valida campos requeridos → crea Pedido con crypto.randomUUID() →
-  agregarPedido() → setPedidoIdSimulado(pedido.id) → setExitoso(true) →
-  setTimeout 3000ms → navigate('/comprador/cotizaciones').
-Banner exito: bg-ep-green-light, border-ep-green, IconCircleCheck + Spinner.
-
-### DetallePedidoComprador.tsx · /comprador/pedidos/:id
-Stores leidos: usePedidosStore, useCotizacionesStore, useOrdenesStore, useNotificacionesStore
-Recibe id via useParams(). Si el pedido no existe: EmptyState con "Pedido no encontrado" y botón volver.
-Estado local (useState): modalAdjudicar: Cotizacion|null, modalRechazar: Cotizacion|null.
-Layout:
-  Botón "← Volver" (navigate(-1)) arriba del header.
-  Header: título text-2xl + badge de estado alineado a la derecha + subtítulo categoría·cantidad·unidad.
-  Card información: grid 2 columnas — izquierda descripción completa; derecha grid 2-col de labels/valores
-    (presupuesto máx si existe, fecha límite, cantidad+unidad, publicado, total cotizaciones).
-  Sección "Cotizaciones recibidas (N)":
-    Banner adjudicación (si pedido.estado==='adjudicado'): bg-ep-green-light border-ep-green rounded-lg
-      "Pedido adjudicado a [proveedorNombre] el [fecha]". Aparece encima de la tabla.
-    Si hay cero cotizaciones → EmptyState.
-    Si hay cotizaciones → tabla con columnas:
-      Proveedor | Precio (font-mono) | Precio unitario (precio/cantidad, font-mono text-muted) |
-      Entrega | Notas (truncado 60 chars, title= tooltip) | Estado (Badge) | Acciones (solo si !adjudicado).
-    Fila con precio mínimo: bg-ep-green-light en toda la fila + badge inline "Mejor precio".
-    Cotizaciones ordenadas por precio ascendente.
-    Columna "Acciones" (alineada derecha): visible solo cuando pedido.estado !== 'adjudicado'.
-      cot.estado === 'pendiente' → Button primary sm "Adjudicar" + Button secondary sm "Rechazar".
-      cot.estado !== 'pendiente' → sin botones (solo el Badge de estado).
-
-Flujo adjudicar:
-  Click "Adjudicar" → setModalAdjudicar(cot).
-  Modal "Confirmar adjudicación": resumen proveedor/precio/entrega + aviso amber con IconAlertTriangle.
-  Confirmar → notifica proveedores rechazados (tipo 'pedido_adjudicado', rolDestino 'proveedor')
-    → aceptarCotizacion(id) [que internamente: marca como aceptada, otras como rechazadas,
-    crea Orden, actualiza pedido a 'adjudicado', notifica comprador y proveedor ganador]
-    → setModalAdjudicar(null).
-
-Flujo rechazar individual:
-  Click "Rechazar" → setModalRechazar(cot).
-  Modal "Rechazar cotización": "¿Rechazar la cotización de [proveedor]?".
-  Confirmar → rechazarCotizacion(id) + notifica proveedor (tipo 'pedido_adjudicado', rolDestino 'proveedor')
-    → setModalRechazar(null).
-
-### MisCotizacionesComprador.tsx · /comprador/cotizaciones
-Tabs: todas | pendientes | aceptadas | rechazadas (con count entre parentesis).
-Agrupa cotizaciones por pedido: encabezado text-xs uppercase + CotizacionCard con callbacks.
-onAceptar: aceptarCotizacion(id) → navigate('/comprador/ordenes').
-onRechazar: rechazarCotizacion(id).
-EmptyState segun tab activa.
-
-### MisOrdenesComprador.tsx · /comprador/ordenes
-Filtra ordenes por compradorId=COMPRADOR_ID, ordena por fechaConfirmacion desc.
-Lista de OrdenCard con onIrChat si chatHabilitado → navigate(`/comprador/pedidos/${orden.pedidoId}`)
-  (antes navegaba a la ruta de chat global eliminada `/comprador/chat`; ahora abre el detalle
-  del pedido, donde vive el componente Chat segmentado por pedidoId).
-
-## Paginas proveedor (src/pages/proveedor/)
-
-### DashboardProveedor.tsx · /proveedor
-Stores: usePedidosStore, useCotizacionesStore, useOrdenesStore.
-Calcula: pedidosDisponibles (abierto|en_cotizacion), misCotizaciones (proveedorId en PROV_IDS),
-  misOrdenes (proveedorId en ['prov-4','prov-demo-001']).
-Grid 3-col StatCards + lista de 5 pedidos recientes disponibles con PedidosTable + onCotizar.
-Header de sección "Pedidos recientes disponibles" con link "Ver todos →" → navigate('/proveedor/pedidos').
-Modal de cotizacion: Modal con CotizacionForm abierto cuando pedidoSeleccionado != null.
-Toast de exito (fixed bottom-6 right-6) que desaparece en 3s.
-
-### PedidosDisponibles.tsx · /proveedor/pedidos
-Filtros: busqueda en titulo/descripcion + categoriaFiltro.
-Detecta si ya cotizte un pedido: cotizaciones.some(c => c.pedidoId=id && c.proveedorId='prov-demo-001').
-Si ya cotizo: no pasa onCotizar al PedidoCard y muestra Badge gray "Ya cotizaste" superpuesto.
-Modal con resumen del pedido (titulo, cantidad, unidad, categoria) + CotizacionForm.
-Toast de exito igual que DashboardProveedor.
-
-### MisCotizacionesProveedor.tsx · /proveedor/cotizaciones
-Misma logica de tabs que la version comprador.
-Filtra cotizaciones donde proveedorId in PROV_IDS = ['prov-1','prov-2','prov-3','prov-4','prov-demo-001'].
-Sin botones de accion (solo visualizacion). Agrupa por pedido con titulo del pedido como encabezado.
-
-### MisOrdenesProveedor.tsx · /proveedor/ordenes
-Filtra ordenes donde proveedorId in ['prov-4','prov-demo-001'].
-OrdenCard con onIrChat si chatHabilitado → navigate(`/proveedor/pedidos/${orden.pedidoId}`)
-  (misma migración que en MisOrdenesComprador: la ruta `/proveedor/chat` fue eliminada).
-
-## Flujos de negocio implementados
-
-### Flujo comprador completo
-1. /comprador → DashboardComprador muestra metricas y acceso rapido
-2. Click "Publicar pedido" → navigate('/comprador/publicar')
-3. PublicarPedido: llenar formulario → handleSubmit() → agregarPedido() →
-   setPedidoIdSimulado() (activa simulador) → banner exito → 3s → navigate('/comprador/cotizaciones')
-4. MisCotizacionesComprador: llegan 4 cotizaciones a los 5/12/22/35s (via simulador)
-   El badge del sidebar se actualiza en tiempo real.
-5a. Desde MisCotizacionesComprador: Click "Aceptar cotizacion" → aceptarCotizacion(id):
-    - cotizacion → 'aceptada', resto del pedido → 'rechazada'
-    - crea Orden con chatHabilitado=true
-    - pedido → 'adjudicado'
-    - navigate('/comprador/ordenes')
-5b. Desde DetallePedidoComprador (/comprador/pedidos/:id): Click "Adjudicar" en fila de la tabla
-    → modal con resumen proveedor/precio/entrega + aviso de efecto en cadena
-    → Confirmar → notifica rechazados + aceptarCotizacion(id) → pedido pasa a 'adjudicado'
-    → banner verde aparece en la página, columna Acciones desaparece.
-    También disponible: "Rechazar" cotización individual sin adjudicar otra.
-6. MisOrdenesComprador: lista la orden con boton "Ir al chat" → detalle del pedido
-7. DetallePedidoComprador: chat segmentado por pedidoId (ver sección "Chat por pedido")
-
-### Flujo proveedor completo
-1. Toggle sidebar → rol proveedor → navigate('/proveedor')
-2. DashboardProveedor → ver estadisticas y pedidos recientes
-3. PedidosDisponibles: buscar/filtrar pedidos → click "Cotizar" → modal
-4. CotizacionForm: completar precio/tiempoEntrega/notas → enviar
-   agregarCotizacion() via getState(), badge "Ya cotizaste" en el pedido
-5. MisCotizacionesProveedor: ver estado de todas las cotizaciones enviadas
-6. DetallePedidoProveedor: chat segmentado por pedidoId (ver sección "Chat por pedido")
-
-### Flujo de cambio de rol
-Click toggle Comprador/Proveedor en Sidebar → useRolStore.setRol() → navigate('/comprador'|'/proveedor')
-→ Sidebar actualiza items y badge → TopBar actualiza badge de rol.
-
-## Chat por pedido (desde v0.3.0, segmentación corregida en v0.3.1, loop infinito corregido en v0.3.2)
-
-Panel de mensajes accesible desde DetallePedidoComprador y DetallePedidoProveedor.
-Visible cuando el pedido está `en_negociacion` (para coordinar antes de adjudicar,
-usando la cotización en negociación) o `adjudicado` (usando la cotización aceptada).
-
-IMPORTANTE — esta es la ÚNICA implementación de chat de la app. Hasta v0.3.0 convivía
-en paralelo un chat "global" (`useChatStore`, páginas `ChatComprador`/`ChatProveedor` en
-`/comprador/chat` y `/proveedor/chat`) que persistía un array plano en `localStorage`
-indexado por `ordenId` y solo mostraba la *primera* orden con `chatHabilitado=true` sin
-forma de elegir otra. Ese camino fue eliminado en v0.3.1 por ser la causa del bug
-"todos los chats muestran los mismos mensajes".
-
-### Colección API: /mensajes
-Cada MensajePedido tiene: { id, pedidoId, cotizacionId?, autorRol: 'comprador'|'proveedor', autorNombre, texto, timestamp, leido? }
-JSON Server expone: GET /mensajes (todos), GET /mensajes?pedidoId=X, POST /mensajes, PATCH /mensajes/:id.
-
-### useMensajesStore (src/store/useMensajesStore.ts)
-State:
-  mensajesPorPedido: Record<pedidoId, MensajePedido[]>  — nunca un array plano global.
-  pedidoActivoId: string | null  — pedido cuyo Chat está montado actualmente.
-  pedidosConMensajeNuevo: string[]  — pedidoIds con mensajes no leídos del otro rol detectados en la sesión;
-    alimenta el badge del botón de chat en TopBar y el badge por item en ChatsActivosPanel.
-IMPORTANTE (v0.3.2) — regla de selectores Zustand: nunca usar `?? []` / `?? {}` inline dentro
-de un selector reactivo (`useMensajesStore((s) => ...)`). Cada llamada crearía una referencia
-nueva cuando la clave no existe en el Record, y `useSyncExternalStore` (que usa Zustand v5
-internamente) compara snapshots por referencia — rompe con "The result of getSnapshot should
-be cached" seguido de "Maximum update depth exceeded" (loop de renders). Regla: definir una
-constante módulo-level estable (p.ej. `const SIN_MENSAJES: MensajePedido[] = []`) y usarla como
-fallback. Tampoco agrupar múltiples campos en un objeto dentro del selector
-(`(s) => ({ mensajes: ..., enviarMensaje: ... })`) por la misma razón — cada acceso debe ser
-su propio hook (`useMensajesStore((s) => s.enviarMensaje)`, etc.), nunca combinados.
-Aplica tanto a `useMensajesStore.getMensajesDePedido` (usa `SIN_MENSAJES` internamente) como al
-selector inline de `Chat.tsx` (`s.mensajesPorPedido[pedidoId] ?? SIN_MENSAJES`, con su propia
-constante módulo-level). `ChatsActivosPanel.tsx` usa `?? []` pero DENTRO de un `useMemo`, no
-dentro del selector de Zustand — no tiene este problema porque no participa del snapshot.
-
-Selectores/acciones:
-  getMensajesDePedido(pedidoId) → mensajesPorPedido[pedidoId] ?? SIN_MENSAJES
-  setMensajesPorPedido(pedidoId, mensajes) / agregarMensaje(mensaje) → mutan solo la entrada de ese pedidoId
-  setPedidoActivo(pedidoId) / limpiarPedidoActivo()
-  cargarMensajes(pedidoId) → GET /mensajes?pedidoId=X, guarda en mensajesPorPedido[pedidoId];
-    llamado al montar <Chat>, marca pedidoId en pedidosConMensajeNuevo si trae no leídos del otro rol.
-  cargarTodosLosMensajes() → GET /mensajes (SIN filtrar), agrupa por pedidoId con Object.groupBy manual,
-    y por cada pedido compara contra el snapshot previo en mensajesPorPedido para detectar mensajes
-    nuevos del otro rol — sin importar si ese pedido tiene el chat abierto o no. Por cada mensaje nuevo
-    despacha `window.dispatchEvent(new CustomEvent('mensaje-nuevo-toast', {...}))`, que ToastContainer
-    ya escucha para mostrar el toast y reproducir el sonido 'mensaje' (utils/sounds.ts).
-    Es la función que llama el polling de 5s en AppRouter — reemplaza el viejo comportamiento que
-    solo refrescaba pedidoActivoId.
-  enviarMensaje(pedidoId, texto, autorRol, autorNombre, cotizacionId?) → POST /mensajes con
-    cotizacionId incluido cuando está disponible; agrega al slot de mensajesPorPedido[pedidoId].
-  marcarMensajesLeidos(pedidoId, miRol) → PATCH /mensajes/:id en paralelo (leido:true) para los mensajes
-    del otro rol; al resolver, limpia pedidoId de pedidosConMensajeNuevo.
-
-### Componente Chat (src/components/ui/Chat.tsx)
-Props: pedidoId: string, otroNombre: string, cotizacionId?: string
-  - Lee useMensajesStore(s => s.mensajesPorPedido[pedidoId] ?? SIN_MENSAJES) — NUNCA un array
-    global, y el fallback usa una constante módulo-level estable (no `?? []` inline, ver nota arriba).
-  - Lee useRolStore para determinar miRol y miNombre
-  - miNombre: 'Comprador Demo' (comprador) | 'Mi Empresa (Proveedor)' (proveedor)
-  - Burbujas propias: derecha, bg-ep-blue text-white, rounded-2xl rounded-tr-sm
-  - Burbujas del otro: izquierda, bg-ep-surface border border-ep-border, rounded-2xl rounded-tl-sm
-  - Auto-scroll al último mensaje via useRef + scrollIntoView en useEffect([mensajes])
-  - useEffect([pedidoId]): monta → cargarMensajes(pedidoId) (fetch inicial filtrado por pedidoId);
-    desmonta → limpiarPedidoActivo()
-  - useEffect([mensajes]): marcarMensajesLeidos(pedidoId, miRol) cada vez que cambia la lista
-  - Enter (sin Shift) envía; botón send con IconSend deshabilitado si texto vacío;
-    handleEnviar() pasa cotizacionId al enviarMensaje del store
-  - Panel h-96 overflow-y-auto bg-ep-blue-dark/5
-
-### Integración en páginas
-  DetallePedidoComprador: <Chat pedidoId={pedido.id} otroNombre={cotizacion.proveedorNombre} cotizacionId={cotizacion.id} />
-    (cotizacion = cotizacionAceptada si adjudicado, cotizacionEnNegociacion si en_negociacion)
-  DetallePedidoProveedor: <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" cotizacionId={miCotizacion.id} />
-    (solo si ganadorSoyYo && cotizacionAceptada, o si miCotizacionEnNegociacion)
-
-### ChatsActivosPanel (src/components/layout/ChatsActivosPanel.tsx)
-Ver sección "Layout principal" más arriba. Es el "menú de chats" que reemplaza a las rutas de chat global:
-lista todos los pedidos con chat habilitado (propios, filtrados por rol) con último mensaje y badge de
-no leídos, y navega al detalle del pedido correspondiente al hacer click — nunca abre un chat genérico.
-
-### DetallePedidoProveedor (src/pages/proveedor/DetallePedidoProveedor.tsx)
-Ruta: /proveedor/pedidos/:id
-  - Lee pedidoId de useParams
-  - Muestra resumen del pedido (título, categoría, estado, badge)
-  - Card con datos de la cotizacion aceptada: precio, tiempoEntrega, fechaCreacion
-  - Componente Chat cuando ganadorSoyYo (adjudicado) o miCotizacionEnNegociacion
-Navegacion: link "Ver chat" en MisCotizacionesProveedor para cotizaciones aceptadas.
-
-## Etapa 4 — Estados, negociación, mensajes vistos, stepper, sonido y toasts (desde v0.4.0)
-
-### Ciclo de vida completo del pedido
-
-EstadoPedido: 'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado'
-EstadoCotizacion: 'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada'
-
-Ciclo normal: abierto → en_cotizacion → en_negociacion → adjudicado
-Terminal alternativo: cancelado (desde cualquier estado no adjudicado)
-
-Campos nuevos en Pedido:
-  cotizacionEnNegociacionId?: string  — ID de la cotizacion en negociacion activa
-  observacionBaja?: string            — motivo obligatorio al cancelar
-  fechaBaja?: string                  — timestamp ISO del momento de cancelacion
-
-Campo nuevo en MensajePedido:
-  leido?: boolean  — false cuando se crea, true cuando el destinatario abre el chat
-
-### Constantes nuevas (src/utils/constants.ts)
-PROV_IDS = ['prov-1','prov-2','prov-3','prov-4','prov-demo-001'] — IDs de proveedores del sistema
-
-### usePedidosStore — acciones nuevas
-  iniciarNegociacion(pedidoId, cotizacionId) → PATCH pedido a {estado:'en_negociacion', cotizacionEnNegociacionId}
-  cancelarNegociacion(pedidoId) → PATCH pedido a {estado:'abierto', cotizacionEnNegociacionId:undefined}
-  cancelarPedido(id, observacion) → PATCH pedido a {estado:'cancelado', observacionBaja, fechaBaja}
-
-### useCotizacionesStore — acciones nuevas
-  iniciarNegociacionCotizacion(cotizacionId) → PATCH cotizacion a {estado:'en_negociacion'}
-  cancelarNegociacionCotizacion(cotizacionId) → PATCH cotizacion a {estado:'pendiente'}
-
-### useMensajesStore — campos y acciones nuevas
-State nuevo:
-  pedidosConMensajeNuevo: string[]  — pedidoIds con mensajes no leídos (tracking de sesion)
-
-Acciones nuevas:
-  marcarMensajesLeidos(pedidoId, miRol) → PATCH /mensajes/:id {leido:true} para mensajes del otro rol;
-    remueve pedidoId de pedidosConMensajeNuevo
-Behavior changes en cargarMensajes():
-  - Primera carga: detecta mensajes con leido===false del otro lado → agrega a pedidosConMensajeNuevo
-  - Polls subsiguientes: detecta IDs nuevos del otro lado → dispara CustomEvent 'mensaje-nuevo-toast'
-    + agrega a pedidosConMensajeNuevo
-
-api.ts nuevo:
-  updateMensaje(id, data) → PATCH /mensajes/:id
-
-### useNotificacionesStore — TipoNotificacion extendido
-Tipos nuevos: 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio'
-
-### Sistema de sonidos (src/utils/sounds.ts)
-Función exportada: playNotificationSound(tipo: 'pedido'|'cotizacion'|'mensaje')
-  pedido: 880Hz, 150ms
-  cotizacion: 660Hz → 880Hz, 100ms cada tono
-  mensaje: 440Hz, 80ms
-Lee localStorage 'ep_sonido_silenciado' antes de reproducir.
-AudioContext lazy: se crea la primera vez que se llama.
-
-### Hook useNotificationSound (src/hooks/useNotificationSound.ts)
-Expone: { silenciado: boolean, toggleSilencio: () => void }
-Persiste la preferencia en localStorage 'ep_sonido_silenciado'.
-Usado por TopBar para mostrar ícono de campana/mute.
-
-### Sistema de toasts extendido (desde v0.4.0)
-
-ToastTipo: 'pedido_nuevo' | 'cotizacion_nueva' | 'cotizacion_adjudicada' | 'cotizacion_rechazada'
-           | 'cotizacion_negociacion' | 'mensaje_nuevo' | 'estado_cambio'
-
-ToastPayload: { id, tipo, titulo, subtitulo?, navegarA? }
-
-Eventos CustomEvent escuchados por ToastContainer:
-  nuevo-pedido-toast          → tipo:pedido_nuevo,           sonido:cotizacion
-  nueva-cotizacion-toast      → tipo:cotizacion_nueva,       sonido:cotizacion
-  cotizacion-adjudicada-toast → tipo:cotizacion_adjudicada,  sonido:pedido       (8s, prominente)
-  cotizacion-rechazada-toast  → tipo:cotizacion_rechazada,   sonido:mensaje
-  cotizacion-negociacion-toast→ tipo:cotizacion_negociacion, sonido:cotizacion
-  mensaje-nuevo-toast         → tipo:mensaje_nuevo,          sonido:mensaje
-  estado-pedido-toast         → tipo:estado_cambio,          sin sonido
-
-Detección en AppRouter.tsx via suscripciones Zustand:
-  usePedidosStore.subscribe  → detecta pedidos nuevos (para proveedor) + cambios de estado
-  useCotizacionesStore.subscribe → detecta cotizaciones nuevas (para comprador) + cambios estado
-    (cotizaciones del proveedor: aceptada/rechazada/en_negociacion)
-
-### Componente PedidoStepper (src/components/ui/PedidoStepper.tsx)
-Props: { estado, rol, nombreProveedor?, miCotizacionEnNegociacion?, observacionBaja? }
-Pasos visuales: Abierto → En negociación → Adjudicado → Cerrado
-Estado cancelado: banner rojo con observacionBaja si existe.
-Texto contextual diferente por rol+estado.
-Montado en DetallePedidoComprador y DetallePedidoProveedor encima de la card de info.
-
-### Chat — mensajes leídos/no leídos
-Campo leido=false asignado al crear mensajes vía enviarMensaje().
-Chat.tsx llama marcarMensajesLeidos(pedidoId, miRol) en useEffect([mensajes]).
-Mensajes no leídos del otro lado: punto azul + ring-1 ring-ep-blue/30 en la burbuja.
-
-### DetallePedidoComprador — negociación
-Botón "Negociar" por cotizacion pendiente (solo si el pedido no está ya en_negociacion).
-Modal confirma → iniciarNegociacionCotizacion() + iniciarNegociacionPedido() + notificacion al proveedor.
-Banner amber con "Cancelar negociación" visible cuando pedido.estado==='en_negociacion'.
-cancelarNegociacion() → vuelve a {abierto, cotizacion→pendiente}.
-Adjudicar sigue disponible desde el estado en_negociacion.
-
-### ListaPedidosComprador — Feature 1 + Feature 7
-Badge circular azul con count de cotizaciones por pedido (0 → texto muted, >0 → badge).
-Badge "mensaje nuevo" si pedidosConMensajeNuevo incluye el pedidoId.
-Modal de baja reemplaza el anterior: textarea obligatoria (mínimo 10 chars), botón deshabilitado hasta cumplir.
-Al confirmar: cancelarPedido() hace PATCH (no DELETE) → estado:'cancelado' + observacionBaja + fechaBaja.
-Pedidos cancelados: badge rojo + ícono InfoCircle con tooltip mostrando observacionBaja.
-Botón de baja oculto para pedidos ya cancelados.
-
-### TopBar — toggle de silencio
-Nuevo botón IconBellOff/IconBell al lado del ícono de notificaciones.
-Click → toggleSilencio() del hook useNotificationSound.
-Ícono en gris muted cuando silenciado, normal cuando activo.
-
-## Borrado de pedidos y cotizaciones (desde v0.3.0)
-
-### Flujo de borrado en cascada
-eliminarPedido(id) en usePedidosStore:
-  1. DELETE /pedidos/:id via api.deletePedido
-  2. useCotizacionesStore.getState().eliminarCotizacionesByPedidoId(id)
-     → itera cotizaciones del pedido → DELETE /cotizaciones/:id para cada una → actualiza store local
-  3. Filtra el pedido del estado local
-
-eliminarCotizacion(id) en useCotizacionesStore:
-  DELETE /cotizaciones/:id → filtra la cotización del estado local
-
-### UI de borrado
-  ListaPedidosComprador: columna "Acciones" con IconTrash outline text-red-500 por cada pedido.
-    Modal de confirmación: "¿Eliminar el pedido [título]? Eliminará también todas sus cotizaciones."
-  MisCotizacionesProveedor: botón IconTrash debajo de cada CotizacionCard.
-    Modal de confirmación: "¿Eliminar tu cotización para [pedido]?"
-  Ambos modales usan el componente Modal existente con Button variant="danger".
-
-## Sistema de toasts enterprise (desde v0.2.1)
-
-Notificación visual en tiempo real para el proveedor cuando el polling detecta un pedido nuevo.
-
-### Arquitectura
-
-Tres capas sin dependencia de librerías externas:
-
-1. **Detección** (`AppRouter.tsx`) — `usePedidosStore.subscribe((state, prevState) => { ... })` compara el
-   array de pedidos antes y después de cada ciclo de polling. Un `useRef<Set<string> | null>` guarda los IDs
-   ya conocidos; la primera invocación (prevState vacío) inicializa el ref sin disparar toasts.
-   Cuando el rol activo es `'proveedor'` y hay IDs nuevos, dispara `window.dispatchEvent(new CustomEvent('nuevo-pedido-toast', { detail: pedido }))` por cada pedido.
-
-2. **Cola** (`ToastContainer.tsx`) — `useState<ToastData[]>` con máximo 3 entradas.
-   Escucha el evento `nuevo-pedido-toast` en `window` con `addEventListener`/cleanup en `useEffect`.
-   Se descarta si el ID ya está en la cola (anti-duplicado). Renderizado: `fixed bottom-6 right-6 z-50 flex flex-col gap-3`.
-   Montado dentro de `AppShell`, disponible en todas las rutas protegidas.
-
-3. **Toast individual** (`Toast.tsx`) — entrada con `translate-x-full → translate-x-0` vía `requestAnimationFrame`.
-   Barra de progreso inferior: div absoluto `bg-ep-blue h-1`, CSS `transition: width 6s linear` de `100%` → `0%`.
-   Auto-cierre con `setTimeout(6000)`. Botón "Ver pedido" navega a `/proveedor/pedidos` vía `useNavigate`.
-   Botón X cierra manualmente. Estilo: `border-l-4 border-ep-blue shadow-lg rounded-lg`.
-
-### Flujo completo
-polling API → `cargarDatos()` actualiza store → `subscribe` compara IDs → `CustomEvent` → `ToastContainer` agrega a cola → `Toast` se anima y cuenta regresiva → cierre automático o manual.
-
-### Restricciones de diseño
-- Sin librerías externas (no react-hot-toast, no sonner).
-- No toca stores ni lógica de negocio.
-- Solo muestra toasts cuando `rol === 'proveedor'`.
-- No dispara al montar (primera carga inicializa baseline sin alertar).
-
-## Convenciones del proyecto
-- UI completamente en espanol
-- Nombres tecnicos de archivos y funciones en ingles (convencion React/TS)
-- Tokens de color definidos en src/index.css con @theme (Tailwind v4) — no en tailwind.config.js
-- Estado global via Zustand — nunca useState para logica de negocio
-- Persistencia via localStorage encapsulada en cada store (sin middleware)
-- Un archivo por componente
-- Exports nombrados para componentes reutilizables, default para paginas
-- Props siempre tipadas con interface NombreComponenteProps
-- Comentarios en el codigo en espanol
-
-## Comandos utiles
-npm run dev       # Solo Vite (sin JSON Server) — datos de red local
-npm run dev:full  # JSON Server puerto 3001 + Vite puerto 5173 en paralelo (desarrollo como host)
-npm run build     # Build de produccion (tsc -b && vite build)
-npm run lint      # Linting con oxlint
-
-## Capa de datos — JSON Server (desde v0.1.9)
-
-Reemplaza la persistencia en localStorage. Los stores Zustand consumen una REST API local
-servida por JSON Server sobre db.json. Dos usuarios en la misma red local comparten los mismos datos.
-
-### Fuente de verdad: db.json
-Archivo en la raiz del proyecto. Estructura de colecciones:
-
-  {
-    "pedidos":       [...],   // Pedido[]
-    "cotizaciones":  [...],   // Cotizacion[]
-    "ordenes":       [...],   // Orden[]
-    "notificaciones": [],     // Notificacion[]
-    "mensajes":      []       // MensajePedido[]
-  }
-
-JSON Server expone endpoints REST automaticos:
-  GET    /pedidos              -> lista todos
-  GET    /pedidos/:id          -> uno por id
-  POST   /pedidos              -> crea
-  PATCH  /pedidos/:id          -> actualiza parcialmente
-  (igual para cotizaciones, ordenes, notificaciones)
-  DELETE /notificaciones/:id   -> elimina
-
-### src/services/api.ts
-Capa de acceso a datos. Unica fuente de llamadas fetch en el proyecto.
-BASE_URL viene de la variable de entorno VITE_API_URL (default http://localhost:3001).
-Todas las funciones son async/await con try/catch que loguea en consola si falla.
-Las funciones que retornan array devuelven [] en caso de error; las que retornan un objeto devuelven null.
-
-Funciones exportadas por entidad:
-  pedidos:       getPedidos(), getPedidoById(id), updatePedido(id, data), createPedido(data)
-  cotizaciones:  getCotizaciones(), getCotizacionesByPedidoId(pedidoId), updateCotizacion(id, data), createCotizacion(data)
-  ordenes:       getOrdenes(), createOrden(data), updateOrden(id, data)
-  notificaciones: getNotificaciones(), createNotificacion(data), updateNotificacion(id, data), deleteNotificacion(id)
-
-### Patron de los stores con API
-Cada store ahora:
-  - Arranca con estado vacio ([] en vez de datos hardcodeados)
-  - Tiene accion cargarDatos() que llama al endpoint GET y puebla el store
-  - Las acciones mutadoras hacen primero el POST/PATCH a la API y DESPUES actualizan el estado local
-  - Si la llamada a la API falla: se loguea en consola y no se muta el estado local
-  - Ya NO persisten en localStorage
-
-| Store                    | cargarDatos() llama  | Acciones que usan API                                                  |
-|--------------------------|----------------------|------------------------------------------------------------------------|
-| usePedidosStore          | api.getPedidos()     | agregarPedido→createPedido, actualizarEstadoPedido→updatePedido, incrementarCotizaciones→updatePedido, eliminarPedido→deletePedido (+ cascade) |
-| useCotizacionesStore     | api.getCotizaciones()| agregarCotizacion→createCotizacion, aceptarCotizacion→updateCotizacion×N, rechazarCotizacion→updateCotizacion, eliminarCotizacion→deleteCotizacion, eliminarCotizacionesByPedidoId→deleteCotizacion×N |
-| useOrdenesStore          | api.getOrdenes()     | agregarOrden→createOrden, actualizarEstadoOrden→updateOrden           |
-| useMensajesStore         | api.getMensajesByPedidoId() (chat abierto) + api.getMensajes() (polling global, agrupado por pedidoId) | enviarMensaje→createMensaje; marcarMensajesLeidos→updateMensaje×N |
-| useNotificacionesStore   | api.getNotificaciones()| agregarNotificacion→createNotificacion, marcarLeida→updateNotificacion, marcarTodasLeidas→updateNotificacion×N, eliminarNotificacion→deleteNotificacion, limpiarTodas→deleteNotificacion×N |
-
-### Inicializacion al montar la app
-AppRouter.tsx (el componente raiz) llama cargarDatos() de los 4 stores en un useEffect([], []).
-Los datos llegan asincrónicamente; los componentes re-renderizan via suscripcion Zustand cuando el store se actualiza.
-main.tsx ya no llama initializarDatos() — los datos iniciales viven en db.json, no en localStorage.
-El polling de 5s en AppRouter también llama useMensajesStore.getState().cargarTodosLosMensajes(),
-que trae TODOS los mensajes y actualiza mensajesPorPedido para cada pedido (no solo el que tiene
-el chat abierto) — necesario para que ChatsActivosPanel y el badge del TopBar reflejen mensajes
-nuevos aunque el usuario no haya abierto ese chat todavía.
-
-### Variables de entorno
-VITE_API_URL  URL base del servidor JSON Server
-  - Host local:    http://localhost:3001  (default si no se define)
-  - Colaborador:   http://[IP-del-host]:3001
-
-Archivo .env.example en la raiz documenta la variable. El colaborador crea .env.local con la IP del host.
-
-### Levantar el entorno completo
-Host:         npm run dev:full  (levanta JSON Server + Vite en paralelo via concurrently)
-Colaborador:  crear .env.local con VITE_API_URL=http://[IP]:3001  →  npm run dev
-
-### Resetear datos al estado inicial
-git checkout db.json
+    comprador/   # DashboardComprador, PublicarPedido, ListaPedidosComprador,
+                 # DetallePedidoComprador, MisCotizacionesComprador, MisOrdenesComprador
+    proveedor/   # DashboardProveedor, PedidosDisponibles, DetallePedidoProveedor,
+                 # MisCotizacionesProveedor, MisOrdenesProveedor
+  store/         # useAuthStore, useRolStore, usePedidosStore, useCotizacionesStore,
+                 # useOrdenesStore, useMensajesStore, useNotificacionesStore
+  types/         # index.ts — todos los tipos e interfaces del dominio
+  data/          # mockData.ts (PEDIDOS_INICIALES, COTIZACIONES_INICIALES, ORDENES_INICIALES)
+  hooks/         # useLocalStorage.ts, useSimuladorCotizaciones.ts, useNotificationSound.ts
+  utils/         # constants.ts, formatters.ts, sounds.ts
+  services/      # api.ts — única capa fetch del proyecto
+  router/        # AppRouter.tsx
+db.json          # fuente de verdad de datos (JSON Server)
+```
+
+---
+
+## 3. ENTIDADES Y DB.JSON
+
+**db.json collections:** `pedidos` · `cotizaciones` · `ordenes` · `notificaciones` · `mensajes`
+
+**Pedido**
+```
+id: string               compradorId: string        titulo: string
+descripcion: string      cantidad: number           unidad: string
+categoria: string        presupuestoMax?: number    fechaLimite: string (ISO)
+estado: EstadoPedido     cotizacionesRecibidas: number
+fechaCreacion: string (ISO)
+cotizacionEnNegociacionId?: string   observacionBaja?: string   fechaBaja?: string (ISO)
+```
+
+**Cotizacion**
+```
+id: string        pedidoId: string       proveedorId: string     proveedorNombre: string
+precio: number    tiempoEntrega: string  notas?: string          calificacionProveedor: number
+estado: EstadoCotizacion                fechaCreacion: string (ISO)
+```
+
+**Orden**
+```
+id: string        pedidoId: string    cotizacionId: string    compradorId: string
+proveedorId: string                   proveedorNombre: string monto: number
+estado: EstadoOrden                   fechaConfirmacion: string (ISO)
+chatHabilitado: boolean
+```
+
+**MensajePedido**
+```
+id: string        pedidoId: string    cotizacionId?: string
+autorRol: 'comprador'|'proveedor'     autorNombre: string
+texto: string     timestamp: string (ISO)               leido?: boolean
+```
+
+**Notificacion**
+```
+id: string   tipo: TipoNotificacion   titulo: string   mensaje: string
+fecha: string (ISO)    leida: boolean   rolDestino: 'comprador'|'proveedor'   entidadId?: string
+```
+
+**Tipos de estado**
+- `EstadoPedido`: `'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado'`
+- `EstadoCotizacion`: `'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada'`
+- `EstadoOrden`: `'confirmada' | 'en_transito' | 'entregada' | 'disputada'`
+- `TipoNotificacion`: `'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada' | 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio'`
+
+---
+
+## 4. CICLO DE VIDA DEL PEDIDO
+
+```
+abierto → en_cotizacion → en_negociacion → adjudicado
+abierto → cancelado  (desde cualquier estado no-adjudicado)
+```
+
+| Transición | Quién | Endpoint |
+|---|---|---|
+| `abierto → en_cotizacion` | automático al recibir 1ª cotización | `PATCH /pedidos/:id` |
+| `en_cotizacion → en_negociacion` | comprador (botón "Negociar") | `PATCH /pedidos/:id` + `PATCH /cotizaciones/:id` |
+| `en_negociacion → abierto` | comprador (botón "Cancelar negociación") | `PATCH /pedidos/:id` + `PATCH /cotizaciones/:id` |
+| `en_negociacion → adjudicado` | comprador (botón "Adjudicar") | `PATCH /pedidos/:id` · `PATCH /cotizaciones/:id` ×N · `POST /ordenes` |
+| `en_cotizacion → adjudicado` | comprador (botón "Adjudicar") | ídem fila anterior |
+| `* → cancelado` | comprador (modal con observación ≥10 chars) | `PATCH /pedidos/:id` con `{estado, observacionBaja, fechaBaja}` |
+
+---
+
+## 5. STORES ZUSTAND
+
+| Store | Archivo | Qué maneja | Acciones principales |
+|---|---|---|---|
+| useAuthStore | useAuthStore.ts | sesión (localStorage `ep_auth`) | `login()`, `logout()` |
+| useRolStore | useRolStore.ts | rol activo (localStorage `ep_rol`) | `setRol()` |
+| usePedidosStore | usePedidosStore.ts | `Pedido[]` vía API | `cargarDatos`, `agregarPedido`, `actualizarEstadoPedido`, `incrementarCotizaciones`, `eliminarPedido`, `iniciarNegociacion`, `cancelarNegociacion`, `cancelarPedido` |
+| useCotizacionesStore | useCotizacionesStore.ts | `Cotizacion[]` vía API | `cargarDatos`, `agregarCotizacion`, `aceptarCotizacion`, `rechazarCotizacion`, `iniciarNegociacionCotizacion`, `cancelarNegociacionCotizacion`, `eliminarCotizacion`, `eliminarCotizacionesByPedidoId` |
+| useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden` |
+| useMensajesStore | useMensajesStore.ts | `mensajesPorPedido: Record<pedidoId, MensajePedido[]>` vía API | `cargarMensajes`, `cargarTodosLosMensajes`, `enviarMensaje`, `marcarMensajesLeidos`, `limpiarPedidoActivo` |
+| useNotificacionesStore | useNotificacionesStore.ts | `Notificacion[]` vía API | `cargarDatos`, `agregarNotificacion`, `marcarLeida`, `marcarTodasLeidas`, `eliminarNotificacion`, `limpiarTodas` |
+
+Todos los stores (excepto Auth y Rol) arrancan vacíos y se pueblan con `cargarDatos()` desde `AppRouter` al montar. Auth y Rol persisten en `localStorage` sin middleware.
+
+---
+
+## 6. RUTAS
+
+| Ruta | Componente | Rol |
+|---|---|---|
+| `/login` | Login | — |
+| `/` | → Navigate `/comprador` | — |
+| `/comprador` | DashboardComprador | comprador |
+| `/comprador/publicar` | PublicarPedido | comprador |
+| `/comprador/pedidos` | ListaPedidosComprador | comprador |
+| `/comprador/pedidos/:id` | DetallePedidoComprador | comprador |
+| `/comprador/cotizaciones` | MisCotizacionesComprador | comprador |
+| `/comprador/ordenes` | MisOrdenesComprador | comprador |
+| `/proveedor` | DashboardProveedor | proveedor |
+| `/proveedor/pedidos` | PedidosDisponibles | proveedor |
+| `/proveedor/pedidos/:id` | DetallePedidoProveedor | proveedor |
+| `/proveedor/cotizaciones` | MisCotizacionesProveedor | proveedor |
+| `/proveedor/ordenes` | MisOrdenesProveedor | proveedor |
+| `*` | → Navigate `/comprador` | — |
+
+Chat vive dentro de `/comprador|proveedor/pedidos/:id` (componente `<Chat>`). Las rutas `/comprador/chat` y `/proveedor/chat` fueron eliminadas en v0.3.1.
+
+---
+
+## 7. REGLAS DE NEGOCIO CRÍTICAS
+
+1. **Rechazar una cotización no toca las demás** — `rechazarCotizacion()` solo parchea esa cotización; adjudicar sí pone todas las demás en `rechazada`.
+2. **`aceptarCotizacion()` es transacción** — marca aceptada, rechaza el resto del pedido, crea Orden, actualiza estado del pedido a `adjudicado`. Todo en cascada dentro del store.
+3. **`eliminarPedido()` es cascade** — DELETE pedido → DELETE todas sus cotizaciones.
+4. **Cancelar pedido es PATCH, no DELETE** — guarda `observacionBaja` y `fechaBaja`; el pedido queda visible con estado `cancelado`.
+5. **Selectores Zustand: nunca objetos ni arrays inline** — `useMensajesStore((s) => s.campo ?? [])` crea referencia nueva en cada render → loop infinito. Usar constante módulo-level estable: `const SIN_MENSAJES: MensajePedido[] = []`. Ver fix de v0.3.2.
+6. **Tampoco agrupar campos en un selector** — `(s) => ({ a: s.a, b: s.b })` crea objeto nuevo en cada snapshot. Usar un hook por campo.
+7. **`cargarTodosLosMensajes()` es el polling global** — trae GET /mensajes (sin filtro), agrupa por `pedidoId`, compara contra snapshot previo para detectar nuevos mensajes. Primera vez que ve un `pedidoId` no dispara toast (baseline).
+8. **Ids demo fijos** — `COMPRADOR_ID = 'comprador-demo-001'`; `PROV_IDS = ['prov-1','prov-2','prov-3','prov-4','prov-demo-001']`. Proveedor logueado: `'prov-demo-001'`.
+9. **Chat habilitado** — visible cuando `pedido.estado === 'en_negociacion'` o `'adjudicado'`.
+10. **Polling cada 5s en AppRouter** — llama `cargarDatos()` de los 4 stores + `cargarTodosLosMensajes()`. Suscripciones Zustand despachan CustomEvents para toasts.
+
+---
+
+## 8. CONVENCIONES
+
+- **UI:** español. Archivos, funciones y variables: inglés (convención React/TS).
+- **Tailwind v4:** tokens de color en `src/index.css` con `@theme`. Prefijo `ep-*`. Nunca `gray-*`.
+- **Estado global:** Zustand. `useState` solo para estado de UI local.
+- **Persistencia:** Auth y Rol en `localStorage` manual. El resto vía API (JSON Server).
+- **Selector Zustand estable:**
+  ```ts
+  const SIN_MENSAJES: MensajePedido[] = []; // módulo-level
+  const mensajes = useMensajesStore((s) => s.mensajesPorPedido[pedidoId] ?? SIN_MENSAJES);
+  const enviar = useMensajesStore((s) => s.enviarMensaje); // campo por campo
+  ```
+- **Fechas:** ISO 8601 strings. Formatear con `formatters.ts`.
+- **Moneda:** pesos argentinos. `font-mono` para precios e IDs en UI.
+- **API base URL:** `VITE_API_URL` (default `http://localhost:3001`). Definida en `.env.local`.
+- **Componentes:** un archivo por componente. Export nombrado para reutilizables, default para páginas.
+- **Props:** siempre tipadas con `interface NombreComponenteProps`.
+- **Llamar otros stores desde una action:** `useOtroStore.getState().accion()`.
+
+---
+
+## 9. COMANDOS ÚTILES
+
+```bash
+npm run dev        # Solo Vite (puerto 5173) — requiere JSON Server corriendo aparte
+npm run dev:full   # JSON Server (3001) + Vite (5173) en paralelo con concurrently
+npm run build      # tsc -b && vite build
+npm run lint       # oxlint
+
+git checkout db.json          # resetear datos al estado inicial
+git push origin mdemichelis   # push a rama de trabajo
+```
