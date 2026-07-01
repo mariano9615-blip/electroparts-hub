@@ -1,6 +1,6 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-06-30
+Última actualización: 2026-06-30 (v0.3.0)
 Rama: mdemichelis
 
 ---
@@ -287,13 +287,140 @@ Rama: mdemichelis
 
 ---
 
-## src/router/AppRouter.tsx (cambios v0.2.0 + v0.2.1 — 127 líneas)
+## src/router/AppRouter.tsx (cambios v0.2.0 + v0.2.1 + v0.3.0 — 129 líneas)
 
 | Líneas | Nombre | Descripción |
 |--------|--------|-------------|
 | 1 | imports React | `useEffect`, `useRef` de `react` |
-| 5–9 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore`, `useRolStore` |
+| 5–10 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore`, `useMensajesStore`, `useRolStore` |
+| 27 | import `DetallePedidoProveedor` | Importa la nueva página de detalle de pedido del proveedor |
 | 51 | `pedidosConocidosRef` | `useRef<Set<string> \| null>(null)` — persiste entre renders para guardar los IDs de pedidos ya conocidos; `null` indica que aún no hubo primera carga |
 | 55–75 | `usePedidosStore.subscribe` | Callback `(state, prevState)`: si ref es `null` inicializa con IDs de `prevState` (baseline sin toasts). Si rol es `'comprador'` solo actualiza ref. Si rol es `'proveedor'` filtra IDs no conocidos y despacha `CustomEvent('nuevo-pedido-toast', { detail: pedido })` por cada uno |
-| 77–82 | `cargarTodo()` | Llama `cargarDatos()` en los 4 stores; se ejecuta al montar y cada 5 s vía `setInterval` |
-| 86–89 | cleanup | `clearInterval` + `desuscribir()` al desmontar — evita memory leaks del timer y del subscriber |
+| 77–84 | `cargarTodo()` | Llama `cargarDatos()` en los 4 stores + si `useMensajesStore.getState().pedidoActivoId` no es null, también llama `cargarMensajes(pedidoActivoId)` para sincronizar el chat activo. Se ejecuta al montar y cada 5 s vía `setInterval` |
+| 88–91 | cleanup | `clearInterval` + `desuscribir()` al desmontar — evita memory leaks del timer y del subscriber |
+| 111 | ruta `/proveedor/pedidos/:id` | Nueva ruta que renderiza `DetallePedidoProveedor` para el detalle de pedido adjudicado con chat |
+
+---
+
+## src/store/useMensajesStore.ts (nuevo — v0.3.0, 46 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–3 | imports | Zustand `create`, tipos `MensajePedido` y `Rol` de types, `api` de services |
+| 5–11 | `MensajesState` | Interface del store: `mensajes: MensajePedido[]`, `pedidoActivoId: string \| null`, y las tres acciones |
+| 13 | `useMensajesStore` | Instancia del store creada con `create<MensajesState>`. No persiste en localStorage — fuente de verdad en API |
+| 15 | estado inicial | `mensajes: []`, `pedidoActivoId: null` |
+| 17–24 | `cargarMensajes(pedidoId)` | Setea `pedidoActivoId` inmediatamente (para que el polling en AppRouter pueda leerlo), luego llama `api.getMensajesByPedidoId`. Solo actualiza el estado si `pedidoActivoId` no cambió mientras esperaba la respuesta (guard de race condition) |
+| 26–35 | `enviarMensaje(pedidoId, texto, autorRol, autorNombre)` | Construye `MensajePedido` con `crypto.randomUUID()` e ISO timestamp, llama `api.createMensaje`, y si ok agrega al array local |
+| 37–39 | `limpiarMensajes()` | Resetea `mensajes: []` y `pedidoActivoId: null`. Llamada al desmontar el componente `Chat` vía cleanup de `useEffect` |
+
+---
+
+## src/components/ui/Chat.tsx (nuevo — v0.3.0, 97 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–4 | imports | React (`useEffect`, `useRef`, `useState`), `IconSend` de Tabler, `useMensajesStore`, `useRolStore` |
+| 6–9 | `ChatProps` | Interface de props: `pedidoId: string`, `otroNombre: string` |
+| 11–15 | `formatHora(timestamp)` | Función utilitaria pura que convierte un ISO string a formato `HH:mm` con padding |
+| 17 | `Chat` | Componente exportado con nombre para la ruta `/comprador/pedidos/:id` y `/proveedor/pedidos/:id` |
+| 18–19 | `useState` | `texto: string` — único estado local (control de UI del input) |
+| 20 | `bottomRef` | `useRef<HTMLDivElement>` apuntando a un div vacío al final de la lista de mensajes; usado para auto-scroll |
+| 22–26 | suscripciones al store | Lee `mensajes`, `cargarMensajes`, `enviarMensaje`, `limpiarMensajes` de `useMensajesStore`; lee `rol` de `useRolStore` para determinar identidad del usuario actual |
+| 28–29 | `miRol` / `miNombre` | Derivados del rol activo: `'comprador'` → `'Comprador Demo'`; `'proveedor'` → `'Mi Empresa (Proveedor)'` |
+| 31–35 | `useEffect([pedidoId])` | Al montar: llama `cargarMensajes(pedidoId)`. Cleanup al desmontar: llama `limpiarMensajes()`. Depende de `pedidoId` por si cambia dinámicamente |
+| 37–39 | `useEffect([mensajes])` | Hace scroll suave al `bottomRef` cada vez que el array de mensajes cambia (nuevo mensaje o carga inicial) |
+| 41–44 | `handleEnviar()` | Valida que `texto.trim()` no esté vacío; llama `enviarMensaje`; resetea el input |
+| 46–50 | `handleKeyDown` | Intercepta `Enter` sin `Shift` → previene salto de línea y llama `handleEnviar` |
+| 54–57 | JSX: header sección | `<h2>` con formato "Chat — Pedido #[id.slice(0,8)] con [otroNombre]", estilo `text-xs font-bold uppercase tracking-widest border-b` |
+| 59–90 | JSX: área de mensajes | `h-96 overflow-y-auto p-4 flex flex-col gap-3 bg-ep-blue-dark/5`. Burbujas: propias → `bg-ep-blue text-white rounded-tr-sm items-end`; ajenas → `bg-ep-surface border rounded-tl-sm items-start`. Metadato `autorNombre · HH:mm` encima en `text-[10px] text-ep-text-muted` |
+| 91–101 | JSX: footer input + send | `border-t border-ep-border p-3 flex gap-2`. Input con focus `border-ep-blue ring-ep-blue`. Botón `IconSend` con `bg-ep-blue` deshabilitado con `opacity-40` si texto vacío |
+
+---
+
+## src/pages/comprador/ListaPedidosComprador.tsx (cambios v0.3.0 — ~240 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 3 | `IconTrash` | Nuevo ícono importado para el botón de eliminar |
+| 4 | `Modal` | Importado para el modal de confirmación de eliminación |
+| 7 | tipo `Pedido` | Importado para tipar el estado `pedidoAEliminar` |
+| 40 | `pedidoAEliminar` | `useState<Pedido \| null>` — controla qué pedido está pendiente de confirmación de eliminación |
+| 42 | `eliminarPedido` | Suscripción a la acción del store; condicional — solo llama API cuando el usuario confirma en el modal |
+| columna Acciones `<th>` | header tabla | Nueva columna "Acciones" alineada a la derecha en el thead de la tabla |
+| columna Acciones `<td>` | fila tabla | Botón `IconTrash` `text-red-500` por cada pedido; click → `setPedidoAEliminar(pedido)` |
+| modal eliminar | `Modal` confirmación | `size="sm"`, avisa que se eliminarán también las cotizaciones; "Cancelar" + "Eliminar" (variant danger) → `eliminarPedido(id)` |
+
+---
+
+## src/pages/proveedor/DetallePedidoProveedor.tsx (nuevo — v0.3.0, 104 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–5 | imports | React (`useMemo`), React Router (`useParams`, `useNavigate`), íconos, componentes UI (`Badge`, `Chat`, `EmptyState`), stores `usePedidosStore` y `useCotizacionesStore`, utilidades de formato |
+| 7–24 | mapas de estado | `ESTADO_COLOR` y `ESTADO_LABEL` locales (mismos valores que en `DetallePedidoComprador`) |
+| 26 | `DetallePedidoProveedor` | Página exportada por defecto para la ruta `/proveedor/pedidos/:id` |
+| 27–28 | router hooks | `useParams` extrae `id`; `useNavigate` para volver |
+| 30–32 | suscripciones | Lee `pedidos` de `usePedidosStore`, `cotizaciones` de `useCotizacionesStore` |
+| 34 | `pedido` | Busca el pedido por id. Si es undefined renderiza EmptyState con botón "Volver a cotizaciones" |
+| 36–39 | `cotizacionAceptada` | `useMemo` que busca la cotización con `pedidoId === id && estado === 'aceptada'`; guarda el guard antes del early return para cumplir reglas de hooks |
+| 43–60 | guard: pedido no encontrado | Botón "Volver" + EmptyState; en prod si el pedido fue eliminado o la URL es incorrecta |
+| 62–77 | JSX: header | Botón "Volver" (`navigate(-1)`), título `text-2xl font-bold`, subtítulo `categoría · cantidad unidad`, badge de estado |
+| 79–97 | JSX: card cotización aceptada | Condicional: solo si `cotizacionAceptada !== null`. Grid 3 cols: precio (`font-mono`), tiempo entrega, fecha. `bg-ep-surface border rounded-lg p-5` |
+| 99–101 | JSX: `<Chat>` | Condicional: solo si `pedido.estado === 'adjudicado'`. Props: `pedidoId={pedido.id}`, `otroNombre="Comprador Demo"` |
+
+---
+
+## src/pages/proveedor/MisCotizacionesProveedor.tsx (cambios v0.3.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 2 | `Link` | Importado de react-router-dom para el link "Ver chat" |
+| 3 | `IconTrash`, `IconMessageCircle` | Nuevos íconos: `IconTrash` para eliminar, `IconMessageCircle` para el link al chat |
+| 4 | `Button`, `Modal` | Nuevos imports UI para el modal de confirmación |
+| 7 | tipo `Cotizacion` | Importado para tipar el estado `cotizacionAEliminar` |
+| ~22 | `cotizacionAEliminar` | `useState<Cotizacion \| null>` — controla qué cotización está pendiente de eliminación |
+| ~25 | `eliminarCotizacion` | Suscripción a la acción del store de cotizaciones |
+| wrapper por cotización | `div` con acciones | Cada `CotizacionCard` se envuelve en un `div flex-col gap-1`. Debajo: fila `flex justify-end` con el link "Ver chat" (solo si `estado === 'aceptada'`) y el botón `IconTrash` |
+| link "Ver chat" | `Link` | Navega a `/proveedor/pedidos/${cot.pedidoId}`; `text-ep-blue hover:text-ep-blue-dark`, `IconMessageCircle` `size={13}` |
+| modal eliminar | `Modal` confirmación | `size="sm"`, "¿Eliminar tu cotización para [pedido]?"; "Cancelar" + "Eliminar" (danger) → `eliminarCotizacion(id)` |
+
+---
+
+## src/store/usePedidosStore.ts (cambios v0.3.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| import `useCotizacionesStore` | nuevo import | Necesario para la cascade; al ser llamado solo dentro de funciones (no a nivel de módulo) evita problemas de inicialización pese a la dependencia circular bidireccional |
+| `eliminarPedido` en `PedidosState` | nueva acción | `(id: string) => void` |
+| `eliminarPedido(id)` | implementación | Llama `api.deletePedido(id)` → si ok: llama `useCotizacionesStore.getState().eliminarCotizacionesByPedidoId(id)` (cascade en paralelo) → filtra el pedido del estado local |
+
+---
+
+## src/store/useCotizacionesStore.ts (cambios v0.3.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| `eliminarCotizacion`, `eliminarCotizacionesByPedidoId` en `CotizacionesState` | nuevas acciones | Dos nuevas firmas en la interface |
+| `eliminarCotizacion(id)` | implementación | `api.deleteCotizacion(id)` → filtra la cotización del array local |
+| `eliminarCotizacionesByPedidoId(pedidoId)` | implementación | Obtiene las cotizaciones del pedido via `get()`, llama `api.deleteCotizacion` en paralelo con `Promise.all`, luego filtra todas del `pedidoId` en el estado local. Llamada desde `usePedidosStore.eliminarPedido` como cascade |
+
+---
+
+## src/types/index.ts (cambios v0.3.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| ~60–66 | `MensajePedido` | Nueva interfaz para mensajes del chat por pedido: `{ id, pedidoId, autorRol: Rol, autorNombre, texto, timestamp }`. Distinta de `Mensaje` (que usa `ordenId`) para no romper el sistema de chat por orden existente |
+
+---
+
+## src/services/api.ts (cambios v0.3.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| import `MensajePedido` | nuevo import | Importado del módulo de tipos para tipar las funciones de mensajes |
+| `getMensajesByPedidoId(pedidoId)` | GET /mensajes?pedidoId=X | Retorna `MensajePedido[]`; `[]` en caso de error |
+| `createMensaje(data)` | POST /mensajes | Crea un nuevo mensaje; retorna `MensajePedido \| null` |
+| `deletePedido(id)` | DELETE /pedidos/:id | Retorna `boolean` indicando éxito; usado por `usePedidosStore.eliminarPedido` |
+| `deleteCotizacion(id)` | DELETE /cotizaciones/:id | Retorna `boolean` indicando éxito; usado por `useCotizacionesStore.eliminarCotizacion` y `eliminarCotizacionesByPedidoId` |

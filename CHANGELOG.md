@@ -2,6 +2,26 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.3.0 — 2026-06-30
+#### Added
+- **Chat por pedido adjudicado**: panel de mensajes en tiempo real accesible desde el detalle de pedido del comprador y del proveedor. Solo visible cuando `pedido.estado === 'adjudicado'`.
+  - `db.json` *(modificado)* — agrega colección `"mensajes": []`.
+  - `src/types/index.ts` *(modificado)* — agrega interfaz `MensajePedido { id, pedidoId, autorRol, autorNombre, texto, timestamp }`.
+  - `src/services/api.ts` *(modificado)* — agrega `getMensajesByPedidoId(pedidoId)`, `createMensaje(data)`, `deletePedido(id)`, `deleteCotizacion(id)`.
+  - `src/store/useMensajesStore.ts` *(nuevo, 46 líneas)* — store Zustand con `mensajes[]`, `pedidoActivoId`, acciones `cargarMensajes`, `enviarMensaje`, `limpiarMensajes`. `pedidoActivoId` es leído por el polling en AppRouter para sincronizar solo cuando hay chat activo.
+  - `src/components/ui/Chat.tsx` *(nuevo, 97 líneas)* — panel `h-96` con scroll interno, burbujas por rol (propia: `bg-ep-blue text-white rounded-tr-sm`; otra: `bg-ep-surface border rounded-tl-sm`), auto-scroll al último mensaje via `useRef + scrollIntoView`, input con Enter para enviar, botón `IconSend`.
+  - `src/components/ui/index.ts` *(modificado)* — exporta `Chat`.
+  - `src/pages/comprador/DetallePedidoComprador.tsx` *(modificado)* — monta `<Chat pedidoId otroNombre>` debajo de la tabla de cotizaciones cuando el pedido está adjudicado.
+  - `src/pages/proveedor/DetallePedidoProveedor.tsx` *(nuevo, 104 líneas)* — página de detalle de pedido para el proveedor: resumen del pedido, card con datos de la cotización aceptada (precio, entrega, fecha), componente `<Chat>`. Ruta: `/proveedor/pedidos/:id`.
+  - `src/router/AppRouter.tsx` *(modificado)* — agrega ruta `/proveedor/pedidos/:id` → `DetallePedidoProveedor`; extiende `cargarTodo()` para llamar `cargarMensajes(pedidoActivoId)` si hay chat activo.
+  - `src/pages/proveedor/MisCotizacionesProveedor.tsx` *(modificado)* — agrega link "Ver chat" para cotizaciones aceptadas → `/proveedor/pedidos/:pedidoId`.
+
+- **Borrado de pedidos y cotizaciones** con eliminación en cascada:
+  - `src/store/usePedidosStore.ts` *(modificado)* — agrega `eliminarPedido(id)`: DELETE /pedidos/:id → cascade `eliminarCotizacionesByPedidoId` → actualiza store local.
+  - `src/store/useCotizacionesStore.ts` *(modificado)* — agrega `eliminarCotizacion(id)` y `eliminarCotizacionesByPedidoId(pedidoId)`: DELETE en API e iterar en cascada.
+  - `src/pages/comprador/ListaPedidosComprador.tsx` *(modificado)* — columna "Acciones" con `IconTrash` + modal de confirmación que advierte del borrado en cascada de cotizaciones.
+  - `src/pages/proveedor/MisCotizacionesProveedor.tsx` *(modificado)* — botón `IconTrash` debajo de cada cotización + modal de confirmación.
+
 ### v0.2.1 — 2026-06-30
 #### Added
 - **Toast enterprise para proveedor**: notificación visual en tiempo real cuando el polling detecta un pedido nuevo.

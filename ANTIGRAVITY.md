@@ -106,15 +106,16 @@ Patron comun a todos los stores:
   - Cada action que muta estado persiste inmediatamente
   - Para llamar otros stores desde una action: useXxxStore.getState().action()
 
-| Store                      | Entidad          | Clave localStorage    | Depende de                                              |
-|----------------------------|------------------|-----------------------|---------------------------------------------------------|
-| useAuthStore.ts            | Auth             | ep_auth               | —                                                       |
-| useRolStore.ts             | Rol              | ep_rol                | —                                                       |
-| usePedidosStore.ts         | Pedido[]         | ep_pedidos            | useNotificacionesStore                                  |
-| useOrdenesStore.ts         | Orden[]          | ep_ordenes            | —                                                       |
-| useCotizacionesStore.ts    | Cotizacion[]     | ep_cotizaciones       | useOrdenesStore, usePedidosStore, useNotificacionesStore |
-| useChatStore.ts            | Mensaje[]        | ep_mensajes           | —                                                       |
-| useNotificacionesStore.ts  | Notificacion[]   | ep_notificaciones     | —                                                       |
+| Store                      | Entidad           | Clave localStorage    | Depende de                                              |
+|----------------------------|-------------------|-----------------------|---------------------------------------------------------|
+| useAuthStore.ts            | Auth              | ep_auth               | —                                                       |
+| useRolStore.ts             | Rol               | ep_rol                | —                                                       |
+| usePedidosStore.ts         | Pedido[]          | — (API)               | useNotificacionesStore, useCotizacionesStore (cascade)  |
+| useOrdenesStore.ts         | Orden[]           | — (API)               | —                                                       |
+| useCotizacionesStore.ts    | Cotizacion[]      | — (API)               | useOrdenesStore, usePedidosStore, useNotificacionesStore |
+| useChatStore.ts            | Mensaje[]         | ep_mensajes           | —                                                       |
+| useMensajesStore.ts        | MensajePedido[]   | — (API /mensajes)     | —                                                       |
+| useNotificacionesStore.ts  | Notificacion[]    | — (API)               | —                                                       |
 
 ### useNotificacionesStore (src/store/useNotificacionesStore.ts)
 Tipos exportados:
@@ -183,6 +184,7 @@ Todas las rutas estan envueltas en AppShell (layout wrapper).
 | /comprador/chat             | ChatComprador                |
 | /proveedor                  | DashboardProveedor           |
 | /proveedor/pedidos          | PedidosDisponibles           |
+| /proveedor/pedidos/:id      | DetallePedidoProveedor       |
 | /proveedor/cotizaciones     | MisCotizacionesProveedor     |
 | /proveedor/ordenes          | MisOrdenesProveedor          |
 | /proveedor/chat             | ChatProveedor                |
@@ -545,6 +547,67 @@ Igual que ChatComprador con logica invertida:
 Click toggle Comprador/Proveedor en Sidebar → useRolStore.setRol() → navigate('/comprador'|'/proveedor')
 → Sidebar actualiza items y badge → TopBar actualiza badge de rol.
 
+## Chat por pedido adjudicado (desde v0.3.0)
+
+Panel de mensajes accesible desde DetallePedidoComprador y DetallePedidoProveedor.
+Solo visible cuando pedido.estado === 'adjudicado'.
+
+### Colección API: /mensajes
+Cada MensajePedido tiene: { id, pedidoId, autorRol: 'comprador'|'proveedor', autorNombre, texto, timestamp }
+JSON Server expone: GET /mensajes?pedidoId=X, POST /mensajes.
+
+### useMensajesStore (src/store/useMensajesStore.ts)
+State: mensajes: MensajePedido[], pedidoActivoId: string | null
+  - pedidoActivoId: setado por cargarMensajes(); usado por el polling en AppRouter
+    para sincronizar solo cuando hay un chat activo.
+Actions:
+  cargarMensajes(pedidoId) → setea pedidoActivoId, llama GET /mensajes?pedidoId=X
+  enviarMensaje(pedidoId, texto, autorRol, autorNombre) → crea MensajePedido con crypto.randomUUID(),
+    POST /mensajes, agrega al estado local
+  limpiarMensajes() → resetea mensajes=[] y pedidoActivoId=null (llamado al desmontar Chat)
+
+### Componente Chat (src/components/ui/Chat.tsx)
+Props: pedidoId: string, otroNombre: string
+  - Lee useRolStore para determinar miRol y miNombre
+  - miNombre: 'Comprador Demo' (comprador) | 'Mi Empresa (Proveedor)' (proveedor)
+  - Burbujas propias: derecha, bg-ep-blue text-white, rounded-2xl rounded-tr-sm
+  - Burbujas del otro: izquierda, bg-ep-surface border border-ep-border, rounded-2xl rounded-tl-sm
+  - Auto-scroll al último mensaje via useRef + scrollIntoView en useEffect([mensajes])
+  - useEffect([pedidoId]): monta → cargarMensajes(pedidoId); desmonta → limpiarMensajes()
+  - Enter (sin Shift) envía; botón send con IconSend deshabilitado si texto vacío
+  - Panel h-96 overflow-y-auto bg-ep-blue-dark/5
+
+### Integración en páginas
+  DetallePedidoComprador: <Chat pedidoId={pedido.id} otroNombre={cotizacionAceptada.proveedorNombre} />
+  DetallePedidoProveedor: <Chat pedidoId={pedido.id} otroNombre="Comprador Demo" />
+
+### DetallePedidoProveedor (src/pages/proveedor/DetallePedidoProveedor.tsx)
+Ruta: /proveedor/pedidos/:id
+  - Lee pedidoId de useParams
+  - Muestra resumen del pedido (título, categoría, estado, badge)
+  - Card con datos de la cotizacion aceptada: precio, tiempoEntrega, fechaCreacion
+  - Componente Chat (solo si pedido.estado === 'adjudicado')
+Navegacion: link "Ver chat" en MisCotizacionesProveedor para cotizaciones aceptadas.
+
+## Borrado de pedidos y cotizaciones (desde v0.3.0)
+
+### Flujo de borrado en cascada
+eliminarPedido(id) en usePedidosStore:
+  1. DELETE /pedidos/:id via api.deletePedido
+  2. useCotizacionesStore.getState().eliminarCotizacionesByPedidoId(id)
+     → itera cotizaciones del pedido → DELETE /cotizaciones/:id para cada una → actualiza store local
+  3. Filtra el pedido del estado local
+
+eliminarCotizacion(id) en useCotizacionesStore:
+  DELETE /cotizaciones/:id → filtra la cotización del estado local
+
+### UI de borrado
+  ListaPedidosComprador: columna "Acciones" con IconTrash outline text-red-500 por cada pedido.
+    Modal de confirmación: "¿Eliminar el pedido [título]? Eliminará también todas sus cotizaciones."
+  MisCotizacionesProveedor: botón IconTrash debajo de cada CotizacionCard.
+    Modal de confirmación: "¿Eliminar tu cotización para [pedido]?"
+  Ambos modales usan el componente Modal existente con Button variant="danger".
+
 ## Sistema de toasts enterprise (desde v0.2.1)
 
 Notificación visual en tiempo real para el proveedor cuando el polling detecta un pedido nuevo.
@@ -606,7 +669,8 @@ Archivo en la raiz del proyecto. Estructura de colecciones:
     "pedidos":       [...],   // Pedido[]
     "cotizaciones":  [...],   // Cotizacion[]
     "ordenes":       [...],   // Orden[]
-    "notificaciones": []      // Notificacion[]
+    "notificaciones": [],     // Notificacion[]
+    "mensajes":      []       // MensajePedido[]
   }
 
 JSON Server expone endpoints REST automaticos:
@@ -639,15 +703,18 @@ Cada store ahora:
 
 | Store                    | cargarDatos() llama  | Acciones que usan API                                                  |
 |--------------------------|----------------------|------------------------------------------------------------------------|
-| usePedidosStore          | api.getPedidos()     | agregarPedido→createPedido, actualizarEstadoPedido→updatePedido, incrementarCotizaciones→updatePedido |
-| useCotizacionesStore     | api.getCotizaciones()| agregarCotizacion→createCotizacion, aceptarCotizacion→updateCotizacion×N, rechazarCotizacion→updateCotizacion |
+| usePedidosStore          | api.getPedidos()     | agregarPedido→createPedido, actualizarEstadoPedido→updatePedido, incrementarCotizaciones→updatePedido, eliminarPedido→deletePedido (+ cascade) |
+| useCotizacionesStore     | api.getCotizaciones()| agregarCotizacion→createCotizacion, aceptarCotizacion→updateCotizacion×N, rechazarCotizacion→updateCotizacion, eliminarCotizacion→deleteCotizacion, eliminarCotizacionesByPedidoId→deleteCotizacion×N |
 | useOrdenesStore          | api.getOrdenes()     | agregarOrden→createOrden, actualizarEstadoOrden→updateOrden           |
+| useMensajesStore         | api.getMensajesByPedidoId() | enviarMensaje→createMensaje; limpiarMensajes resetea estado local |
 | useNotificacionesStore   | api.getNotificaciones()| agregarNotificacion→createNotificacion, marcarLeida→updateNotificacion, marcarTodasLeidas→updateNotificacion×N, eliminarNotificacion→deleteNotificacion, limpiarTodas→deleteNotificacion×N |
 
 ### Inicializacion al montar la app
 AppRouter.tsx (el componente raiz) llama cargarDatos() de los 4 stores en un useEffect([], []).
 Los datos llegan asincrónicamente; los componentes re-renderizan via suscripcion Zustand cuando el store se actualiza.
 main.tsx ya no llama initializarDatos() — los datos iniciales viven en db.json, no en localStorage.
+El polling de 5s en AppRouter también llama useMensajesStore.getState().cargarMensajes(pedidoActivoId)
+si hay un pedidoActivoId activo (lo setea el componente Chat al montarse).
 
 ### Variables de entorno
 VITE_API_URL  URL base del servidor JSON Server
