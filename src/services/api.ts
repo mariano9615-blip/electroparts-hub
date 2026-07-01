@@ -1,4 +1,4 @@
-import type { Pedido, Cotizacion, Orden } from '../types';
+import type { Pedido, Cotizacion, Orden, MensajePedido } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
@@ -209,6 +209,54 @@ export async function deleteNotificacion(id: string): Promise<boolean> {
     return res.ok;
   } catch (e) {
     console.error('api.deleteNotificacion:', e);
+    return false;
+  }
+}
+
+// ─── Mensajes de pedido ──────────────────────────────────────────────────────
+
+export async function getMensajesByPedidoId(pedidoId: string): Promise<MensajePedido[]> {
+  try {
+    const res = await fetch(`${BASE_URL}/mensajes?pedidoId=${pedidoId}`);
+    return await res.json();
+  } catch (e) {
+    console.error('api.getMensajesByPedidoId:', e);
+    return [];
+  }
+}
+
+export async function createMensaje(data: MensajePedido): Promise<MensajePedido | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/mensajes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (e) {
+    console.error('api.createMensaje:', e);
+    return null;
+  }
+}
+
+// ─── Delete ──────────────────────────────────────────────────────────────────
+
+export async function deletePedido(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/pedidos/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.error('api.deletePedido:', e);
+    return false;
+  }
+}
+
+export async function deleteCotizacion(id: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/cotizaciones/${id}`, { method: 'DELETE' });
+    return res.ok;
+  } catch (e) {
+    console.error('api.deleteCotizacion:', e);
     return false;
   }
 }

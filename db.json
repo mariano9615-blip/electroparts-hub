@@ -41,6 +41,48 @@
       "estado": "adjudicado",
       "cotizacionesRecibidas": 4,
       "fechaCreacion": "2026-06-29T12:00:00.000Z"
+    },
+    {
+      "id": "qZv-z55dZo0",
+      "compradorId": "comprador-demo-001",
+      "titulo": "prueba",
+      "descripcion": "prueba",
+      "cantidad": 10,
+      "unidad": "unidades",
+      "categoria": "Iluminacion LED",
+      "presupuestoMax": 20000,
+      "fechaLimite": "2026-07-03T00:00:00.000Z",
+      "estado": "abierto",
+      "cotizacionesRecibidas": 0,
+      "fechaCreacion": "2026-07-01T00:35:35.642Z"
+    },
+    {
+      "id": "mmQtOgiGKug",
+      "compradorId": "comprador-demo-001",
+      "titulo": "prueba franco",
+      "descripcion": "prueba",
+      "cantidad": 10000,
+      "unidad": "unidades",
+      "categoria": "Semiconductores",
+      "presupuestoMax": 100000,
+      "fechaLimite": "2026-07-03T00:00:00.000Z",
+      "estado": "abierto",
+      "cotizacionesRecibidas": 0,
+      "fechaCreacion": "2026-07-01T00:42:49.956Z"
+    },
+    {
+      "id": "8JQ-AEVQceg",
+      "compradorId": "comprador-demo-001",
+      "titulo": "PRUEBA ULTIMA",
+      "descripcion": "PRUEBA ULTIMA",
+      "cantidad": 10,
+      "unidad": "unidades",
+      "categoria": "Iluminacion LED",
+      "presupuestoMax": 10000,
+      "fechaLimite": "2026-07-03T00:00:00.000Z",
+      "estado": "adjudicado",
+      "cotizacionesRecibidas": 0,
+      "fechaCreacion": "2026-07-01T00:48:44.848Z"
     }
   ],
   "cotizaciones": [
@@ -53,7 +95,7 @@
       "tiempoEntrega": "2 dias habiles",
       "notas": "Stock disponible. Incluye IVA. Entrega en puerta.",
       "calificacionProveedor": 4.7,
-      "estado": "pendiente",
+      "estado": "rechazada",
       "fechaCreacion": "2026-06-30T12:00:00.000Z"
     },
     {
@@ -65,7 +107,7 @@
       "tiempoEntrega": "3 dias habiles",
       "notas": "Precio sin IVA. El flete se cotiza aparte segun destino.",
       "calificacionProveedor": 4.2,
-      "estado": "pendiente",
+      "estado": "rechazada",
       "fechaCreacion": "2026-06-30T12:00:00.000Z"
     },
     {
@@ -91,6 +133,18 @@
       "calificacionProveedor": 3.9,
       "estado": "rechazada",
       "fechaCreacion": "2026-06-29T12:00:00.000Z"
+    },
+    {
+      "id": "5zWDO7x0T2E",
+      "pedidoId": "8JQ-AEVQceg",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "precio": 50000,
+      "tiempoEntrega": "2",
+      "notas": "simulacro",
+      "calificacionProveedor": 4,
+      "estado": "aceptada",
+      "fechaCreacion": "2026-07-01T00:55:18.178Z"
     }
   ],
   "ordenes": [
@@ -105,7 +159,51 @@
       "estado": "en_transito",
       "fechaConfirmacion": "2026-06-29T12:00:00.000Z",
       "chatHabilitado": true
+    },
+    {
+      "id": "S9tPX_rQyB8",
+      "pedidoId": "8JQ-AEVQceg",
+      "cotizacionId": "5zWDO7x0T2E",
+      "compradorId": "comprador-demo-001",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "monto": 50000,
+      "estado": "confirmada",
+      "fechaConfirmacion": "2026-07-01T00:56:24.332Z",
+      "chatHabilitado": true
     }
   ],
-  "notificaciones": []
+  "notificaciones": [
+    {
+      "tipo": "nueva_cotizacion",
+      "rolDestino": "comprador",
+      "titulo": "Nueva cotización recibida",
+      "mensaje": "Mi Empresa (Proveedor) cotizó $50000 para tu pedido",
+      "id": "iwX63f6AIPg",
+      "fecha": "2026-07-01T00:55:18.212Z",
+      "leida": false
+    },
+    {
+      "tipo": "orden_confirmada",
+      "rolDestino": "comprador",
+      "titulo": "Orden confirmada",
+      "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
+      "entidadId": "21c88d62-b59d-47d0-82c7-f6b395bd6cde",
+      "id": "bID3pnZa6AU",
+      "fecha": "2026-07-01T00:56:24.372Z",
+      "leida": false
+    },
+    {
+      "tipo": "cotizacion_aceptada",
+      "rolDestino": "proveedor",
+      "titulo": "Cotización aceptada",
+      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
+      "entidadId": "5zWDO7x0T2E",
+      "id": "Xh7w_KoKmAU",
+      "fecha": "2026-07-01T00:56:24.372Z",
+      "leida": true
+    }
+  ],
+  "mensajes": [],
+  "$schema": "./node_modules/json-server/schema.json"
 }

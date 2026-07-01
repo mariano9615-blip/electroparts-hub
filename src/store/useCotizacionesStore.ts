@@ -12,6 +12,8 @@ interface CotizacionesState {
   agregarCotizacion: (cotizacion: Cotizacion) => void;
   aceptarCotizacion: (cotizacionId: string) => void;
   rechazarCotizacion: (cotizacionId: string) => void;
+  eliminarCotizacion: (id: string) => void;
+  eliminarCotizacionesByPedidoId: (pedidoId: string) => void;
 }
 
 export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
@@ -105,5 +107,23 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
         ),
       }));
     }).catch((e) => console.error('rechazarCotizacion:', e));
+  },
+
+  eliminarCotizacion: (id) => {
+    api.deleteCotizacion(id).then((ok) => {
+      if (!ok) return;
+      set((state) => ({ cotizaciones: state.cotizaciones.filter((c) => c.id !== id) }));
+    }).catch((e) => console.error('eliminarCotizacion:', e));
+  },
+
+  eliminarCotizacionesByPedidoId: (pedidoId) => {
+    const aEliminar = get().cotizaciones.filter((c) => c.pedidoId === pedidoId);
+    Promise.all(aEliminar.map((c) => api.deleteCotizacion(c.id)))
+      .then(() => {
+        set((state) => ({
+          cotizaciones: state.cotizaciones.filter((c) => c.pedidoId !== pedidoId),
+        }));
+      })
+      .catch((e) => console.error('eliminarCotizacionesByPedidoId:', e));
   },
 }));

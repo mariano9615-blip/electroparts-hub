@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { IconClipboardList, IconAlertTriangle } from '@tabler/icons-react';
-import { Badge, Button, EmptyState, PageHeader, Select } from '../../components/ui';
+import { IconClipboardList, IconAlertTriangle, IconTrash } from '@tabler/icons-react';
+import { Badge, Button, EmptyState, Modal, PageHeader, Select } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { COMPRADOR_ID } from '../../utils/constants';
 import { formatFecha, diasHasta } from '../../utils/formatters';
+import type { Pedido } from '../../types';
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
 
@@ -37,8 +38,10 @@ export default function ListaPedidosComprador() {
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [pedidoAEliminar, setPedidoAEliminar] = useState<Pedido | null>(null);
 
   const pedidos = usePedidosStore((s) => s.pedidos);
+  const eliminarPedido = usePedidosStore((s) => s.eliminarPedido);
 
   const misPedidos = useMemo(
     () =>
@@ -156,6 +159,7 @@ export default function ListaPedidosComprador() {
                 <th className={`${TH} text-left`}>Fecha límite</th>
                 <th className={`${TH} text-right`}>Cotizaciones</th>
                 <th className={`${TH} text-right`}>Estado</th>
+                <th className={`${TH} text-right`}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -192,6 +196,17 @@ export default function ListaPedidosComprador() {
                         {ESTADO_LABEL[pedido.estado] ?? pedido.estado}
                       </Badge>
                     </td>
+                    <td className="px-3 py-2.5 text-right">
+                      <button
+                        onClick={() => setPedidoAEliminar(pedido)}
+                        className="p-1.5 rounded hover:bg-ep-surface-raised transition-colors duration-150"
+                        title="Eliminar pedido"
+                      >
+                        <div className="text-red-500">
+                          <IconTrash size={14} stroke={2} />
+                        </div>
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -199,6 +214,42 @@ export default function ListaPedidosComprador() {
           </table>
         </div>
       )}
+
+      {/* Modal: confirmar eliminación de pedido */}
+      <Modal
+        open={pedidoAEliminar !== null}
+        onClose={() => setPedidoAEliminar(null)}
+        title="Eliminar pedido"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="md" onClick={() => setPedidoAEliminar(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => {
+                if (!pedidoAEliminar) return;
+                eliminarPedido(pedidoAEliminar.id);
+                setPedidoAEliminar(null);
+              }}
+            >
+              Eliminar
+            </Button>
+          </>
+        }
+      >
+        {pedidoAEliminar && (
+          <p className="text-sm text-ep-text-secondary">
+            ¿Eliminar el pedido{' '}
+            <span className="font-semibold text-ep-text-primary">
+              {pedidoAEliminar.titulo}
+            </span>
+            ? Esta acción eliminará también todas sus cotizaciones.
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }

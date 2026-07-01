@@ -56,6 +56,15 @@ export interface Mensaje {
   timestamp: string;
 }
 
+export interface MensajePedido {
+  id: string;
+  pedidoId: string;
+  autorRol: Rol;
+  autorNombre: string;
+  texto: string;
+  timestamp: string;
+}
+
 export interface Proveedor {
   id: string;
   nombre: string;

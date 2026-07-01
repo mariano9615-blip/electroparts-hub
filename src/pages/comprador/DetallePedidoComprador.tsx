@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IconArrowLeft, IconAlertCircle, IconInbox, IconAlertTriangle } from '@tabler/icons-react';
-import { Badge, Button, EmptyState, Modal, Select } from '../../components/ui';
+import { Badge, Button, Chat, EmptyState, Modal, Select } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
@@ -460,6 +460,11 @@ export default function DetallePedidoComprador() {
           </div>
         )}
       </Modal>
+
+      {/* Chat por pedido adjudicado */}
+      {pedidoAdjudicado && cotizacionAceptada && (
+        <Chat pedidoId={pedido.id} otroNombre={cotizacionAceptada.proveedorNombre} />
+      )}
 
       {/* Modal de confirmación: Rechazar cotización individual */}
       <Modal

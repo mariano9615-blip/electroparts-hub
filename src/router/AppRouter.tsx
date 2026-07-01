@@ -6,6 +6,7 @@ import { usePedidosStore } from '../store/usePedidosStore';
 import { useCotizacionesStore } from '../store/useCotizacionesStore';
 import { useOrdenesStore } from '../store/useOrdenesStore';
 import { useNotificacionesStore } from '../store/useNotificacionesStore';
+import { useMensajesStore } from '../store/useMensajesStore';
 import { useRolStore } from '../store/useRolStore';
 
 import Login from '../pages/Login';
@@ -23,6 +24,7 @@ import PedidosDisponibles from '../pages/proveedor/PedidosDisponibles';
 import MisCotizacionesProveedor from '../pages/proveedor/MisCotizacionesProveedor';
 import MisOrdenesProveedor from '../pages/proveedor/MisOrdenesProveedor';
 import ChatProveedor from '../pages/proveedor/ChatProveedor';
+import DetallePedidoProveedor from '../pages/proveedor/DetallePedidoProveedor';
 
 function RutaProtegida({ children }: { children: React.ReactNode }) {
   const autenticado = useAuthStore((s) => s.autenticado);
@@ -79,6 +81,8 @@ export function AppRouter() {
       useCotizacionesStore.getState().cargarDatos();
       useOrdenesStore.getState().cargarDatos();
       useNotificacionesStore.getState().cargarDatos();
+      const pedidoActivoId = useMensajesStore.getState().pedidoActivoId;
+      if (pedidoActivoId) useMensajesStore.getState().cargarMensajes(pedidoActivoId);
     };
 
     cargarTodo();
@@ -107,6 +111,7 @@ export function AppRouter() {
 
           <Route path="/proveedor" element={<DashboardProveedor />} />
           <Route path="/proveedor/pedidos" element={<PedidosDisponibles />} />
+          <Route path="/proveedor/pedidos/:id" element={<DetallePedidoProveedor />} />
           <Route path="/proveedor/cotizaciones" element={<MisCotizacionesProveedor />} />
           <Route path="/proveedor/ordenes" element={<MisOrdenesProveedor />} />
           <Route path="/proveedor/chat" element={<ChatProveedor />} />

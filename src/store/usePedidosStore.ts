@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Pedido, EstadoPedido } from '../types';
 import { useNotificacionesStore } from './useNotificacionesStore';
+import { useCotizacionesStore } from './useCotizacionesStore';
 import * as api from '../services/api';
 
 interface PedidosState {
@@ -9,6 +10,7 @@ interface PedidosState {
   agregarPedido: (pedido: Pedido) => void;
   actualizarEstadoPedido: (id: string, estado: EstadoPedido) => void;
   incrementarCotizaciones: (pedidoId: string) => void;
+  eliminarPedido: (id: string) => void;
 }
 
 export const usePedidosStore = create<PedidosState>((set, get) => ({
@@ -39,6 +41,14 @@ export const usePedidosStore = create<PedidosState>((set, get) => ({
         pedidos: state.pedidos.map((p) => (p.id === id ? { ...p, estado } : p)),
       }));
     }).catch((e) => console.error('actualizarEstadoPedido:', e));
+  },
+
+  eliminarPedido: (id) => {
+    api.deletePedido(id).then((ok) => {
+      if (!ok) return;
+      useCotizacionesStore.getState().eliminarCotizacionesByPedidoId(id);
+      set((state) => ({ pedidos: state.pedidos.filter((p) => p.id !== id) }));
+    }).catch((e) => console.error('eliminarPedido:', e));
   },
 
   incrementarCotizaciones: (pedidoId) => {

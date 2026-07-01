@@ -11,3 +11,4 @@ export { EmptyState } from './EmptyState';
 export { PageHeader } from './PageHeader';
 export { Toast } from './Toast';
 export { ToastContainer } from './ToastContainer';
+export { Chat } from './Chat';
