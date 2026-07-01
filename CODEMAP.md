@@ -1,6 +1,6 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-06-30 (v0.3.0)
+Última actualización: 2026-06-30 (v0.4.0)
 Rama: mdemichelis
 
 ---
@@ -424,3 +424,224 @@ Rama: mdemichelis
 | `createMensaje(data)` | POST /mensajes | Crea un nuevo mensaje; retorna `MensajePedido \| null` |
 | `deletePedido(id)` | DELETE /pedidos/:id | Retorna `boolean` indicando éxito; usado por `usePedidosStore.eliminarPedido` |
 | `deleteCotizacion(id)` | DELETE /cotizaciones/:id | Retorna `boolean` indicando éxito; usado por `useCotizacionesStore.eliminarCotizacion` y `eliminarCotizacionesByPedidoId` |
+
+---
+
+## src/types/index.ts (cambios v0.4.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 5 | `EstadoPedido` | Agrega `'en_negociacion'` a la unión: `'abierto' \| 'en_cotizacion' \| 'en_negociacion' \| 'adjudicado' \| 'cancelado'` |
+| 6 | `EstadoCotizacion` | Agrega `'en_negociacion'` a la unión: `'pendiente' \| 'en_negociacion' \| 'aceptada' \| 'rechazada'` |
+| 22–24 | campos opcionales `Pedido` | `cotizacionEnNegociacionId?: string` (id de la cotización en negociación activa), `observacionBaja?: string` (texto obligatorio al cancelar), `fechaBaja?: string` (ISO de la cancelación) |
+| 62–70 | `MensajePedido` | Agrega campo `leido?: boolean` — `false` en mensajes nuevos, `true` tras `marcarMensajesLeidos`. Permite el indicador de punto azul en el Chat y el badge "mensaje nuevo" en la lista |
+
+---
+
+## src/utils/constants.ts (cambios v0.4.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 33 | `PROV_IDS` | `export const PROV_IDS = ['prov-1', 'prov-2', 'prov-3', 'prov-4', 'prov-demo-001'] as const` — lista de todos los proveedores del sistema demo. Usado en `AppRouter.tsx` y `DetallePedidoProveedor.tsx` para filtrar cotizaciones pertenecientes al usuario activo. Requiere cast `(PROV_IDS as readonly string[])` al llamar `.includes(string)` por TS literal type |
+
+---
+
+## src/utils/sounds.ts (nuevo v0.4.0 — 45 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 3 | `TipoSonido` | Tipo local: `'pedido' \| 'cotizacion' \| 'mensaje'` |
+| 5 | `_ctx` | Variable de módulo `AudioContext \| null` — singleton lazy para evitar múltiples contextos de audio |
+| 7–10 | `getCtx()` | Crea el `AudioContext` en la primera llamada; lo reutiliza en las siguientes. Evita el warning del navegador por múltiples contextos |
+| 12–30 | `beep(freq, durMs)` | `Promise<void>` que crea oscilador + nodo de ganancia, conecta al destino, aplica rampa exponencial y resuelve en `osc.onended`. Envuelto en try/catch para no propagar errores en contextos bloqueados |
+| 32–45 | `playNotificationSound(tipo)` | Función exportada. Retorna inmediatamente si `localStorage 'ep_sonido_silenciado' === 'true'`. Según tipo: `pedido`→`beep(880, 150)`, `cotizacion`→`beep(660,100).then(()=>beep(880,100))` (doble tono ascendente), `mensaje`→`beep(440, 80)`. Fire-and-forget. Llamada desde `ToastContainer` al recibir cada evento |
+
+---
+
+## src/services/api.ts (cambios v0.4.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| `updateMensaje(id, data)` | PATCH /mensajes/:id | Nuevo función que recibe `Partial<MensajePedido>` y retorna `MensajePedido \| null`. Usada exclusivamente por `useMensajesStore.marcarMensajesLeidos` para cambiar `leido: true` en paralelo con `Promise.all` |
+
+---
+
+## src/store/useNotificacionesStore.ts (cambios v0.4.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 4–13 | `TipoNotificacion` | Extiende el tipo unión con 4 valores nuevos: `'cotizacion_en_negociacion'` (comprador inició negociación con proveedor), `'cotizacion_rechazada'` (cotización individual rechazada), `'mensaje_nuevo'` (mensaje no leído en chat), `'estado_pedido_cambio'` (cambio de estado genérico de pedido). Retrocompatible — no modifica lógica existente |
+
+---
+
+## src/store/usePedidosStore.ts (cambios v0.4.0 — 119 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 7–17 | `PedidosState` | Agrega 3 nuevas firmas: `iniciarNegociacion`, `cancelarNegociacion`, `cancelarPedido` |
+| 57–70 | `iniciarNegociacion(pedidoId, cotizacionId)` | PATCH `/pedidos/:id` con `{ estado: 'en_negociacion', cotizacionEnNegociacionId }`. Si ok: map sobre el array local aplicando ambos campos. Llamada desde `DetallePedidoComprador.handleConfirmarNegociacion` junto con `iniciarNegociacionCotizacion` del store de cotizaciones |
+| 72–83 | `cancelarNegociacion(pedidoId)` | PATCH `/pedidos/:id` con `{ estado: 'abierto', cotizacionEnNegociacionId: undefined }`. Revierte el pedido al estado anterior sin registrar historial. Llamada desde `handleCancelarNegociacion` junto con `cancelarNegociacionCotizacion` |
+| 85–97 | `cancelarPedido(id, observacion)` | PATCH `/pedidos/:id` con `{ estado: 'cancelado', observacionBaja: observacion, fechaBaja: new Date().toISOString() }`. No DELETE — preserva el registro en `db.json` con el motivo. El estado `cancelado` es terminal; el botón de baja se oculta y se muestra un `IconInfoCircle` con tooltip |
+
+---
+
+## src/store/useCotizacionesStore.ts (cambios v0.4.0 — 153 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 9–19 | `CotizacionesState` | Agrega 2 nuevas firmas: `iniciarNegociacionCotizacion` y `cancelarNegociacionCotizacion` |
+| 114–123 | `iniciarNegociacionCotizacion(cotizacionId)` | PATCH `/cotizaciones/:id` con `{ estado: 'en_negociacion' }`. Si ok: map local. Siempre se llama en conjunto con `usePedidosStore.iniciarNegociacion` desde el mismo handler en DetallePedidoComprador (no hay coordinación explícita entre stores) |
+| 125–134 | `cancelarNegociacionCotizacion(cotizacionId)` | PATCH `/cotizaciones/:id` con `{ estado: 'pendiente' }`. Revierte la cotización al estado `pendiente`. Siempre se llama junto con `usePedidosStore.cancelarNegociacion` |
+
+---
+
+## src/store/useMensajesStore.ts (cambios v0.4.0 — 103 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 6–15 | `MensajesState` | Agrega `pedidosConMensajeNuevo: string[]` (pedidoIds con mensajes no leídos en sesión) y `marcarMensajesLeidos` a la interface |
+| 20 | estado inicial | `pedidosConMensajeNuevo: []` — no persiste; se recalcula al cargar mensajes cada sesión |
+| 22–64 | `cargarMensajes(pedidoId)` | Lógica de detección dual: calcula `esPrimeraCarga = prev.pedidoActivoId !== pedidoId` antes del `set`. **Primera carga**: busca mensajes con `autorRol !== miRol && leido === false`; si existen, agrega `pedidoId` a `pedidosConMensajeNuevo` sin disparar toast. **Polls subsiguientes**: filtra IDs no conocidos del otro rol; si hay nuevos, agrega a `pedidosConMensajeNuevo` y dispara `CustomEvent('mensaje-nuevo-toast')` por cada uno. Guard de race condition en línea 30: descarta respuestas de polls anteriores si `pedidoActivoId` cambió |
+| 66–80 | `enviarMensaje(...)` | Agrega `leido: false` al objeto `MensajePedido` construido localmente antes de llamar `api.createMensaje` |
+| 86–101 | `marcarMensajesLeidos(pedidoId, miRol)` | Filtra mensajes con `autorRol !== miRol && leido === false`. Si hay, hace `Promise.all` de `api.updateMensaje(m.id, { leido: true })`. Al resolver: map local a `leido: true` y elimina `pedidoId` de `pedidosConMensajeNuevo`. Llamada desde `Chat.tsx` en `useEffect([mensajes])` cada vez que llegan nuevos mensajes |
+
+---
+
+## src/hooks/useNotificationSound.ts (nuevo v0.4.0 — 17 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 3 | `STORAGE_KEY` | `'ep_sonido_silenciado'` — clave de localStorage compartida con `playNotificationSound` en `sounds.ts` |
+| 5–17 | `useNotificationSound()` | Hook exportado. `useState` inicializado lazy desde `localStorage`. `useEffect([silenciado])` persiste cada cambio. `toggleSilencio` con `useCallback`. Retorna `{ silenciado, toggleSilencio }`. Consumido por `TopBar.tsx` para el ícono de mute |
+
+---
+
+## src/components/ui/Toast.tsx (refactorizado v0.4.0 — 172 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 3–12 | imports íconos | 8 íconos de Tabler: `IconShoppingCart`, `IconFileInvoice`, `IconTrophy`, `IconX`, `IconMessage`, `IconAlertCircle`, `IconClock`, `IconInfoCircle` |
+| 14–21 | `ToastTipo` | Tipo unión exportado con 7 variantes: `'pedido_nuevo'`, `'cotizacion_nueva'`, `'cotizacion_adjudicada'`, `'cotizacion_rechazada'`, `'cotizacion_negociacion'`, `'mensaje_nuevo'`, `'estado_cambio'` |
+| 23–29 | `ToastPayload` | Interface exportada: `id`, `tipo: ToastTipo`, `titulo`, `subtitulo?`, `navegarA?`. Usada por `ToastContainer` para tipar la cola y por `AppRouter` para construir los payloads de cada CustomEvent |
+| 35–94 | `CONFIG` | Map `Record<ToastTipo, {...}>` con `bordColor`, `barColor`, `icono`, `iconoColor`, `duracionMs` por tipo. `cotizacion_adjudicada` dura 8000 ms; `estado_cambio` dura 4000 ms; el resto 5000–6000 ms |
+| 96–172 | `Toast` | Componente. Slide-in via `entrado` boolean + `requestAnimationFrame`. Barra de progreso CSS (div `absolute bottom-0 h-1`) con `transition: width Xms linear`. `cotizacion_adjudicada`: ícono `size=22` y título `text-base`. Botón "Ver" / "Ver detalle" condicional cuando `navegarA` presente; llama `navigate(navegarA) + onClose` |
+
+---
+
+## src/components/ui/ToastContainer.tsx (refactorizado v0.4.0 — 64 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 4 | import `playNotificationSound` | Importa desde `'../../utils/sounds'` — invocada al agregar cada toast |
+| 6 | `MAX_TOASTS` | `4` — límite de toasts simultáneos (antes era 3) |
+| 9–21 | `EVENTOS` | Array de 7 objetos `{ nombre, tipo, sonido }` que mapea cada nombre de CustomEvent a su `ToastTipo` y su `TipoSonido` (o `null` para `estado_cambio` que no tiene sonido) |
+| 26–48 | `useEffect` — registro de listeners | Itera `EVENTOS` creando un handler por evento. Cada handler: extrae `detail`, verifica límite y anti-duplicado por `id`, agrega al estado y llama `playNotificationSound(sonido)` si `sonido !== null`. Cleanup: `removeEventListener` para cada par `{nombre, handler}` |
+
+---
+
+## src/components/ui/PedidoStepper.tsx (nuevo v0.4.0 — 169 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–2 | imports | `IconCheck`, `IconX` de Tabler; tipos `EstadoPedido`, `Rol` de `../../types` |
+| 4–10 | `PedidoStepperProps` | Props: `estado: EstadoPedido`, `rol: Rol`, `nombreProveedor?`, `miCotizacionEnNegociacion?`, `observacionBaja?` |
+| 12 | `PASOS` | `['Abierto', 'En negociación', 'Adjudicado', 'Cerrado'] as const` |
+| 14–28 | `estadoAPasoIndex(estado)` | Función pura: `abierto/en_cotizacion`→0, `en_negociacion`→1, `adjudicado`→2, `cancelado`→-1 (terminal alternativo, renderizado especial) |
+| 30–61 | `textoContextual(...)` | Función pura con lógica `rol × estado`: comprador recibe frases sobre negociación y adjudicación; proveedor distingue `miCotizacionEnNegociacion` (negociando con vos) vs. otro proveedor en negociación; `cancelado` siempre muestra mensaje de baja |
+| 63–169 | `PedidoStepper` | Componente exportado (named export). Rama `cancelado`: banner rojo con `IconX` y `observacionBaja`. Rama normal: (1) fila de círculos + líneas conectoras — `bg-ep-green` si pasado, `bg-ep-blue` si activo, `bg-ep-border` si futuro; (2) fila de etiquetas con `text-ep-blue`/muted/disabled según posición; (3) párrafo de texto contextual debajo de línea divisora |
+
+---
+
+## src/components/ui/index.ts (cambios v0.4.0)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| — | export `PedidoStepper` | Agrega `export { PedidoStepper } from './PedidoStepper'` al barrel de exports de la carpeta `ui` |
+
+---
+
+## src/components/ui/Chat.tsx (cambios v0.4.0 — 127 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 24 | `marcarMensajesLeidos` | Nueva suscripción al store: `useMensajesStore((s) => s.marcarMensajesLeidos)` |
+| 38–42 | `useEffect([mensajes])` | Nuevo efecto: cuando `mensajes.length > 0` llama `marcarMensajesLeidos(pedidoId, miRol)`. Dispara en cada actualización de mensajes (incluye el polling de 5 s). Remueve `pedidoId` de `pedidosConMensajeNuevo` y PATCHea en API |
+| 77 | `noLeido` | `const noLeido = !esMio && msg.leido === false` — booleano derivado por mensaje |
+| 83–88 | punto azul | Cuando `noLeido`: muestra `<span className="w-1.5 h-1.5 rounded-full bg-ep-blue">` junto al timestamp del mensaje del otro lado |
+| 90–96 | ring en burbuja | Cuando `noLeido`: agrega `ring-1 ring-ep-blue/30` al className de la burbuja |
+
+---
+
+## src/components/layout/TopBar.tsx (cambios v0.4.0 — 116 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 3 | `IconBellOff` | Ícono adicional importado de Tabler para el estado silenciado |
+| 8 | import `useNotificationSound` | Hook importado desde `'../../hooks/useNotificationSound'` |
+| 35 | `{ silenciado, toggleSilencio }` | Desestructurado del hook; `silenciado` controla el ícono; `toggleSilencio` es el handler del botón |
+| 62–73 | botón mute | `<button onClick={toggleSilencio}>` con `aria-label` y `title` condicionales. Silenciado: `IconBellOff size=18 className="text-ep-text-muted"`. Activo: `IconBell size=18 className="text-ep-text-secondary"`. Posicionado antes del botón de notificaciones |
+
+---
+
+## src/router/AppRouter.tsx (cambios v0.4.0 — 241 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 11 | import `PROV_IDS` | Importa desde `'../utils/constants'`; cast `(PROV_IDS as readonly string[])` al usar `.includes()` |
+| 54–56 | 3 `useRef` de snapshots | `pedidosConocidosRef: Set<string> \| null` (IDs conocidos), `pedidosEstadoRef: Map<string, string> \| null` (pedidoId→estado), `cotizacionesEstadoRef: Map<string, string> \| null` (cotizacionId→estado). `null` en todos indica primera carga — se inicializan con baseline sin disparar toasts |
+| 60–109 | `usePedidosStore.subscribe` | Suscripción permanente al store de pedidos. **Primera vez** (`ref === null`): inicializa `pedidosConocidosRef` con IDs de `prevState` y `pedidosEstadoRef` con estado actual (baseline). **Proveedor**: filtra IDs no conocidos → `CustomEvent('nuevo-pedido-toast')` con `navegarA`. **Todos los roles**: detecta cambios de estado (`estadoAnterior !== p.estado`) → `CustomEvent('estado-pedido-toast')`. Actualiza ambos refs al final |
+| 112–185 | `useCotizacionesStore.subscribe` | Suscripción al store de cotizaciones. **Primera vez**: inicializa `cotizacionesEstadoRef` y retorna. Itera todas las cotizaciones del nuevo estado: si `!estadoAnterior` (cotización nueva) y `rol === 'comprador'` → `CustomEvent('nueva-cotizacion-toast')`; si `estadoAnterior !== c.estado` y es cotización del proveedor activo (`PROV_IDS.includes`) → despacha `cotizacion-adjudicada-toast`, `cotizacion-rechazada-toast` o `cotizacion-negociacion-toast` según el nuevo estado. Actualiza ref al final |
+| 187–204 | `cargarTodo()` + polling | Sin cambios en lógica; ahora incluye limpieza `desubPedidos()` + `desubCotizaciones()` en el `return` del `useEffect` para evitar memory leaks |
+
+---
+
+## src/pages/comprador/ListaPedidosComprador.tsx (cambios v0.4.0 — 356 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 7–9 | nuevos imports íconos | `IconTrash` (existente), `IconInfoCircle` (tooltip observación), `IconMessage` (badge mensaje nuevo) |
+| 52–54 | nuevos `useState` | `observacionBaja: string` (textarea del modal de baja), `tooltipObsId: string \| null` (controla qué pedido muestra tooltip de observación) |
+| 57–59 | nuevas suscripciones | `cancelarPedido` de `usePedidosStore`, `cotizaciones` de `useCotizacionesStore`, `pedidosConMensajeNuevo` de `useMensajesStore` |
+| 36–42 | `FILTRO_ESTADO_OPTIONS` | Agrega opción `{ value: 'en_negociacion', label: 'En negociación' }` al select de filtro |
+| 80–87 | `cotizacionesPorPedido` | `useMemo` que acumula un `Record<string, number>` contando cotizaciones por `pedidoId` iterando el array completo |
+| 114–124 | `handleAbrirModalBaja` / `handleConfirmarBaja` | Reemplazan el antiguo `handleEliminar`. `handleConfirmarBaja` valida `observacionBaja.trim().length >= 10` antes de llamar `cancelarPedido` (PATCH, no DELETE) |
+| 207 | `tieneMensajeNuevo` | `pedidosConMensajeNuevo.includes(pedido.id)` — booleano por fila |
+| 208 | `cancelado` | `pedido.estado === 'cancelado'` — controla visibilidad del botón de baja y el icono de tooltip |
+| 223–231 | badge "mensaje nuevo" | Condicional `tieneMensajeNuevo`: pill `bg-ep-blue-light text-ep-blue` con `IconMessage size=10` y texto "nuevo" junto al título |
+| 244–249 | badge cotizaciones | `cantCot === 0` → texto muted `font-mono`; `cantCot > 0` → `<span>` circular `bg-ep-blue text-white min-w-[22px] h-[22px] rounded-full` con `font-mono font-bold` |
+| 257–279 | tooltip `observacionBaja` | `IconInfoCircle` junto al badge de estado cuando `cancelado && pedido.observacionBaja`. Posición: `absolute right-0 top-6 z-20 w-56`. Controlled por `tooltipObsId` (hover mouse + click toggle) |
+| 283–293 | botón baja | Solo visible cuando `!cancelado`. Reemplaza lógica de DELETE; abre modal de baja |
+| 304–354 | modal de baja | Título "¿Por qué das de baja este pedido?". Textarea `rows=4` con placeholder de ejemplo; contador de chars abajo (`text-ep-red` si <10). Botón "Confirmar baja" `disabled={observacionBaja.trim().length < 10}` |
+
+---
+
+## src/pages/comprador/DetallePedidoComprador.tsx (cambios v0.4.0 — 604 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 4 | nuevos imports | `PedidoStepper` desde `'../../components/ui'`; `IconHandStop` para el banner de negociación |
+| 30–50 | mapas `COT_ESTADO_*` | Agrega `en_negociacion: 'amber'` / `'En negociación'` a los mapas de color y label de cotizaciones |
+| 44–50 | `FILTRO_ESTADO_COT_OPTIONS` | Agrega `{ value: 'en_negociacion', label: 'En negociación' }` |
+| 66 | `modalNegociar` | `useState<Cotizacion \| null>` — controla el modal de confirmación de inicio de negociación |
+| 78–81 | nuevas suscripciones stores | `iniciarNegociacionCotizacion`, `cancelarNegociacionCotizacion` de `useCotizacionesStore`; `iniciarNegociacion` (alias `iniciarNegociacionPedido`), `cancelarNegociacion` (alias `cancelarNegociacionPedido`) de `usePedidosStore` |
+| 151–158 | derivados de estado | `pedidoEnNegociacion`, `pedidoCancelado`, `pedidoBloqueado = pedidoAdjudicado \|\| pedidoCancelado`, `cotizacionEnNegociacion` |
+| 190–202 | `handleConfirmarNegociacion()` | Llama `iniciarNegociacionCotizacion(modalNegociar.id)` + `iniciarNegociacionPedido(pedido.id, modalNegociar.id)` + notificación `cotizacion_en_negociacion` al proveedor + cierra modal |
+| 204–208 | `handleCancelarNegociacion()` | Llama `cancelarNegociacionCotizacion(cotizacionEnNegociacion.id)` + `cancelarNegociacionPedido(pedido.id)` |
+| 235–240 | `<PedidoStepper>` | Montado entre el header y la card de info. Props: `estado`, `rol="comprador"`, `nombreProveedor` (acepta la cotización aceptada o en negociación), `observacionBaja` |
+| 294–308 | banner amber negociación | Visible cuando `pedidoEnNegociacion && cotizacionEnNegociacion`. Muestra nombre del proveedor + botón "Cancelar negociación" que llama `handleCancelarNegociacion` |
+| 393–394 | columna `esEnNegociacion` | Booleano por fila; resalta la fila con `bg-ep-amber-light/40` y muestra badge "Negociando" |
+| 442–469 | botones por cotización | `Adjudicar` visible para `pendiente` y `en_negociacion`. `Negociar` visible solo si `pendiente && !pedidoEnNegociacion`. `Rechazar` visible solo si `pendiente` |
+| 543–568 | modal de negociación | `size="sm"`, texto confirmación con nombre del proveedor. Footer: "Cancelar" + "Iniciar negociación" → `handleConfirmarNegociacion` |
+
+---
+
+## src/pages/proveedor/DetallePedidoProveedor.tsx (cambios v0.4.0 — 160 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 8 | import `PROV_IDS` | Importado desde `'../../utils/constants'`; usado con cast `(PROV_IDS as readonly string[])` |
+| 43–51 | `miCotizacion` | `useMemo` que busca una cotización del pedido donde `PROV_IDS.includes(c.proveedorId)` — identifica si el usuario demo cotizó en este pedido |
+| 53 | `miCotizacionEnNegociacion` | `miCotizacion?.estado === 'en_negociacion'` — booleano derivado |
+| 75–77 | `ganadorSoyYo` | `cotizacionAceptada !== null && PROV_IDS.includes(cotizacionAceptada.proveedorId)` — determina si mostrar nombre en stepper y si el chat debe abrirse |
+| 104–110 | `<PedidoStepper>` | `estado`, `rol="proveedor"`, `nombreProveedor` solo cuando `ganadorSoyYo` (muestra "¡Tu cotización fue adjudicada!"), `miCotizacionEnNegociacion`, `observacionBaja` |
+| 113–125 | banner amber negociación proveedor | Visible cuando `miCotizacionEnNegociacion`. Icono `IconClock`, texto "Tu cotización está siendo evaluada" con subtexto "Usá el chat para coordinar" |
