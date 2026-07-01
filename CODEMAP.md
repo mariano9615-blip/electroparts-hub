@@ -1,7 +1,45 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (v0.5.0 — refactor sidebar, terminología comercial, tabs, métricas, actividad)
+Última actualización: 2026-07-01 (v0.5.1 — Etapa 5a: ciclo de vida de orden)
 Rama: mdemichelis
+
+---
+
+## RESUMEN v0.5.1 — Archivos clave modificados
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `src/types/index.ts` | Nuevo `EstadoOrden` (6 estados), nuevo `EstadoPago`, campos nuevos en `Orden` | 9–12 (tipos), 40–57 (Orden) |
+| `src/store/useNotificacionesStore.ts` | + 6 valores en `TipoNotificacion` | 4–19 |
+| `src/store/useOrdenesStore.ts` | + 6 acciones async: `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden` | 18–130 (acciones) |
+| `src/utils/formatters.ts` | + `getLabelEstadoOrden`, `getLabelEstadoPago`, `getColorEstadoPago`; actualiza `getColorEstadoOrden` | 70–107 |
+| `src/components/ordenes/OrdenStepper.tsx` | **NUEVO** — stepper horizontal de 5 pasos con texto contextual por rol y estado disputada en rojo | 1–100 |
+| `src/components/ordenes/OrdenCard.tsx` | Refactor total: + prop `rol`, `pedidoTitulo`, `acciones[]`; panel expandible con `OrdenStepper` + info de pago | 1–175 |
+| `src/pages/comprador/MisOrdenesComprador.tsx` | + 7 tabs; modales recepción y disputa; calcula `acciones` por estado | 1–200 |
+| `src/pages/proveedor/MisOrdenesProveedor.tsx` | + 7 tabs; modales preparación, envío y pago; calcula `acciones` por estado | 1–215 |
+| `src/router/AppRouter.tsx` | + `ordenesEstadoRef`; suscripción a ordenes que detecta cambios de estado y estadoPago | 54, 192–250 |
+| `db.json` | + `estadoPago: "pendiente"` en todas las órdenes; migra `en_transito` → `enviado` | n/a |
+
+### Lógica condicional clave — useOrdenesStore.ts
+
+- `confirmarEntrega()` (L74–88): si `actualizada.estadoPago === 'confirmado'` → llama `cerrarOrden()` automáticamente.
+- `confirmarPago()` (L90–108): si `orden.estado === 'entregado'` → llama `cerrarOrden()` automáticamente.
+- `cerrarOrden()` (L121–132): notifica a ambos roles (comprador y proveedor) ya que el cierre es bilateral.
+
+### Lógica condicional clave — OrdenCard.tsx
+
+- `numeroSeguimiento` se muestra solo si `estado ∈ {enviado, en_preparacion, entregado, cerrado}` (L73–78).
+- Panel expandible (L94–147): toggle local via `useState(false)`.
+- Banner "Orden completada" solo para estado `cerrado`; botón "Calificar" deshabilitado con tooltip (L80–89).
+
+### Lógica condicional clave — MisOrdenesComprador.tsx
+
+- `getAccionesComprador(orden)`: estado `enviado` → botones "Confirmar recepción" (primary) + "Abrir disputa" (danger); estados `confirmada|en_preparacion` → solo "Abrir disputa" (danger).
+- Modal disputa: botón habilitado solo si `obsDisputa.length >= 20`.
+
+### Lógica condicional clave — MisOrdenesProveedor.tsx
+
+- `getAccionesProveedor(orden)`: `confirmada` → "Marcar en preparación"; `en_preparacion` → "Marcar como enviado"; `entregado` → "Confirmar pago recibido"; resto → sin acciones.
 
 ---
 

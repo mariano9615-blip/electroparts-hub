@@ -24,7 +24,7 @@ src/
     layout/      # AppShell, Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel
     pedidos/     # PedidoCard
     cotizaciones/# CotizacionCard, CotizacionForm
-    ordenes/     # OrdenCard
+    ordenes/     # OrdenCard, OrdenStepper
     domain/      # PedidosTable, CotizacionesTable
   pages/
     comprador/   # DashboardComprador, PublicarPedido, ListaPedidosComprador,
@@ -67,10 +67,17 @@ estado: EstadoCotizacion                fechaCreacion: string (ISO)
 
 **Orden**
 ```
-id: string        pedidoId: string    cotizacionId: string    compradorId: string
-proveedorId: string                   proveedorNombre: string monto: number
-estado: EstadoOrden                   fechaConfirmacion: string (ISO)
+id: string              pedidoId: string | null    cotizacionId: string    compradorId: string
+proveedorId: string     proveedorNombre: string    monto: number
+estado: EstadoOrden     fechaConfirmacion: string (ISO)
 chatHabilitado: boolean
+estadoPago: EstadoPago                             // default: 'pendiente' al crear orden
+numeroSeguimiento?: string                         // cargado por proveedor al marcar enviado
+fechaEnvio?: string (ISO)                          // seteado al marcar enviado
+fechaEntrega?: string (ISO)                        // seteado al confirmar entrega
+comprobantePago?: string                           // texto libre: número de transferencia, CBU, etc.
+fechaPagoConfirmado?: string (ISO)                 // seteado al confirmar pago
+observacionDisputa?: string                        // texto de la disputa abierta por el comprador
 ```
 
 **MensajePedido**
@@ -89,8 +96,9 @@ fecha: string (ISO)    leida: boolean   rolDestino: 'comprador'|'proveedor'   en
 **Tipos de estado**
 - `EstadoPedido`: `'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado'`
 - `EstadoCotizacion`: `'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada'`
-- `EstadoOrden`: `'confirmada' | 'en_transito' | 'entregada' | 'disputada'`
-- `TipoNotificacion`: `'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada' | 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio'`
+- `EstadoOrden`: `'confirmada' | 'en_preparacion' | 'enviado' | 'entregado' | 'cerrado' | 'disputada'`
+- `EstadoPago`: `'pendiente' | 'en_proceso' | 'confirmado'`
+- `TipoNotificacion`: `'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada' | 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio' | 'orden_en_preparacion' | 'orden_enviada' | 'orden_entregada' | 'orden_pago_confirmado' | 'orden_cerrada' | 'orden_disputada'`
 
 ---
 
@@ -110,6 +118,23 @@ abierto → cancelado  (desde cualquier estado no-adjudicado)
 | `en_cotizacion → adjudicado` | comprador (botón "Adjudicar") | ídem fila anterior |
 | `* → cancelado` | comprador (modal con observación ≥10 chars) | `PATCH /pedidos/:id` con `{estado, observacionBaja, fechaBaja}` |
 
+## 4b. CICLO DE VIDA DE LA ORDEN
+
+```
+confirmada → en_preparacion → enviado → entregado → cerrado
+* → disputada  (comprador, desde cualquier estado antes de entregado)
+entregado + estadoPago=confirmado → cerrado  (automático)
+```
+
+| Transición | Quién | Endpoint | Condición |
+|---|---|---|---|
+| `confirmada → en_preparacion` | proveedor (botón) | `PATCH /ordenes/:id` | — |
+| `en_preparacion → enviado` | proveedor (modal, tracking opcional) | `PATCH /ordenes/:id` con `{estado, numeroSeguimiento?, fechaEnvio}` | — |
+| `enviado → entregado` | comprador (modal de confirmación) | `PATCH /ordenes/:id` con `{estado, fechaEntrega}` | — |
+| `entregado → cerrado` | automático | `PATCH /ordenes/:id` | `estadoPago === 'confirmado'` al confirmar entrega, o entregado al confirmar pago |
+| `estadoPago: pendiente → confirmado` | proveedor (modal, comprobante opcional) | `PATCH /ordenes/:id` con `{estadoPago, comprobantePago?, fechaPagoConfirmado}` | — |
+| `* → disputada` | comprador (modal, observación ≥20 chars) | `PATCH /ordenes/:id` con `{estado, observacionDisputa}` | estado ∈ {confirmada, en_preparacion, enviado} |
+
 ---
 
 ## 5. STORES ZUSTAND
@@ -120,7 +145,7 @@ abierto → cancelado  (desde cualquier estado no-adjudicado)
 | useRolStore | useRolStore.ts | rol activo (localStorage `ep_rol`) | `setRol()` |
 | usePedidosStore | usePedidosStore.ts | `Pedido[]` vía API | `cargarDatos`, `agregarPedido`, `actualizarEstadoPedido`, `incrementarCotizaciones`, `eliminarPedido`, `iniciarNegociacion`, `cancelarNegociacion`, `cancelarPedido` |
 | useCotizacionesStore | useCotizacionesStore.ts | `Cotizacion[]` vía API | `cargarDatos`, `agregarCotizacion`, `aceptarCotizacion`, `rechazarCotizacion`, `iniciarNegociacionCotizacion`, `cancelarNegociacionCotizacion`, `eliminarCotizacion`, `eliminarCotizacionesByPedidoId` |
-| useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden` |
+| useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden`, `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden` |
 | useMensajesStore | useMensajesStore.ts | `mensajesPorPedido: Record<pedidoId, MensajePedido[]>` vía API | `cargarMensajes`, `cargarTodosLosMensajes`, `enviarMensaje`, `marcarMensajesLeidos`, `limpiarPedidoActivo` |
 | useNotificacionesStore | useNotificacionesStore.ts | `Notificacion[]` vía API | `cargarDatos`, `agregarNotificacion`, `marcarLeida`, `marcarTodasLeidas`, `eliminarNotificacion`, `limpiarTodas` |
 
@@ -163,12 +188,24 @@ Los valores internos del store y db.json NO cambian. Solo cambia el texto visibl
 | `pedido.estado = 'adjudicado'` | proveedor | "Vendido" |
 | `cotizacion.estado = 'aceptada'` | comprador | "Aceptada" |
 | `cotizacion.estado = 'aceptada'` | proveedor | "Ganada" |
+| `orden.estado = 'confirmada'` | ambos | "Confirmada" |
+| `orden.estado = 'en_preparacion'` | comprador | "En preparación" |
+| `orden.estado = 'en_preparacion'` | proveedor | "Preparando pedido" |
+| `orden.estado = 'enviado'` | comprador | "En camino" |
+| `orden.estado = 'enviado'` | proveedor | "Enviado" |
+| `orden.estado = 'entregado'` | comprador | "Recibido" |
+| `orden.estado = 'entregado'` | proveedor | "Entregado" |
+| `orden.estado = 'cerrado'` | ambos | "Cerrado" |
+| `orden.estado = 'disputada'` | ambos | "En disputa" |
+| `orden.estadoPago = 'pendiente'` | ambos | "Pago pendiente" |
+| `orden.estadoPago = 'en_proceso'` | ambos | "Pago en proceso" |
+| `orden.estadoPago = 'confirmado'` | ambos | "Pago confirmado" |
 | Botón acción | comprador | "Confirmar compra" (antes "Adjudicar") |
 | Banner post-compra | comprador | "Compra confirmada con [proveedor]" |
 | Toast cotización ganada | proveedor | "¡Ganaste la venta! [nombre pedido]" |
 | Toast compra comprador | comprador | "Compra confirmada para [nombre pedido]" |
 
-Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol)`, `getLabelEstadoCotizacion(estado, rol)`.
+Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol)`, `getLabelEstadoCotizacion(estado, rol)`, `getLabelEstadoOrden(estado, rol)`, `getLabelEstadoPago(estado)`.
 
 ## 6c. SIDEBAR — ESTRUCTURA POR ROL
 
@@ -199,8 +236,10 @@ Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol
 6. **Tampoco agrupar campos en un selector** — `(s) => ({ a: s.a, b: s.b })` crea objeto nuevo en cada snapshot. Usar un hook por campo.
 7. **`cargarTodosLosMensajes()` es el polling global** — trae GET /mensajes (sin filtro), agrupa por `pedidoId`, compara contra snapshot previo para detectar nuevos mensajes. Primera vez que ve un `pedidoId` no dispara toast (baseline).
 8. **Ids demo fijos** — `COMPRADOR_ID = 'comprador-demo-001'`; `PROV_IDS = ['prov-1','prov-2','prov-3','prov-4','prov-demo-001']`. Proveedor logueado: `'prov-demo-001'`.
-9. **Chat habilitado** — visible cuando `pedido.estado === 'en_negociacion'` o `'adjudicado'`.
+9. **Chat habilitado** — `chatHabilitado: true` en db.json; visible en órdenes `en_negociacion`, `adjudicado`, `enviado`, `entregado`, `cerrado`. Solo navega al chat si `pedidoId` no es null.
 10. **Polling cada 5s en AppRouter** — llama `cargarDatos()` de los 4 stores + `cargarTodosLosMensajes()`. Suscripciones Zustand despachan CustomEvents para toasts.
+11. **Cierre automático de orden** — `cerrarOrden()` se llama automáticamente desde `confirmarEntrega()` si `estadoPago === 'confirmado'`, y desde `confirmarPago()` si `orden.estado === 'entregado'`.
+12. **`estadoPago` tiene fallback** — órdenes sin el campo usan `?? 'pendiente'` como default para compatibilidad con datos pre-etapa-5a.
 
 ---
 

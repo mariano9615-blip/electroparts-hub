@@ -2,6 +2,22 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.5.1 — 2026-07-01
+#### Added — Etapa 5a — Ciclo de vida de orden: preparación, envío, entrega, pago y disputa
+
+- `src/types/index.ts` *(modificado)* — reemplaza `EstadoOrden` con nuevo tipo de 6 estados (`confirmada | en_preparacion | enviado | entregado | cerrado | disputada`); agrega tipo `EstadoPago`; agrega campos opcionales a `Orden`: `estadoPago`, `numeroSeguimiento`, `fechaEnvio`, `fechaEntrega`, `comprobantePago`, `fechaPagoConfirmado`, `observacionDisputa`; `pedidoId` ahora acepta `string | null`.
+- `src/store/useNotificacionesStore.ts` *(modificado)* — extiende `TipoNotificacion` con 6 nuevos tipos: `orden_en_preparacion`, `orden_enviada`, `orden_entregada`, `orden_pago_confirmado`, `orden_cerrada`, `orden_disputada`.
+- `src/store/useOrdenesStore.ts` *(refactorizado)* — agrega 6 nuevas acciones async: `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden`. Cada una hace PATCH a la API, actualiza el store local y dispara notificación al otro rol. `confirmarEntrega` y `confirmarPago` llaman `cerrarOrden` automáticamente cuando corresponde.
+- `src/utils/formatters.ts` *(modificado)* — agrega `getLabelEstadoOrden(estado, rol)`, `getLabelEstadoPago(estado)`, `getColorEstadoPago(estado)`. Actualiza `getColorEstadoOrden` para los nuevos estados.
+- `src/components/ordenes/OrdenStepper.tsx` *(nuevo)* — stepper horizontal de 5 pasos (Confirmada → En preparación → Enviado → Entregado → Cerrado), con texto contextual por rol y estado. Si `estado === 'disputada'`: panel rojo con ícono de alerta, independiente de los pasos.
+- `src/components/ordenes/OrdenCard.tsx` *(refactorizado)* — nueva estructura: título del pedido, badges de estado y pago, fecha, N° de seguimiento, botones de acción pasados via prop `acciones[]`, chat button, toggle "Ver detalles" que expande `OrdenStepper` + panel de estado de pago + motivo de disputa.
+- `src/pages/comprador/MisOrdenesComprador.tsx` *(refactorizado)* — 7 tabs de filtro (Todas/Confirmadas/En preparación/En camino/Recibidas/Cerradas/Disputas); modales para "Confirmar recepción" y "Abrir disputa" (mínimo 20 chars); `acciones` calculadas por estado; obtiene `pedidoTitulo` cruzando con `usePedidosStore`.
+- `src/pages/proveedor/MisOrdenesProveedor.tsx` *(refactorizado)* — 7 tabs de filtro (Todas/Confirmadas/Preparando/Enviadas/Entregadas/Cerradas/Disputas); modales para "Marcar en preparación", "Marcar como enviado" (tracking opcional), "Confirmar pago recibido" (comprobante opcional).
+- `src/router/AppRouter.tsx` *(modificado)* — agrega `ordenesEstadoRef` para snapshot de estado+estadoPago; suscripción a `useOrdenesStore` que detecta cambios de `orden.estado` y `orden.estadoPago` y despacha `CustomEvent 'orden-estado-toast'` con mensaje contextual por rol.
+- `db.json` *(modificado)* — agrega `estadoPago: "pendiente"` a todas las órdenes existentes; migra la orden `en_transito` (ord-001) → `enviado` con `numeroSeguimiento` de ejemplo; mantiene estructura existente de pedidos, cotizaciones, notificaciones y mensajes.
+
+---
+
 ### v0.5.0 — 2026-07-01
 #### Changed — Refactor sidebar, terminología comercial, tabs de filtro, métricas y actividad reciente
 

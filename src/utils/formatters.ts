@@ -74,6 +74,38 @@ export function getLabelEstadoCotizacion(estado: string, rol: 'comprador' | 'pro
   return map[estado] ?? estado;
 }
 
+export function getLabelEstadoOrden(estado: string, rol: 'comprador' | 'proveedor'): string {
+  if (rol === 'comprador') {
+    const map: Record<string, string> = {
+      confirmada: 'Confirmada',
+      en_preparacion: 'En preparación',
+      enviado: 'En camino',
+      entregado: 'Recibido',
+      cerrado: 'Cerrado',
+      disputada: 'En disputa',
+    };
+    return map[estado] ?? estado;
+  }
+  const map: Record<string, string> = {
+    confirmada: 'Confirmada',
+    en_preparacion: 'Preparando pedido',
+    enviado: 'Enviado',
+    entregado: 'Entregado',
+    cerrado: 'Cerrado',
+    disputada: 'En disputa',
+  };
+  return map[estado] ?? estado;
+}
+
+export function getLabelEstadoPago(estado: string): string {
+  const map: Record<string, string> = {
+    pendiente: 'Pago pendiente',
+    en_proceso: 'Pago en proceso',
+    confirmado: 'Pago confirmado',
+  };
+  return map[estado] ?? estado;
+}
+
 export function getColorEstadoPedido(estado: string): string {
   const map: Record<string, string> = {
     abierto:       'bg-ep-green-light text-ep-green-dark',
@@ -95,10 +127,21 @@ export function getColorEstadoCotizacion(estado: string): string {
 
 export function getColorEstadoOrden(estado: string): string {
   const map: Record<string, string> = {
-    confirmada:  'bg-ep-blue-light text-ep-blue-dark',
-    en_transito: 'bg-ep-amber-light text-ep-amber',
-    entregada:   'bg-ep-green-light text-ep-green-dark',
-    disputada:   'bg-ep-red-light text-ep-red',
+    confirmada:    'bg-ep-blue-light text-ep-blue-dark',
+    en_preparacion:'bg-ep-amber-light text-ep-amber-dark',
+    enviado:       'bg-ep-blue-light text-ep-blue-dark',
+    entregado:     'bg-ep-green-light text-ep-green-dark',
+    cerrado:       'bg-ep-surface-raised text-ep-text-secondary',
+    disputada:     'bg-ep-red-light text-ep-red-dark',
   };
   return map[estado] ?? 'bg-gray-100 text-gray-500';
+}
+
+export function getColorEstadoPago(estado: string): string {
+  const map: Record<string, string> = {
+    pendiente:  'bg-ep-surface-raised text-ep-text-secondary',
+    en_proceso: 'bg-ep-amber-light text-ep-amber-dark',
+    confirmado: 'bg-ep-green-light text-ep-green-dark',
+  };
+  return map[estado] ?? 'bg-ep-surface-raised text-ep-text-secondary';
 }

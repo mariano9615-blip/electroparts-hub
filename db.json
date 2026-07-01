@@ -25,32 +25,48 @@
       "estado": "adjudicado",
       "cotizacionesRecibidas": 0,
       "fechaCreacion": "2026-07-01T02:26:28.199Z"
+    },
+    {
+      "id": "ZxudCJRtfPg",
+      "compradorId": "comprador-demo-001",
+      "titulo": "prueba ultima del 1 de julio",
+      "descripcion": "asdfasdf",
+      "cantidad": 2029,
+      "unidad": "unidades",
+      "categoria": "Iluminacion LED",
+      "fechaLimite": "2026-07-03T00:00:00.000Z",
+      "estado": "cancelado",
+      "cotizacionesRecibidas": 0,
+      "fechaCreacion": "2026-07-01T03:25:55.967Z",
+      "observacionBaja": "puto el que lee",
+      "fechaBaja": "2026-07-01T03:36:46.507Z"
+    },
+    {
+      "id": "EfeVXdO482o",
+      "compradorId": "comprador-demo-001",
+      "titulo": "prueba ultima y nos vamos",
+      "descripcion": "12",
+      "cantidad": 1020,
+      "unidad": "unidades",
+      "categoria": "Iluminacion LED",
+      "fechaLimite": "2026-07-03T00:00:00.000Z",
+      "estado": "adjudicado",
+      "cotizacionesRecibidas": 0,
+      "fechaCreacion": "2026-07-01T03:37:17.046Z"
     }
   ],
   "cotizaciones": [
     {
-      "id": "UnHDIG2NNp8",
-      "pedidoId": "GJuy_RyPuGA",
+      "id": "_8U-Ev5oFm4",
+      "pedidoId": "EfeVXdO482o",
       "proveedorId": "prov-demo-001",
       "proveedorNombre": "Mi Empresa (Proveedor)",
-      "precio": 175000,
-      "tiempoEntrega": "4",
-      "notas": "prueba chat",
+      "precio": 45000,
+      "tiempoEntrega": "2",
+      "notas": "111",
       "calificacionProveedor": 4,
       "estado": "aceptada",
-      "fechaCreacion": "2026-07-01T02:03:16.232Z"
-    },
-    {
-      "id": "00nIT4FmezU",
-      "pedidoId": "zXd6KeZ-Ci0",
-      "proveedorId": "prov-demo-001",
-      "proveedorNombre": "Mi Empresa (Proveedor)",
-      "precio": 900000,
-      "tiempoEntrega": "5",
-      "notas": "hola",
-      "calificacionProveedor": 4,
-      "estado": "aceptada",
-      "fechaCreacion": "2026-07-01T02:27:25.485Z"
+      "fechaCreacion": "2026-07-01T03:37:38.638Z"
     }
   ],
   "ordenes": [
@@ -62,9 +78,11 @@
       "proveedorId": "prov-4",
       "proveedorNombre": "DistribuidoraElec AR",
       "monto": 298000,
-      "estado": "en_transito",
+      "estado": "enviado",
       "fechaConfirmacion": "2026-06-29T12:00:00.000Z",
-      "chatHabilitado": true
+      "chatHabilitado": true,
+      "estadoPago": "pendiente",
+      "numeroSeguimiento": "REM-2026-0042"
     },
     {
       "id": "S9tPX_rQyB8",
@@ -76,7 +94,8 @@
       "monto": 50000,
       "estado": "confirmada",
       "fechaConfirmacion": "2026-07-01T00:56:24.332Z",
-      "chatHabilitado": true
+      "chatHabilitado": true,
+      "estadoPago": "pendiente"
     },
     {
       "id": "FucvOO-HMjo",
@@ -88,7 +107,8 @@
       "monto": 500000,
       "estado": "confirmada",
       "fechaConfirmacion": "2026-07-01T01:53:12.484Z",
-      "chatHabilitado": true
+      "chatHabilitado": true,
+      "estadoPago": "pendiente"
     },
     {
       "id": "QgvK8Nhj9Fo",
@@ -100,7 +120,8 @@
       "monto": 175000,
       "estado": "confirmada",
       "fechaConfirmacion": "2026-07-01T02:03:26.044Z",
-      "chatHabilitado": true
+      "chatHabilitado": true,
+      "estadoPago": "pendiente"
     },
     {
       "id": "2SE7_C8JPPQ",
@@ -112,7 +133,34 @@
       "monto": 900000,
       "estado": "confirmada",
       "fechaConfirmacion": "2026-07-01T02:27:40.204Z",
-      "chatHabilitado": true
+      "chatHabilitado": true,
+      "estadoPago": "pendiente"
+    },
+    {
+      "id": "BfKAQmRI6D8",
+      "pedidoId": "ZxudCJRtfPg",
+      "cotizacionId": "S8igl4UTA_Q",
+      "compradorId": "comprador-demo-001",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "monto": 30000,
+      "estado": "confirmada",
+      "fechaConfirmacion": "2026-07-01T03:27:07.476Z",
+      "chatHabilitado": true,
+      "estadoPago": "pendiente"
+    },
+    {
+      "id": "PUQW0al_uBQ",
+      "pedidoId": "EfeVXdO482o",
+      "cotizacionId": "_8U-Ev5oFm4",
+      "compradorId": "comprador-demo-001",
+      "proveedorId": "prov-demo-001",
+      "proveedorNombre": "Mi Empresa (Proveedor)",
+      "monto": 45000,
+      "estado": "confirmada",
+      "fechaConfirmacion": "2026-07-01T03:37:46.138Z",
+      "chatHabilitado": true,
+      "estadoPago": "pendiente"
     }
   ],
   "notificaciones": [
@@ -123,7 +171,7 @@
       "mensaje": "Mi Empresa (Proveedor) cotizó $50000 para tu pedido",
       "id": "iwX63f6AIPg",
       "fecha": "2026-07-01T00:55:18.212Z",
-      "leida": false
+      "leida": true
     },
     {
       "tipo": "orden_confirmada",
@@ -132,16 +180,6 @@
       "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
       "entidadId": "21c88d62-b59d-47d0-82c7-f6b395bd6cde",
       "id": "bID3pnZa6AU",
-      "fecha": "2026-07-01T00:56:24.372Z",
-      "leida": false
-    },
-    {
-      "tipo": "cotizacion_aceptada",
-      "rolDestino": "proveedor",
-      "titulo": "Cotización aceptada",
-      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
-      "entidadId": "5zWDO7x0T2E",
-      "id": "Xh7w_KoKmAU",
       "fecha": "2026-07-01T00:56:24.372Z",
       "leida": true
     },
@@ -152,7 +190,7 @@
       "mensaje": "Mi Empresa (Proveedor) cotizó $500000 para tu pedido",
       "id": "zbOP8zJV2MY",
       "fecha": "2026-07-01T01:52:59.711Z",
-      "leida": false
+      "leida": true
     },
     {
       "tipo": "orden_confirmada",
@@ -162,27 +200,7 @@
       "entidadId": "71002a58-7d3e-4acf-9ef0-9a844e731cc9",
       "id": "fY9sVXCguR4",
       "fecha": "2026-07-01T01:53:12.522Z",
-      "leida": false
-    },
-    {
-      "tipo": "cotizacion_aceptada",
-      "rolDestino": "proveedor",
-      "titulo": "Cotización aceptada",
-      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
-      "entidadId": "CmfmQ35C8Xs",
-      "id": "CVRkVBWnkE4",
-      "fecha": "2026-07-01T01:53:12.523Z",
-      "leida": false
-    },
-    {
-      "tipo": "nueva_orden",
-      "rolDestino": "proveedor",
-      "titulo": "Nuevo pedido disponible",
-      "mensaje": "prueba 30/6",
-      "entidadId": "4acfd7f8-3887-4809-978f-97398734891e",
-      "id": "iuWDz05ecjs",
-      "fecha": "2026-07-01T02:02:45.748Z",
-      "leida": false
+      "leida": true
     },
     {
       "tipo": "nueva_cotizacion",
@@ -191,7 +209,7 @@
       "mensaje": "Mi Empresa (Proveedor) cotizó $175000 para tu pedido",
       "id": "wRgNFxGtLOQ",
       "fecha": "2026-07-01T02:03:16.268Z",
-      "leida": false
+      "leida": true
     },
     {
       "tipo": "orden_confirmada",
@@ -201,27 +219,7 @@
       "entidadId": "12a20b1f-b324-4d97-bceb-bd59ee125d82",
       "id": "cuBIbxq1ZNc",
       "fecha": "2026-07-01T02:03:26.076Z",
-      "leida": false
-    },
-    {
-      "tipo": "cotizacion_aceptada",
-      "rolDestino": "proveedor",
-      "titulo": "Cotización aceptada",
-      "mensaje": "Tu cotización fue aceptada. Prepará el envío",
-      "entidadId": "UnHDIG2NNp8",
-      "id": "J4NtVjV6_xU",
-      "fecha": "2026-07-01T02:03:26.076Z",
-      "leida": false
-    },
-    {
-      "tipo": "nueva_orden",
-      "rolDestino": "proveedor",
-      "titulo": "Nuevo pedido disponible",
-      "mensaje": "PRUEBA ULTIMA 2",
-      "entidadId": "40350977-515d-486c-87ba-9708e1031a24",
-      "id": "YovyG5DYSEg",
-      "fecha": "2026-07-01T02:26:28.223Z",
-      "leida": false
+      "leida": true
     },
     {
       "tipo": "nueva_cotizacion",
@@ -230,7 +228,7 @@
       "mensaje": "Mi Empresa (Proveedor) cotizó $900000 para tu pedido",
       "id": "fKH8-m-6OvI",
       "fecha": "2026-07-01T02:27:25.521Z",
-      "leida": false
+      "leida": true
     },
     {
       "tipo": "orden_confirmada",
@@ -240,17 +238,65 @@
       "entidadId": "b588e4fb-86e6-47a3-86c3-73c7d8a510a5",
       "id": "mslfyD4f37g",
       "fecha": "2026-07-01T02:27:40.258Z",
-      "leida": false
+      "leida": true
+    },
+    {
+      "tipo": "nueva_cotizacion",
+      "rolDestino": "comprador",
+      "titulo": "Nueva cotización recibida",
+      "mensaje": "Mi Empresa (Proveedor) cotizó $30000 para tu pedido",
+      "id": "NdMTXJ_2-Rs",
+      "fecha": "2026-07-01T03:26:33.413Z",
+      "leida": true
+    },
+    {
+      "tipo": "orden_confirmada",
+      "rolDestino": "comprador",
+      "titulo": "Orden confirmada",
+      "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
+      "entidadId": "18beabe5-361e-4326-919b-3292ab5cafce",
+      "id": "vVtfegM0Lgc",
+      "fecha": "2026-07-01T03:27:07.514Z",
+      "leida": true
+    },
+    {
+      "tipo": "nueva_orden",
+      "rolDestino": "proveedor",
+      "titulo": "Nuevo pedido disponible",
+      "mensaje": "prueba ultima y nos vamos",
+      "entidadId": "bd949383-4226-4408-918c-a5e8e5f2604c",
+      "id": "EsomFLwTeF4",
+      "fecha": "2026-07-01T03:37:17.076Z",
+      "leida": true
+    },
+    {
+      "tipo": "nueva_cotizacion",
+      "rolDestino": "comprador",
+      "titulo": "Nueva cotización recibida",
+      "mensaje": "Mi Empresa (Proveedor) cotizó $45000 para tu pedido",
+      "id": "6s-hsscEnWQ",
+      "fecha": "2026-07-01T03:37:38.673Z",
+      "leida": true
+    },
+    {
+      "tipo": "orden_confirmada",
+      "rolDestino": "comprador",
+      "titulo": "Orden confirmada",
+      "mensaje": "Tu orden con Mi Empresa (Proveedor) ha sido confirmada",
+      "entidadId": "4a509726-2470-4629-89af-5b8e5bf938af",
+      "id": "Hq7LqyIs87E",
+      "fecha": "2026-07-01T03:37:46.176Z",
+      "leida": true
     },
     {
       "tipo": "cotizacion_aceptada",
       "rolDestino": "proveedor",
       "titulo": "Cotización aceptada",
       "mensaje": "Tu cotización fue aceptada. Prepará el envío",
-      "entidadId": "00nIT4FmezU",
-      "id": "I_Kwk7QR8y0",
-      "fecha": "2026-07-01T02:27:40.258Z",
-      "leida": false
+      "entidadId": "_8U-Ev5oFm4",
+      "id": "n0VzeB6WJlo",
+      "fecha": "2026-07-01T03:37:46.176Z",
+      "leida": true
     }
   ],
   "mensajes": [
@@ -322,6 +368,26 @@
       "autorNombre": "Comprador Demo",
       "texto": "hola",
       "timestamp": "2026-07-01T02:29:27.979Z",
+      "leido": true
+    },
+    {
+      "id": "axkUW6hEeW4",
+      "pedidoId": "EfeVXdO482o",
+      "cotizacionId": "_8U-Ev5oFm4",
+      "autorRol": "proveedor",
+      "autorNombre": "Mi Empresa (Proveedor)",
+      "texto": "hola bb",
+      "timestamp": "2026-07-01T03:37:59.579Z",
+      "leido": true
+    },
+    {
+      "id": "oubRWB4Djek",
+      "pedidoId": "EfeVXdO482o",
+      "cotizacionId": "_8U-Ev5oFm4",
+      "autorRol": "comprador",
+      "autorNombre": "Comprador Demo",
+      "texto": "hola cachorro",
+      "timestamp": "2026-07-01T03:38:19.277Z",
       "leido": true
     }
   ],

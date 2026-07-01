@@ -4,7 +4,14 @@ export type Rol = 'comprador' | 'proveedor';
 
 export type EstadoPedido = 'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado';
 export type EstadoCotizacion = 'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada';
-export type EstadoOrden = 'confirmada' | 'en_transito' | 'entregada' | 'disputada';
+export type EstadoOrden =
+  | 'confirmada'
+  | 'en_preparacion'
+  | 'enviado'
+  | 'entregado'
+  | 'cerrado'
+  | 'disputada';
+export type EstadoPago = 'pendiente' | 'en_proceso' | 'confirmado';
 
 export interface Pedido {
   id: string;
@@ -39,7 +46,7 @@ export interface Cotizacion {
 
 export interface Orden {
   id: string;
-  pedidoId: string;
+  pedidoId: string | null;
   cotizacionId: string;
   compradorId: string;
   proveedorId: string;
@@ -48,6 +55,13 @@ export interface Orden {
   estado: EstadoOrden;
   fechaConfirmacion: string;
   chatHabilitado: boolean;
+  estadoPago: EstadoPago;
+  numeroSeguimiento?: string;
+  fechaEnvio?: string;
+  fechaEntrega?: string;
+  comprobantePago?: string;
+  fechaPagoConfirmado?: string;
+  observacionDisputa?: string;
 }
 
 export interface MensajePedido {

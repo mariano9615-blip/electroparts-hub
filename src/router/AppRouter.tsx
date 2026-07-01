@@ -52,6 +52,7 @@ export function AppRouter() {
   const pedidosConocidosRef = useRef<Set<string> | null>(null);
   const pedidosEstadoRef = useRef<Map<string, string> | null>(null);
   const cotizacionesEstadoRef = useRef<Map<string, string> | null>(null);
+  const ordenesEstadoRef = useRef<Map<string, { estado: string; estadoPago: string }> | null>(null);
 
   useEffect(() => {
     // ── Suscripción a cambios en pedidos ─────────────────────────────────────
@@ -189,6 +190,81 @@ export function AppRouter() {
       );
     });
 
+    // ── Suscripción a cambios en órdenes ─────────────────────────────────────
+    const desubOrdenes = useOrdenesStore.subscribe((state) => {
+      if (ordenesEstadoRef.current === null) {
+        ordenesEstadoRef.current = new Map(
+          state.ordenes.map((o) => [o.id, { estado: o.estado, estadoPago: o.estadoPago ?? 'pendiente' }]),
+        );
+        return;
+      }
+
+      const rol = useRolStore.getState().rol;
+
+      state.ordenes.forEach((o) => {
+        const anterior = ordenesEstadoRef.current!.get(o.id);
+        if (!anterior) return;
+
+        const estadoPagoActual = o.estadoPago ?? 'pendiente';
+
+        if (anterior.estado !== o.estado) {
+          const pedidoNombre =
+            usePedidosStore.getState().pedidos.find((p) => p.id === o.pedidoId)?.titulo ?? '';
+
+          if (rol === 'comprador') {
+            const toasts: Record<string, string> = {
+              en_preparacion: `Tu pedido${pedidoNombre ? ` "${pedidoNombre}"` : ''} está siendo preparado`,
+              enviado: `Tu pedido${pedidoNombre ? ` "${pedidoNombre}"` : ''} fue despachado`,
+              cerrado: `Orden${pedidoNombre ? ` "${pedidoNombre}"` : ''} completada`,
+              disputada: `Disputa abierta en orden${pedidoNombre ? ` "${pedidoNombre}"` : ''}`,
+            };
+            const titulo = toasts[o.estado];
+            if (titulo) {
+              window.dispatchEvent(
+                new CustomEvent('orden-estado-toast', {
+                  detail: { id: `${o.id}-${o.estado}`, titulo, subtitulo: '' },
+                }),
+              );
+            }
+          } else if (rol === 'proveedor') {
+            const toasts: Record<string, string> = {
+              entregado: `El comprador confirmó la recepción`,
+              cerrado: `Orden completada`,
+            };
+            const titulo = toasts[o.estado];
+            if (titulo) {
+              const subtitulo = pedidoNombre ? `Pedido: ${pedidoNombre}` : '';
+              window.dispatchEvent(
+                new CustomEvent('orden-estado-toast', {
+                  detail: { id: `${o.id}-${o.estado}`, titulo, subtitulo },
+                }),
+              );
+            }
+          }
+        }
+
+        if (anterior.estadoPago !== estadoPagoActual && estadoPagoActual === 'confirmado') {
+          const pedidoNombre =
+            usePedidosStore.getState().pedidos.find((p) => p.id === o.pedidoId)?.titulo ?? '';
+          if (rol === 'comprador') {
+            window.dispatchEvent(
+              new CustomEvent('orden-estado-toast', {
+                detail: {
+                  id: `${o.id}-pago-confirmado`,
+                  titulo: 'Pago confirmado',
+                  subtitulo: pedidoNombre ? `Pedido: ${pedidoNombre}` : '',
+                },
+              }),
+            );
+          }
+        }
+      });
+
+      ordenesEstadoRef.current = new Map(
+        state.ordenes.map((o) => [o.id, { estado: o.estado, estadoPago: o.estadoPago ?? 'pendiente' }]),
+      );
+    });
+
     const cargarTodo = () => {
       usePedidosStore.getState().cargarDatos();
       useCotizacionesStore.getState().cargarDatos();
@@ -206,6 +282,7 @@ export function AppRouter() {
       clearInterval(intervalo);
       desubPedidos();
       desubCotizaciones();
+      desubOrdenes();
     };
   }, []);
 
