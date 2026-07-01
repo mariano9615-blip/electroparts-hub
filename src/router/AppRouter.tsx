@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AppShell } from '../components/layout/AppShell';
 import { useAuthStore } from '../store/useAuthStore';
@@ -6,6 +6,7 @@ import { usePedidosStore } from '../store/usePedidosStore';
 import { useCotizacionesStore } from '../store/useCotizacionesStore';
 import { useOrdenesStore } from '../store/useOrdenesStore';
 import { useNotificacionesStore } from '../store/useNotificacionesStore';
+import { useRolStore } from '../store/useRolStore';
 
 import Login from '../pages/Login';
 
@@ -46,7 +47,33 @@ function RutaLogin() {
 }
 
 export function AppRouter() {
+  // Ref que guarda los IDs de pedidos ya conocidos para detectar nuevos en cada ciclo de polling
+  const pedidosConocidosRef = useRef<Set<string> | null>(null);
+
   useEffect(() => {
+    // Subscribe al store de pedidos: compara estado previo vs. actual en cada actualización
+    const desuscribir = usePedidosStore.subscribe((state, prevState) => {
+      // Primera carga: inicializar baseline sin disparar toasts
+      if (pedidosConocidosRef.current === null) {
+        pedidosConocidosRef.current = new Set(prevState.pedidos.map((p) => p.id));
+      }
+
+      const rol = useRolStore.getState().rol;
+      if (rol !== 'proveedor') {
+        pedidosConocidosRef.current = new Set(state.pedidos.map((p) => p.id));
+        return;
+      }
+
+      const nuevosPedidos = state.pedidos.filter(
+        (p) => !pedidosConocidosRef.current!.has(p.id),
+      );
+      nuevosPedidos.forEach((pedido) => {
+        window.dispatchEvent(new CustomEvent('nuevo-pedido-toast', { detail: pedido }));
+      });
+
+      pedidosConocidosRef.current = new Set(state.pedidos.map((p) => p.id));
+    });
+
     const cargarTodo = () => {
       usePedidosStore.getState().cargarDatos();
       useCotizacionesStore.getState().cargarDatos();
@@ -56,7 +83,10 @@ export function AppRouter() {
 
     cargarTodo();
     const intervalo = setInterval(cargarTodo, 5000);
-    return () => clearInterval(intervalo);
+    return () => {
+      clearInterval(intervalo);
+      desuscribir();
+    };
   }, []);
 
   return (

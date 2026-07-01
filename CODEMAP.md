@@ -256,10 +256,44 @@ Rama: mdemichelis
 
 ---
 
-## src/router/AppRouter.tsx (cambios v0.2.0)
+## src/components/ui/Toast.tsx (nuevo, v0.2.1 — 78 líneas)
 
 | Líneas | Nombre | Descripción |
 |--------|--------|-------------|
-| 1 | import `useEffect` | Import de `react` para el efecto de carga y polling |
-| 5–8 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore` — usados solo para disparar `cargarDatos()` |
-| 49–60 | `useEffect` en `AppRouter` | Define `cargarTodo()` que llama `cargarDatos()` en los 4 stores; la llama inmediatamente al montar y la registra en un `setInterval` de 5000ms. Retorna `() => clearInterval(intervalo)` para evitar memory leaks al desmontar. Mantiene los datos sincronizados en tiempo real entre usuarios en red local. |
+| 1–3 | imports | `useEffect`, `useRef`, `useState` de React; `useNavigate` de react-router-dom; `IconShoppingCart`, `IconX` de @tabler/icons-react |
+| 5–10 | `ToastProps` | Interface: `id`, `categoria`, `presupuestoMax?`, `onClose(id)` |
+| 12 | `DURACION_MS` | Constante `6000` — duración en ms del auto-cierre y de la animación de la barra de progreso |
+| 14–78 | `Toast` | Componente exportado. Estado local: `entrado` (boolean para slide-in) y `progreso` (string CSS para la barra). `useEffect` activa `translate-x-0` vía `requestAnimationFrame` y arranca barra de progreso con `setTimeout(50ms)`; registra `setTimeout(6000)` para auto-cerrar. Clase `transition-transform duration-300` sobre el contenedor raíz para el slide. Barra de progreso: div `absolute bottom-0 h-1 bg-ep-blue` con `style.transition = 'width 6s linear'`. Botón "Ver pedido" llama `navigate('/proveedor/pedidos')` + `onClose`. Botón X llama `onClose` directamente |
+
+---
+
+## src/components/ui/ToastContainer.tsx (nuevo, v0.2.1 — 57 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1–3 | imports | `useEffect`, `useState` de React; `Toast` local; tipo `Pedido` de `../../types` |
+| 5–9 | `ToastData` | Interface local: `id`, `categoria`, `presupuestoMax?` — subconjunto de `Pedido` necesario para el toast |
+| 11 | `MAX_TOASTS` | Constante `3` — límite de toasts simultáneos en pantalla |
+| 13–57 | `ToastContainer` | Componente exportado. `useState<ToastData[]>` para la cola. `useEffect` registra listener de `'nuevo-pedido-toast'` en `window`; el handler extrae `detail: Pedido`, verifica límite y anti-duplicado por `id`, y agrega al estado. Cleanup en return del efecto. `handleClose(id)` filtra el id del array. Devuelve `null` si la cola está vacía. Renderiza `fixed bottom-6 right-6 z-50 flex flex-col gap-3` con un `<Toast>` por elemento |
+
+---
+
+## src/components/layout/AppShell.tsx (cambios v0.2.1 — 47 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 4 | import `ToastContainer` | Importa desde `'../ui/ToastContainer'` |
+| 42–43 | `<ToastContainer />` | Montado dentro del div raíz del layout, fuera del área de contenido, para que sea un portal fijo disponible en todas las rutas protegidas |
+
+---
+
+## src/router/AppRouter.tsx (cambios v0.2.0 + v0.2.1 — 127 líneas)
+
+| Líneas | Nombre | Descripción |
+|--------|--------|-------------|
+| 1 | imports React | `useEffect`, `useRef` de `react` |
+| 5–9 | imports stores | `usePedidosStore`, `useCotizacionesStore`, `useOrdenesStore`, `useNotificacionesStore`, `useRolStore` |
+| 51 | `pedidosConocidosRef` | `useRef<Set<string> \| null>(null)` — persiste entre renders para guardar los IDs de pedidos ya conocidos; `null` indica que aún no hubo primera carga |
+| 55–75 | `usePedidosStore.subscribe` | Callback `(state, prevState)`: si ref es `null` inicializa con IDs de `prevState` (baseline sin toasts). Si rol es `'comprador'` solo actualiza ref. Si rol es `'proveedor'` filtra IDs no conocidos y despacha `CustomEvent('nuevo-pedido-toast', { detail: pedido })` por cada uno |
+| 77–82 | `cargarTodo()` | Llama `cargarDatos()` en los 4 stores; se ejecuta al montar y cada 5 s vía `setInterval` |
+| 86–89 | cleanup | `clearInterval` + `desuscribir()` al desmontar — evita memory leaks del timer y del subscriber |

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { ToastContainer } from '../ui/ToastContainer';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -37,6 +38,9 @@ export const AppShell = ({ children }: AppShellProps) => {
         <TopBar onToggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto bg-ep-bg p-6">{children}</main>
       </div>
+
+      {/* Toasts enterprise para notificación de pedidos nuevos */}
+      <ToastContainer />
     </div>
   );
 };

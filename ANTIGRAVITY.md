@@ -545,6 +545,38 @@ Igual que ChatComprador con logica invertida:
 Click toggle Comprador/Proveedor en Sidebar → useRolStore.setRol() → navigate('/comprador'|'/proveedor')
 → Sidebar actualiza items y badge → TopBar actualiza badge de rol.
 
+## Sistema de toasts enterprise (desde v0.2.1)
+
+Notificación visual en tiempo real para el proveedor cuando el polling detecta un pedido nuevo.
+
+### Arquitectura
+
+Tres capas sin dependencia de librerías externas:
+
+1. **Detección** (`AppRouter.tsx`) — `usePedidosStore.subscribe((state, prevState) => { ... })` compara el
+   array de pedidos antes y después de cada ciclo de polling. Un `useRef<Set<string> | null>` guarda los IDs
+   ya conocidos; la primera invocación (prevState vacío) inicializa el ref sin disparar toasts.
+   Cuando el rol activo es `'proveedor'` y hay IDs nuevos, dispara `window.dispatchEvent(new CustomEvent('nuevo-pedido-toast', { detail: pedido }))` por cada pedido.
+
+2. **Cola** (`ToastContainer.tsx`) — `useState<ToastData[]>` con máximo 3 entradas.
+   Escucha el evento `nuevo-pedido-toast` en `window` con `addEventListener`/cleanup en `useEffect`.
+   Se descarta si el ID ya está en la cola (anti-duplicado). Renderizado: `fixed bottom-6 right-6 z-50 flex flex-col gap-3`.
+   Montado dentro de `AppShell`, disponible en todas las rutas protegidas.
+
+3. **Toast individual** (`Toast.tsx`) — entrada con `translate-x-full → translate-x-0` vía `requestAnimationFrame`.
+   Barra de progreso inferior: div absoluto `bg-ep-blue h-1`, CSS `transition: width 6s linear` de `100%` → `0%`.
+   Auto-cierre con `setTimeout(6000)`. Botón "Ver pedido" navega a `/proveedor/pedidos` vía `useNavigate`.
+   Botón X cierra manualmente. Estilo: `border-l-4 border-ep-blue shadow-lg rounded-lg`.
+
+### Flujo completo
+polling API → `cargarDatos()` actualiza store → `subscribe` compara IDs → `CustomEvent` → `ToastContainer` agrega a cola → `Toast` se anima y cuenta regresiva → cierre automático o manual.
+
+### Restricciones de diseño
+- Sin librerías externas (no react-hot-toast, no sonner).
+- No toca stores ni lógica de negocio.
+- Solo muestra toasts cuando `rol === 'proveedor'`.
+- No dispara al montar (primera carga inicializa baseline sin alertar).
+
 ## Convenciones del proyecto
 - UI completamente en espanol
 - Nombres tecnicos de archivos y funciones en ingles (convencion React/TS)

@@ -2,6 +2,14 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.2.1 — 2026-06-30
+#### Added
+- **Toast enterprise para proveedor**: notificación visual en tiempo real cuando el polling detecta un pedido nuevo.
+  - `src/components/ui/Toast.tsx` *(nuevo, 78 líneas)* — componente individual con slide-in desde la derecha, barra de progreso CSS (`border-l-4 border-ep-blue`, `shadow-lg`), auto-cierre a los 6 s y botón "Ver pedido" que navega a `/proveedor/pedidos`.
+  - `src/components/ui/ToastContainer.tsx` *(nuevo, 57 líneas)* — cola de hasta 3 toasts con `useState`; escucha el `CustomEvent` `nuevo-pedido-toast` en `window`; renderizado `fixed bottom-6 right-6 z-50`.
+  - `src/router/AppRouter.tsx` *(modificado)* — `usePedidosStore.subscribe` con `useRef<Set<string>>` para comparar IDs de pedidos antes/después de cada ciclo; despacha `CustomEvent` por cada pedido nuevo cuando el rol es `'proveedor'`.
+  - `src/components/layout/AppShell.tsx` *(modificado)* — monta `<ToastContainer />` en el layout protegido para que esté disponible en todas las rutas.
+
 ### v0.2.0 — 2026-06-30
 #### Added
 - Polling automático cada 5 segundos en `AppRouter.tsx`: llama `cargarDatos()` de los 4 stores (pedidos, cotizaciones, órdenes, notificaciones) en un `setInterval` que se limpia al desmontar. Permite sincronización en tiempo real entre usuarios en red local sin recargar la página.
