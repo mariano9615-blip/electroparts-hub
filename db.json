@@ -390,6 +390,5 @@
       "timestamp": "2026-07-01T03:38:19.277Z",
       "leido": true
     }
-  ],
-  "$schema": "./node_modules/json-server/schema.json"
+  ]
 }

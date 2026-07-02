@@ -1,0 +1,164 @@
+// Schema de base de datos — ElectroParts Hub
+// Migrado desde db.json (JSON Server) a MySQL para deploy en Vercel.
+// Los nombres de modelo/campo se mantienen en español, igual que src/types/index.ts,
+// para que el mapeo entre Prisma y el dominio de la app sea 1:1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum EstadoPedido {
+  abierto
+  en_cotizacion
+  en_negociacion
+  adjudicado
+  cancelado
+}
+
+enum EstadoCotizacion {
+  pendiente
+  en_negociacion
+  aceptada
+  rechazada
+}
+
+enum EstadoOrden {
+  confirmada
+  en_preparacion
+  enviado
+  entregado
+  cerrado
+  disputada
+}
+
+enum EstadoPago {
+  pendiente
+  en_proceso
+  confirmado
+}
+
+enum Rol {
+  comprador
+  proveedor
+}
+
+enum TipoNotificacion {
+  nueva_cotizacion
+  pedido_adjudicado
+  orden_confirmada
+  nueva_orden
+  cotizacion_aceptada
+  cotizacion_en_negociacion
+  cotizacion_rechazada
+  mensaje_nuevo
+  estado_pedido_cambio
+  orden_en_preparacion
+  orden_enviada
+  orden_entregada
+  orden_pago_confirmado
+  orden_cerrada
+  orden_disputada
+}
+
+model Pedido {
+  id                     String        @id
+  compradorId            String
+  titulo                 String
+  descripcion            String        @db.Text
+  cantidad               Int
+  unidad                 String
+  categoria              String
+  presupuestoMax         Int?
+  fechaLimite            DateTime
+  estado                 EstadoPedido  @default(abierto)
+  cotizacionesRecibidas  Int           @default(0)
+  fechaCreacion          DateTime      @default(now())
+  cotizacionEnNegociacionId String?
+  observacionBaja        String?       @db.Text
+  fechaBaja              DateTime?
+
+  cotizaciones Cotizacion[]
+  ordenes      Orden[]
+  mensajes     MensajePedido[]
+
+  @@index([compradorId])
+  @@index([estado])
+}
+
+model Cotizacion {
+  id                   String           @id
+  pedidoId             String
+  proveedorId          String
+  proveedorNombre      String
+  precio               Int
+  tiempoEntrega        String
+  notas                String?          @db.Text
+  calificacionProveedor Float
+  estado               EstadoCotizacion @default(pendiente)
+  fechaCreacion        DateTime         @default(now())
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId])
+  @@index([proveedorId])
+}
+
+model Orden {
+  id                  String      @id
+  // Nullable: una orden puede quedar huérfana si se borra el pedido original (igual que en db.json)
+  pedidoId            String?
+  cotizacionId         String
+  compradorId          String
+  proveedorId          String
+  proveedorNombre      String
+  monto                Int
+  estado               EstadoOrden @default(confirmada)
+  fechaConfirmacion    DateTime    @default(now())
+  chatHabilitado       Boolean     @default(true)
+  estadoPago           EstadoPago  @default(pendiente)
+  numeroSeguimiento    String?
+  fechaEnvio           DateTime?
+  fechaEntrega         DateTime?
+  comprobantePago      String?     @db.Text
+  fechaPagoConfirmado  DateTime?
+  observacionDisputa   String?     @db.Text
+
+  pedido Pedido? @relation(fields: [pedidoId], references: [id], onDelete: SetNull)
+
+  @@index([pedidoId])
+  @@index([compradorId])
+  @@index([proveedorId])
+}
+
+model MensajePedido {
+  id           String   @id
+  pedidoId     String
+  cotizacionId String?
+  autorRol     Rol
+  autorNombre  String
+  texto        String   @db.Text
+  timestamp    DateTime @default(now())
+  leido        Boolean  @default(false)
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@index([pedidoId])
+}
+
+model Notificacion {
+  id          String            @id
+  tipo        TipoNotificacion
+  titulo      String
+  mensaje     String            @db.Text
+  fecha       DateTime          @default(now())
+  leida       Boolean           @default(false)
+  rolDestino  Rol
+  entidadId   String?
+
+  @@index([rolDestino])
+}

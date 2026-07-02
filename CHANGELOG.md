@@ -1,6 +1,29 @@
 # CHANGELOG — ElectroParts Hub
 
-## [Unreleased] — rama mdemichelis
+## [Unreleased] — rama electroparts-bd
+
+### v0.6.0 — 2026-07-01
+#### Changed — Migración de JSON Server (mock) a MySQL + funciones serverless de Vercel
+
+Objetivo: dejar la rama lista para deploy en Vercel. JSON Server solo corre en local y no
+es deployable; se reemplaza por un backend real (`/api/*`, funciones serverless de Node)
+que persiste en MySQL vía Prisma. El frontend no cambió su forma de consumir datos —
+`src/services/api.ts` sigue siendo la única capa fetch, solo cambió a qué URL apunta.
+
+- `prisma/schema.prisma` *(nuevo)* — modelos `Pedido`, `Cotizacion`, `Orden`, `MensajePedido`, `Notificacion` + enums (`EstadoPedido`, `EstadoCotizacion`, `EstadoOrden`, `EstadoPago`, `Rol`, `TipoNotificacion`), migrados 1:1 desde los tipos de `src/types/index.ts`. `Cotizacion` y `MensajePedido` tienen FK a `Pedido` con `onDelete: Cascade` (reemplaza el borrado en cascada que antes hacía el frontend a mano); `Orden.pedidoId` es `onDelete: SetNull` (una orden puede quedar con `pedidoId: null` si se borra el pedido, igual que en db.json).
+- `prisma/seed.ts` *(nuevo)* — lee `db.json` y hace `createMany` (`skipDuplicates: true`) en MySQL, en orden de dependencias (Pedido → Cotizacion/Orden/MensajePedido). Se corre con `npm run db:seed`.
+- `api/_db.ts` *(nuevo)* — cliente Prisma singleton cacheado en `globalThis`, patrón estándar para evitar agotar el pool de conexiones cuando una función serverless queda "warm" y se reinvoca.
+- `api/_utils.ts` *(nuevo)* — `sendJson`, `methodNotAllowed`, `handleError`: helpers compartidos por todos los handlers.
+- `api/health.ts` *(nuevo)* — `GET /api/health`, hace `SELECT 1` contra MySQL para verificar la conexión post-deploy.
+- `api/pedidos/index.ts` + `[id].ts`, `api/cotizaciones/index.ts` + `[id].ts`, `api/ordenes/index.ts` + `[id].ts`, `api/notificaciones/index.ts` + `[id].ts`, `api/mensajes/index.ts` + `[id].ts` *(nuevos)* — reimplementan cada endpoint que antes servía JSON Server (`GET`/`POST` en `index.ts`, `GET`/`PATCH`/`DELETE` por id en `[id].ts`), incluyendo el filtro `?pedidoId=` que usaban `cotizaciones` y `mensajes`. Mismos verbos y payloads que antes — el frontend no tuvo que cambiar su forma de llamarlos.
+- `src/services/api.ts` *(modificado)* — `BASE_URL` pasa de `http://localhost:3001` a `/api` (mismo origen); sigue siendo overrideable con `VITE_API_URL`.
+- `package.json` *(modificado)* — quita `json-server` y `concurrently`; agrega `prisma`, `@prisma/client`, `@vercel/node`, `vercel`, `tsx`. Nuevos scripts: `dev` ahora es `vercel dev` (Vite + `/api` en el mismo proceso), `dev:vite` (solo frontend, reemplaza al viejo `dev`), `db:push`, `db:seed`, `db:studio`. `postinstall: prisma generate`.
+- `tsconfig.api.json` *(nuevo)* + `tsconfig.json` *(modificado)* — nueva referencia de proyecto que tipa `api/**` y `prisma/seed.ts` con `module: esnext` / `moduleResolution: bundler` (igual que el frontend, porque Vercel empaqueta cada función con esbuild y no necesita extensiones `.js` en imports relativos).
+- `vercel.json` *(nuevo)* — `buildCommand`/`outputDirectory` para el build de Vite, más rewrites: `/api/*` a las funciones, el resto a `index.html` (necesario para que las rutas del SPA de React Router no den 404 al refrescar).
+- `.env.example` *(modificado)* — agrega `DATABASE_URL`; `VITE_API_URL` queda documentado como opcional.
+- `db.json` *(modificado)* — ya no se sirve en runtime; queda solo como fuente de datos para `prisma/seed.ts`. Se quitó la key `$schema` (apuntaba a `json-server/schema.json`, paquete ya no instalado).
+- `README.md` *(reescrito)* — instrucciones de setup (MySQL + `db:push` + `db:seed` + `vercel dev`), guía para crear una base MySQL gratis en TiDB Cloud Serverless, y pasos de deploy en Vercel.
+- Fixes de compilación preexistentes encontrados al correr `tsc -b` durante esta migración (no relacionados a la migración en sí, arrastrados de la Etapa 5a): `CotizacionCard.tsx` llamaba a una función inexistente `estadoALabel` en vez de `getLabelEstadoCotizacion`; `NotificacionesPanel.tsx` no mapeaba los 6 `TipoNotificacion` nuevos de Etapa 5a (`orden_en_preparacion`, `orden_enviada`, `orden_entregada`, `orden_pago_confirmado`, `orden_cerrada`, `orden_disputada`); `mockData.ts` tenía `estado: 'en_transito'`, valor que ya no existe en `EstadoOrden`; `useCotizacionesStore.aceptarCotizacion` construía una `Orden` sin el campo `estadoPago`, ahora requerido.
 
 ### v0.5.1 — 2026-07-01
 #### Added — Etapa 5a — Ciclo de vida de orden: preparación, envío, entrega, pago y disputa

@@ -4,13 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:full": "concurrently \"json-server --watch db.json --port 3001\" \"vite\"",
+    "dev": "vercel dev",
+    "dev:vite": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "@tabler/icons-react": "^3.44.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -22,15 +30,17 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vercel/node": "^5.8.22",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.2",
-    "concurrently": "^10.0.3",
-    "json-server": "^1.0.0-beta.15",
     "oxlint": "^1.69.0",
     "postcss": "^8.5.15",
     "prettier": "^3.8.5",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4.3.1",
+    "tsx": "^4.22.4",
     "typescript": "~6.0.2",
+    "vercel": "^54.18.7",
     "vite": "^8.1.0"
   }
 }

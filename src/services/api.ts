@@ -1,6 +1,8 @@
 import type { Pedido, Cotizacion, Orden, MensajePedido } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+// Mismo origen por default: funciona tanto en local con `vercel dev` (sirve /api junto a Vite)
+// como en producción en Vercel. VITE_API_URL queda como override para casos especiales.
+const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 
 // Interfaz local compatible con Notificacion del store (evita importacion circular)
 interface NotificacionPayload {
