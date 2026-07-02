@@ -1,6 +1,6 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (v0.6.0 — migración a MySQL + Vercel serverless)
+Última actualización: 2026-07-01 (v0.6.1 — cambio de MySQL a PostgreSQL/Supabase)
 Rama: electroparts-bd
 
 ---
@@ -836,6 +836,11 @@ usa para comparar snapshots, así que no tiene el mismo problema.
 
 ## v0.6.0 — Migración a MySQL + funciones serverless de Vercel (rama electroparts-bd)
 
+> **Superseded por v0.6.1** (ver más abajo): el motor de base de datos cambió de MySQL a
+> PostgreSQL/Supabase un commit después. Todo lo de esta sección sobre `api/`, el patrón de
+> handlers, `prisma/seed.ts` y la config de build sigue vigente — la única diferencia es el
+> `provider` del datasource y las variables de conexión (ver v0.6.1).
+
 Reemplaza JSON Server (mock, solo local, no deployable) por un backend real: funciones
 serverless de Vercel en `/api/*` que persisten en MySQL vía Prisma. El frontend sigue
 llamando a `src/services/api.ts` exactamente igual que antes — solo cambió el `BASE_URL`
@@ -918,3 +923,35 @@ con `GET`/`PATCH`/`DELETE` según la entidad lo necesite (ver tabla).
 | `src/components/layout/NotificacionesPanel.tsx` | 20–36 | `ICONOS_TIPO`/`COLORES_ICONO` no cubrían los 6 `TipoNotificacion` que agregó Etapa 5a (`orden_en_preparacion`, `orden_enviada`, `orden_entregada`, `orden_pago_confirmado`, `orden_cerrada`, `orden_disputada`) |
 | `src/data/mockData.ts` | 115 | `estado: 'en_transito'` — valor que `EstadoOrden` ya no acepta (Etapa 5a lo reemplazó por `'enviado'`); `mockData.ts` es código muerto (nada lo importa) pero igual debe tipar correctamente |
 | `src/store/useCotizacionesStore.ts` | 46–57 | La `Orden` construida en `aceptarCotizacion()` no incluía `estadoPago`, campo requerido desde Etapa 5a — se agregó `estadoPago: 'pendiente'` |
+
+---
+
+## v0.6.1 — Cambio de motor: MySQL → PostgreSQL/Supabase
+
+Un commit después de v0.6.0 se cambió el motor de base de datos. Motivo: el plan free de
+Supabase da 500MB persistentes (no expira por inactividad) y trae el connection pooler
+(PgBouncer) integrado, mejor que las alternativas MySQL gratuitas evaluadas antes. No cambió
+nada de `api/*` (los handlers de Prisma son agnósticos al motor) ni de `src/services/api.ts`
+— solo el `datasource` del schema y las variables de conexión.
+
+### prisma/schema.prisma
+
+| Líneas | Cambio |
+|--------|--------|
+| 10–19 | `datasource db`: `provider = "postgresql"` (antes `"mysql"`). Se agregó `directUrl = env("DIRECT_URL")` — Supabase expone un pooler PgBouncer (puerto 6543, usado por `DATABASE_URL` en runtime) y una conexión directa (puerto 5432, `DIRECT_URL`) separada; Prisma necesita la directa para `db push`/migraciones porque PgBouncer en modo transaction no soporta los prepared statements que usa el CLI para eso. MySQL no tenía esta distinción porque no se usaba un pooler externo |
+
+El resto del schema (modelos, enums, `@db.Text`, índices, relaciones `onDelete`) no cambió:
+son atributos válidos tanto en MySQL como en PostgreSQL, Prisma los traduce al dialecto
+correcto según el `provider`.
+
+### .env.example / .env
+
+`DATABASE_URL` pasa de `mysql://...` a `postgresql://...` con `?pgbouncer=true`; se agrega
+`DIRECT_URL` (mismo host, puerto 5432, sin el query param). Ambas se sacan del panel de
+Supabase en **Project Settings → Database → Connection string** (pestañas "Transaction
+pooler" y "Direct connection").
+
+### Deploy en Vercel
+
+Sin cambios en `vercel.json` ni en la config de build — solo hay que cargar `DATABASE_URL`
+**y** `DIRECT_URL` como env vars del proyecto (antes solo hacía falta `DATABASE_URL`).

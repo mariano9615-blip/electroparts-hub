@@ -7,9 +7,9 @@ Referencia técnica densa. Leer antes de cualquier cambio. Detalles narrativos e
 - **Nombre:** ElectroParts Hub — marketplace B2B de compras de componentes eléctricos
 - **Stack:** React 19.2 · React Router 7.18 · Zustand 5.0 · TypeScript 6.0 · Vite 8.1 · Tailwind CSS 4.3 (config vía `@theme` en CSS, sin `tailwind.config.js`) · `@tailwindcss/postcss` (PostCSS plugin v4) · `@tabler/icons-react` 3.44
 - **Dev deps:** oxlint 1.69 · prettier 3.8 · `@vitejs/plugin-react` 6.0 · autoprefixer 10.5
-- **Repo/rama activa:** `electroparts-bd` (creada desde `fchiotti` para migrar a MySQL + deploy Vercel)
+- **Repo/rama activa:** `electroparts-bd` (creada desde `fchiotti` para migrar a Postgres/Supabase + deploy Vercel)
 - **Ruta local:** `c:\Proyectos\electroparts-hub`
-- **Backend (desde electroparts-bd):** funciones serverless de Vercel en `/api/*` (Node, TypeScript) · Prisma 6 como ORM · MySQL como base de datos · Vite sirve el frontend
+- **Backend (desde electroparts-bd):** funciones serverless de Vercel en `/api/*` (Node, TypeScript) · Prisma 6 como ORM · PostgreSQL en Supabase como base de datos (pooler PgBouncer para runtime, conexión directa solo para migraciones) · Vite sirve el frontend
 - **Backend (histórico, ramas anteriores a electroparts-bd):** JSON Server sobre `db.json` (puerto 3001) — reemplazado por completo, ya no se usa
 
 ---
@@ -19,7 +19,7 @@ Referencia técnica densa. Leer antes de cualquier cambio. Detalles narrativos e
 api/             # Funciones serverless de Vercel (backend real, reemplaza a JSON Server)
   _db.ts         # Cliente Prisma singleton (patrón cacheado en globalThis para serverless)
   _utils.ts      # sendJson, methodNotAllowed, handleError — helpers compartidos
-  health.ts      # GET /api/health — chequea conexión a MySQL
+  health.ts      # GET /api/health — chequea conexión a la base
   pedidos/       # index.ts (GET/POST /api/pedidos), [id].ts (GET/PATCH/DELETE /api/pedidos/:id)
   cotizaciones/  # index.ts (GET ?pedidoId=/POST), [id].ts (PATCH/DELETE)
   ordenes/       # index.ts (GET/POST), [id].ts (PATCH)
@@ -27,7 +27,7 @@ api/             # Funciones serverless de Vercel (backend real, reemplaza a JSO
   mensajes/      # index.ts (GET ?pedidoId=/POST), [id].ts (PATCH)
 prisma/
   schema.prisma  # Modelos: Pedido, Cotizacion, Orden, MensajePedido, Notificacion (+ enums)
-  seed.ts        # Importa db.json a MySQL — `npm run db:seed`
+  seed.ts        # Importa db.json a Postgres — `npm run db:seed`
 src/
   assets/
   components/
@@ -61,7 +61,7 @@ tsconfig.api.json # tipa api/ y prisma/seed.ts (module: esnext, moduleResolution
 
 ## 3. ENTIDADES Y BASE DE DATOS
 
-Fuente de verdad: `prisma/schema.prisma` (MySQL). Los mismos campos existían antes en
+Fuente de verdad: `prisma/schema.prisma` (PostgreSQL, Supabase). Los mismos campos existían antes en
 `db.json` (JSON Server) — la migración fue 1:1, ver CHANGELOG v0.6.0.
 
 **Tablas:** `Pedido` · `Cotizacion` · `Orden` · `MensajePedido` · `Notificacion`
@@ -125,7 +125,7 @@ fecha: string (ISO)    leida: boolean   rolDestino: 'comprador'|'proveedor'   en
 > Nota: todos los endpoints de esta sección y la 4b tienen prefijo `/api/` desde
 > `electroparts-bd` (ej. `PATCH /pedidos/:id` → `PATCH /api/pedidos/:id`). El verbo y el
 > payload no cambiaron — solo el prefijo, porque ahora responden funciones serverless
-> (Prisma + MySQL) en vez de JSON Server. Ver `api/` en la sección 2 y CHANGELOG v0.6.0.
+> (Prisma + PostgreSQL/Supabase) en vez de JSON Server. Ver `api/` en la sección 2 y CHANGELOG v0.6.0/v0.6.1.
 
 ```
 abierto → en_cotizacion → en_negociacion → adjudicado
@@ -271,7 +271,7 @@ Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol
 - **UI:** español. Archivos, funciones y variables: inglés (convención React/TS).
 - **Tailwind v4:** tokens de color en `src/index.css` con `@theme`. Prefijo `ep-*`. Nunca `gray-*`.
 - **Estado global:** Zustand. `useState` solo para estado de UI local.
-- **Persistencia:** Auth y Rol en `localStorage` manual (sesión de cliente, no es dato de negocio). El resto vía `/api/*` (Prisma + MySQL).
+- **Persistencia:** Auth y Rol en `localStorage` manual (sesión de cliente, no es dato de negocio). El resto vía `/api/*` (Prisma + PostgreSQL/Supabase).
 - **Selector Zustand estable:**
   ```ts
   const SIN_MENSAJES: MensajePedido[] = []; // módulo-level
@@ -281,7 +281,7 @@ Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol
 - **Fechas:** ISO 8601 strings. Formatear con `formatters.ts`.
 - **Moneda:** pesos argentinos. `font-mono` para precios e IDs en UI.
 - **API base URL:** `VITE_API_URL` (default `/api`, mismo origen). Solo se define si frontend y backend viven en dominios distintos.
-- **DB connection:** `DATABASE_URL` (server-side, usada por Prisma en `api/_db.ts` y `prisma/seed.ts`) — nunca se expone al cliente, va en `.env`/env vars de Vercel, no en `VITE_*`.
+- **DB connection:** `DATABASE_URL` (pooler PgBouncer, server-side, usada por Prisma en `api/_db.ts` en runtime) + `DIRECT_URL` (conexión directa, solo para `db:push`/`db:seed`) — nunca se exponen al cliente, van en `.env`/env vars de Vercel, no en `VITE_*`.
 - **Componentes:** un archivo por componente. Export nombrado para reutilizables, default para páginas.
 - **Props:** siempre tipadas con `interface NombreComponenteProps`.
 - **Llamar otros stores desde una action:** `useOtroStore.getState().accion()`.
@@ -296,8 +296,8 @@ npm run dev:vite   # Solo Vite, sin backend — las llamadas a /api van a fallar
 npm run build      # tsc -b && vite build
 npm run lint       # oxlint
 
-npm run db:push    # aplica prisma/schema.prisma a MySQL (crea/actualiza tablas)
-npm run db:seed    # importa db.json a MySQL (datos de ejemplo)
+npm run db:push    # aplica prisma/schema.prisma a Postgres (crea/actualiza tablas)
+npm run db:seed    # importa db.json a Postgres (datos de ejemplo)
 npm run db:studio  # Prisma Studio — explorador visual de la base
 
 git push origin electroparts-bd   # push a la rama de trabajo

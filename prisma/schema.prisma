@@ -1,5 +1,5 @@
 // Schema de base de datos — ElectroParts Hub
-// Migrado desde db.json (JSON Server) a MySQL para deploy en Vercel.
+// Migrado desde db.json (JSON Server) a PostgreSQL (Supabase) para deploy en Vercel.
 // Los nombres de modelo/campo se mantienen en español, igual que src/types/index.ts,
 // para que el mapeo entre Prisma y el dominio de la app sea 1:1.
 
@@ -8,8 +8,15 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // DATABASE_URL: connection pooler de Supabase (PgBouncer, puerto 6543) — la usan las
+  // funciones serverless de /api en runtime, porque cada invocación es una conexión nueva
+  // y el pooler evita agotar el límite de conexiones directas de Postgres.
+  url       = env("DATABASE_URL")
+  // DIRECT_URL: conexión directa (puerto 5432) — la usa el Prisma CLI para `db push` /
+  // migraciones, porque PgBouncer en modo transaction no soporta los prepared statements
+  // que Prisma necesita para eso.
+  directUrl = env("DIRECT_URL")
 }
 
 enum EstadoPedido {

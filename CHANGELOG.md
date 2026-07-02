@@ -2,6 +2,20 @@
 
 ## [Unreleased] — rama electroparts-bd
 
+### v0.6.1 — 2026-07-01
+#### Changed — Motor de base de datos: MySQL → PostgreSQL (Supabase)
+
+Se cambió el motor definido en v0.6.0 antes de tener credenciales reales cargadas — no hubo
+datos en producción que migrar. Motivo: el free tier de Supabase (500MB persistentes, no
+expira por inactividad) es más generoso que las alternativas MySQL evaluadas, y ya trae
+pooler de conexiones (PgBouncer) integrado.
+
+- `prisma/schema.prisma` *(modificado)* — `datasource db`: `provider` de `"mysql"` a `"postgresql"`; agrega `directUrl = env("DIRECT_URL")` (Supabase separa el pooler de conexiones del acceso directo que necesita Prisma para migraciones — ver ANTIGRAVITY.md). El resto del schema (modelos, enums, índices, relaciones) no cambió: son válidos en ambos motores.
+- `.env.example` *(modificado)* — `DATABASE_URL` pasa a formato `postgresql://...?pgbouncer=true` (pooler, puerto 6543); se agrega `DIRECT_URL` (conexión directa, puerto 5432, solo la usa el Prisma CLI).
+- `README.md` *(modificado)* — la guía "Crear una base MySQL gratis (TiDB Cloud)" se reemplaza por "Crear una base en Supabase (gratis)"; sección de deploy en Vercel actualizada para cargar también `DIRECT_URL`.
+- `ANTIGRAVITY.md`, `CODEMAP.md` *(modificados)* — referencias a MySQL actualizadas a PostgreSQL/Supabase.
+- Sin cambios en `api/*`, `src/services/api.ts` ni `vercel.json` — los handlers de Prisma y el frontend son agnósticos al motor de base de datos.
+
 ### v0.6.0 — 2026-07-01
 #### Changed — Migración de JSON Server (mock) a MySQL + funciones serverless de Vercel
 
