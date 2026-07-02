@@ -1,4 +1,5 @@
-import type { Pedido, Cotizacion, Orden, MensajePedido } from '../types';
+import bcrypt from 'bcryptjs';
+import type { Pedido, Cotizacion, Orden, MensajePedido, Usuario } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
@@ -287,3 +288,73 @@ export async function deleteCotizacion(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ─── Usuarios ────────────────────────────────────────────────────────────────
+// SUPABASE MIGRATION: reemplazar el cuerpo de cada función por el cliente de Supabase.
+// Las firmas no cambian. Ver ANTIGRAVITY.md sección "Migración Supabase".
+
+export const usuariosApi = {
+  async getAll(): Promise<Usuario[]> {
+    try {
+      const res = await fetch(`${BASE_URL}/usuarios`);
+      return await res.json();
+    } catch (e) {
+      console.error('api.usuariosApi.getAll:', e);
+      return [];
+    }
+  },
+
+  async getById(id: string): Promise<Usuario | null> {
+    try {
+      const res = await fetch(`${BASE_URL}/usuarios/${id}`);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) {
+      console.error('api.usuariosApi.getById:', e);
+      return null;
+    }
+  },
+
+  async getByUsuario(usuario: string): Promise<Usuario | null> {
+    try {
+      const res = await fetch(`${BASE_URL}/usuarios?usuario=${encodeURIComponent(usuario)}`);
+      const lista: Usuario[] = await res.json();
+      return lista[0] ?? null;
+    } catch (e) {
+      console.error('api.usuariosApi.getByUsuario:', e);
+      return null;
+    }
+  },
+
+  async create(data: Omit<Usuario, 'id' | 'fechaCreacion' | 'ultimaModificacion'>): Promise<Usuario> {
+    const ahora = new Date().toISOString();
+    const res = await fetch(`${BASE_URL}/usuarios`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, fechaCreacion: ahora, ultimaModificacion: ahora }),
+    });
+    return await res.json();
+  },
+
+  async update(id: string, data: Partial<Usuario>): Promise<Usuario> {
+    const res = await fetch(`${BASE_URL}/usuarios/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, ultimaModificacion: new Date().toISOString() }),
+    });
+    return await res.json();
+  },
+
+  async delete(id: string): Promise<void> {
+    await fetch(`${BASE_URL}/usuarios/${id}`, { method: 'DELETE' });
+  },
+
+  async validateCredentials(usuario: string, password: string): Promise<Omit<Usuario, 'passwordHash'> | null> {
+    const encontrado = await usuariosApi.getByUsuario(usuario);
+    if (!encontrado) return null;
+    const valido = await bcrypt.compare(password, encontrado.passwordHash);
+    if (!valido) return null;
+    const { passwordHash: _passwordHash, ...usuarioSeguro } = encontrado;
+    return usuarioSeguro;
+  },
+};

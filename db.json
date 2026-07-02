@@ -1,4 +1,39 @@
 {
+  "usuarios": [
+    {
+      "id": "user-admin-001",
+      "usuario": "admin",
+      "passwordHash": "$2b$10$5./YBaaxaLP0c9b9AYRjQeSJ2Ea/1uhnKy9Cm9IfcdzK8A3A4f0kC",
+      "rol": "admin",
+      "nombre": "Administrador",
+      "empresa": "ElectroParts Hub",
+      "activo": true,
+      "fechaCreacion": "2026-07-01T00:00:00.000Z",
+      "ultimaModificacion": "2026-07-01T00:00:00.000Z"
+    },
+    {
+      "id": "user-comprador-001",
+      "usuario": "comprador",
+      "passwordHash": "$2b$10$zBTEp2zYKHYZJKASF/3hseTYQrpVtYpKjvoojXjEk.fcHon0WZLai",
+      "rol": "comprador",
+      "nombre": "Usuario Comprador Demo",
+      "empresa": "Empresa Compradora S.A.",
+      "activo": true,
+      "fechaCreacion": "2026-07-01T00:00:00.000Z",
+      "ultimaModificacion": "2026-07-01T00:00:00.000Z"
+    },
+    {
+      "id": "user-proveedor-001",
+      "usuario": "proveedor",
+      "passwordHash": "$2b$10$vkn8CL3Wcz1xoma8C7YZQ.WLY0.k6uGexPfGhGn.kABCm1d1V5oUC",
+      "rol": "proveedor",
+      "nombre": "Usuario Proveedor Demo",
+      "empresa": "Proveedor Electrónico S.R.L.",
+      "activo": true,
+      "fechaCreacion": "2026-07-01T00:00:00.000Z",
+      "ultimaModificacion": "2026-07-01T00:00:00.000Z"
+    }
+  ],
   "pedidos": [
     {
       "id": "GJuy_RyPuGA",

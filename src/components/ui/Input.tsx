@@ -5,6 +5,7 @@ interface InputProps {
   placeholder?: string;
   value: string | number;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   type?: string;
   error?: string;
   required?: boolean;
@@ -21,6 +22,7 @@ export const Input = ({
   placeholder,
   value,
   onChange,
+  onBlur,
   type = 'text',
   error,
   required = false,
@@ -42,6 +44,7 @@ export const Input = ({
       type={type}
       value={value}
       onChange={onChange}
+      onBlur={onBlur}
       placeholder={placeholder}
       disabled={disabled}
       required={required}

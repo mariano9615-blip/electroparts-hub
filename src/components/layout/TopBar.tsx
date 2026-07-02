@@ -47,6 +47,7 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
   const navigate = useNavigate();
   const rol = useAuthStore((s) => s.rol);
   const usuario = useAuthStore((s) => s.usuario);
+  const nombre = useAuthStore((s) => s.nombre);
   const esAdmin = rol === 'admin';
   const seccion = BREADCRUMB_MAP[pathname] ?? 'ElectroParts Hub';
   const [panelAbierto, setPanelAbierto] = useState(false);
@@ -137,11 +138,11 @@ export const TopBar = ({ onToggleSidebar }: TopBarProps) => {
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-ep-green-light rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-ep-green-dark">
-                {usuario ? usuario.slice(0, 2).toUpperCase() : ''}
+                {(nombre ?? usuario) ? (nombre ?? usuario)!.slice(0, 2).toUpperCase() : ''}
               </span>
             </div>
             <span className="text-sm font-medium text-ep-text-primary hidden md:block">
-              {usuario}
+              {nombre ?? usuario}
             </span>
           </div>
 

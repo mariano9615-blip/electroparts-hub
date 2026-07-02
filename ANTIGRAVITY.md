@@ -47,7 +47,7 @@ db.json          # fuente de verdad de datos (JSON Server)
 
 ## 3. ENTIDADES Y DB.JSON
 
-**Autenticación y roles (Etapa 6)** — sin backend de auth, usuarios fijos hardcodeados en `useAuthStore.ts`:
+**Autenticación y roles (Etapa 6b)** — usuarios persistidos en `db.json` (colección `usuarios`), contraseñas hasheadas con `bcryptjs`. `useAuthStore.login()` valida contra `usuariosApi.validateCredentials()`:
 
 ```
 type RolUsuario = 'admin' | 'comprador' | 'proveedor'
@@ -55,13 +55,21 @@ type RolUsuario = 'admin' | 'comprador' | 'proveedor'
 
 | Usuario | Contraseña | Rol | Acceso |
 |---|---|---|---|
-| admin | 123456 | admin | Panel de administración completo (`/admin/*`), solo lectura salvo resolución de disputas |
+| admin | 123456 | admin | Panel de administración completo (`/admin/*`), solo lectura salvo resolución de disputas y ABM de usuarios |
 | comprador | 123456 | comprador | Vistas de comprador (`/comprador/*`) |
 | proveedor | 123456 | proveedor | Vistas de proveedor (`/proveedor/*`) |
 
-El rol queda fijado por el usuario logueado — ya no existe un toggle de rol en la UI.
+El rol queda fijado por el usuario logueado — no existe un toggle de rol en la UI. El admin es supervisor total de usuarios (`/admin/usuarios`): crea, edita, cambia contraseña, activa/desactiva y elimina comprador/proveedor. El admin no se puede crear desde el panel y no puede ser eliminado ni desactivado (validado en `useUsuariosStore` y en la UI).
 
-**db.json collections:** `pedidos` · `cotizaciones` · `ordenes` · `notificaciones` · `mensajes`
+**Usuario**
+```
+id: string             usuario: string          passwordHash: string
+rol: RolUsuario         nombre: string           empresa?: string
+activo: boolean         fechaCreacion: string (ISO)   ultimaModificacion: string (ISO)
+```
+`passwordHash` nunca sale de `src/services/api.ts` hacia componentes o el store `useUsuariosStore` (que tipa su array como `Omit<Usuario, 'passwordHash'>[]`). `usuariosApi.validateCredentials()` es la única función que compara el hash (vía `bcrypt.compare`) y también devuelve el usuario sin `passwordHash`, usado directamente por `useAuthStore`.
+
+**db.json collections:** `usuarios` · `pedidos` · `cotizaciones` · `ordenes` · `notificaciones` · `mensajes`
 
 **Pedido**
 ```
@@ -158,7 +166,8 @@ entregado + estadoPago=confirmado → cerrado  (automático)
 
 | Store | Archivo | Qué maneja | Acciones principales |
 |---|---|---|---|
-| useAuthStore | useAuthStore.ts | sesión + rol (localStorage `ep_auth`) | `login(usuario, password)`, `logout()` |
+| useAuthStore | useAuthStore.ts | sesión + rol + nombre (localStorage `ep_auth`) | `login(usuario, password)` — async, valida contra `usuariosApi.validateCredentials`; `logout()` |
+| useUsuariosStore | useUsuariosStore.ts | `Omit<Usuario, 'passwordHash'>[]` vía API — ABM enterprise | `cargarUsuarios`, `crearUsuario`, `editarUsuario`, `cambiarPassword`, `toggleActivo`, `eliminarUsuario` |
 | usePedidosStore | usePedidosStore.ts | `Pedido[]` vía API | `cargarDatos`, `agregarPedido`, `actualizarEstadoPedido`, `incrementarCotizaciones`, `eliminarPedido`, `iniciarNegociacion`, `cancelarNegociacion`, `cancelarPedido` |
 | useCotizacionesStore | useCotizacionesStore.ts | `Cotizacion[]` vía API | `cargarDatos`, `agregarCotizacion`, `aceptarCotizacion`, `rechazarCotizacion`, `iniciarNegociacionCotizacion`, `cancelarNegociacionCotizacion`, `eliminarCotizacion`, `eliminarCotizacionesByPedidoId` |
 | useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden`, `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden`, `resolverDisputa` (Etapa 6, uso admin) |
@@ -167,7 +176,7 @@ entregado + estadoPago=confirmado → cerrado  (automático)
 
 **Etapa 6 — `useRolStore` fue eliminado.** El rol vive únicamente en `useAuthStore` (`useAuthStore((s) => s.rol)`), determinado por el usuario logueado. Todos los consumidores que antes leían `useRolStore` (Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel, Chat, useMensajesStore, AppRouter) ahora leen `useAuthStore`.
 
-Todos los stores (excepto Auth) arrancan vacíos y se pueblan con `cargarDatos()` desde `AppRouter` al montar. Auth persiste en `localStorage` sin middleware.
+Todos los stores (excepto Auth) arrancan vacíos y se pueblan con `cargarDatos()` desde `AppRouter` al montar. Auth persiste en `localStorage` sin middleware. `useUsuariosStore` no persiste en `localStorage` — su única fuente de verdad es `db.json` vía `usuariosApi`; se carga con `cargarUsuarios()` dentro de `AdminUsuarios.tsx` (no forma parte del polling global de `AppRouter`).
 
 ---
 
@@ -196,7 +205,7 @@ Todos los stores (excepto Auth) arrancan vacíos y se pueblan con `cargarDatos()
 | `/admin/pedidos` | AdminPedidos | admin | todos los pedidos, solo lectura |
 | `/admin/ordenes` | AdminOrdenes | admin | todas las órdenes, solo lectura |
 | `/admin/disputas` | AdminDisputas | admin | órdenes `disputada`; única acción admin: resolver |
-| `/admin/usuarios` | AdminUsuarios | admin | lista solo lectura de los 3 usuarios fijos |
+| `/admin/usuarios` | AdminUsuarios | admin | ABM enterprise: alta, edición, cambio de contraseña, activar/desactivar, eliminar |
 | `*` | → Navigate según rol (o `/login` si no autenticado) | — | |
 
 Chat vive dentro de `/comprador|proveedor/pedidos/:id` (componente `<Chat>`). Las rutas `/comprador/chat` y `/proveedor/chat` fueron eliminadas en v0.3.1. El admin no tiene chat ni notificaciones — esos íconos se ocultan en el `TopBar` cuando `rol === 'admin'`.
@@ -278,7 +287,9 @@ Comprador y proveedor comparten el componente `Sidebar.tsx`; ambos muestran arri
 12. **`estadoPago` tiene fallback** — órdenes sin el campo usan `?? 'pendiente'` como default para compatibilidad con datos pre-etapa-5a.
 13. **Protección de rutas por rol (Etapa 6)** — `AppRouter.tsx` define un `LayoutPorRol({ rolRequerido })` por cada sección (`/admin`, `/comprador`, `/proveedor`). Si no hay sesión → redirige a `/login`. Si el rol autenticado no coincide con `rolRequerido` de esa sección → redirige a `/${rol}` (el dashboard propio del usuario), nunca deja pasar. `/login` redirige al dashboard del rol si ya hay sesión. `/` y `*` redirigen según rol (o a `/login` si no hay sesión).
 14. **Polling deshabilitado para admin** — el `setInterval` de 5s en `AppRouter` chequea `useAuthStore.getState().rol` en cada tick y no vuelve a llamar `cargarDatos()` si es `'admin'`. Sí hay una carga inicial única al montar, sin importar el rol, para que el admin tenga datos al entrar.
-15. **Admin de solo lectura** — todas las vistas `/admin/*` muestran datos de todos los compradores/proveedores sin acciones de negocio, excepto `AdminDisputas`, cuyo único botón ("Resolver disputa") llama `useOrdenesStore.getState().resolverDisputa(ordenId, resolucion)`, que hace `PATCH /ordenes/:id` con `{ estado: 'cerrado', resolucionDisputa, resolvedBy: 'admin' }`.
+15. **Admin de solo lectura salvo excepciones** — todas las vistas `/admin/*` muestran datos de todos los compradores/proveedores sin acciones de negocio, excepto `AdminDisputas` (botón "Resolver disputa" → `useOrdenesStore.getState().resolverDisputa()`) y `AdminUsuarios` (ABM completo de usuarios vía `useUsuariosStore`).
+16. **Protección del usuario admin (Etapa 6b)** — el usuario con `rol === 'admin'` no puede ser eliminado ni desactivado bajo ninguna circunstancia. Se valida en dos capas: `useUsuariosStore.eliminarUsuario()` y `toggleActivo()` no-opean con `console.warn` si el target es admin; y en `AdminUsuarios.tsx` los íconos de eliminar y el badge de estado quedan `disabled` con tooltip "El administrador no puede ser eliminado ni desactivado". El admin tampoco se puede crear desde el panel — el `Select` de rol del formulario de alta solo ofrece `comprador`/`proveedor`.
+17. **`passwordHash` nunca sale de la capa de servicios hacia el store** — `src/services/api.ts` (`usuariosApi.getAll/getById/create/update`) puede devolver el objeto `Usuario` completo (incluye `passwordHash`), pero `useUsuariosStore` lo omite siempre al guardar en su estado (`const { passwordHash, ...usuarioSeguro } = usuario`), por lo que ningún componente accede a él. `usuariosApi.validateCredentials()` es la única función que lee `passwordHash` para comparar con `bcrypt.compare()`, y devuelve el usuario ya sin ese campo.
 
 ---
 
@@ -314,3 +325,29 @@ npm run lint       # oxlint
 git checkout db.json          # resetear datos al estado inicial
 git push origin mdemichelis   # push a rama de trabajo
 ```
+
+---
+
+## 10. MIGRACIÓN SUPABASE
+
+`src/services/api.ts` es la única capa de acceso a datos del proyecto — ningún componente ni store hace `fetch` directo. Esto hace que migrar de JSON Server a Supabase sea un reemplazo de implementación, no un cambio de interfaz.
+
+**Contrato de `usuariosApi`** (firmas estables, no cambian con la migración):
+```ts
+export const usuariosApi = {
+  getAll: () => Promise<Usuario[]>
+  getById: (id: string) => Promise<Usuario | null>
+  getByUsuario: (usuario: string) => Promise<Usuario | null>
+  create: (data: Omit<Usuario, 'id' | 'fechaCreacion' | 'ultimaModificacion'>) => Promise<Usuario>
+  update: (id: string, data: Partial<Usuario>) => Promise<Usuario>
+  delete: (id: string) => Promise<void>
+  validateCredentials: (usuario: string, password: string) => Promise<Omit<Usuario, 'passwordHash'> | null>
+}
+```
+
+**Patrón de reemplazo:**
+1. Solo se reescribe el cuerpo de cada función en `src/services/api.ts` (y de las demás funciones de la misma capa: `getPedidos`, `updateOrden`, etc.) usando el cliente de Supabase (`supabase.from('usuarios').select()...`); las firmas y los tipos de retorno no cambian.
+2. Los IDs siguen siendo `string` (JSON Server usa strings arbitrarios, Supabase usa UUID strings) — ningún consumidor asume un formato concreto.
+3. Los timestamps siguen siendo ISO 8601 strings — formato nativo de las columnas `timestamptz` de Supabase.
+4. `passwordHash` deja de calcularse/compararse en el cliente con `bcryptjs` y pasa a resolverse del lado del servidor (Supabase Auth o una Edge Function) — es el único punto donde el cuerpo de `validateCredentials` cambia de forma no trivial; su firma (`Promise<Omit<Usuario, 'passwordHash'> | null>`) se mantiene igual para no tocar `useAuthStore`.
+5. Los stores (`useUsuariosStore`, `useAuthStore`) no requieren cambios: siguen llamando a `usuariosApi.*` con `try/catch` y actualizando su estado local con la respuesta.

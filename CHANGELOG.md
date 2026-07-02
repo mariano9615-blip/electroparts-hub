@@ -2,6 +2,20 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### Etapa 6b — 2026-07-01
+#### Added — ABM enterprise de usuarios, bcryptjs, auth desde db.json, preparado para Supabase
+
+- `package.json` *(modificado)* — agrega dependencia `bcryptjs` y dev dependency `@types/bcryptjs`.
+- `db.json` *(modificado)* — agrega colección `usuarios` con los 3 usuarios fijos (`admin`/`comprador`/`proveedor`, contraseña `123456`), ahora con `passwordHash` (bcrypt, 10 salt rounds) en vez de contraseña en texto plano.
+- `src/types/index.ts` *(modificado)* — agrega interfaces `Usuario` (`id`, `usuario`, `passwordHash`, `rol`, `nombre`, `empresa?`, `activo`, `fechaCreacion`, `ultimaModificacion`) y `UsuarioFormData` (para los formularios de alta del panel).
+- `src/services/api.ts` *(modificado)* — agrega `usuariosApi` (`getAll`, `getById`, `getByUsuario`, `create`, `update`, `delete`, `validateCredentials`); `validateCredentials` compara con `bcrypt.compare` y devuelve el usuario sin `passwordHash`. Comentario de migración a Supabase encima del objeto.
+- `src/store/useUsuariosStore.ts` *(nuevo)* — store del ABM: `usuarios: Omit<Usuario,'passwordHash'>[]`, `cargarUsuarios`, `crearUsuario` (valida unicidad + hashea password), `editarUsuario`, `cambiarPassword` (hashea), `toggleActivo` y `eliminarUsuario` (ambas no-opean con `console.warn` si el target es admin). No persiste en `localStorage`.
+- `src/store/useAuthStore.ts` *(reescrito)* — `login()` ahora es async y valida contra `usuariosApi.validateCredentials()` en vez del diccionario hardcodeado; agrega campo `nombre` y `errorLogin` (mensaje distinto para credenciales inválidas vs. cuenta desactivada); persiste `{ usuario, rol, nombre }` en `localStorage['ep_auth']`.
+- `src/pages/Login.tsx` *(modificado)* — `intentarLogin` ahora espera el `Promise<boolean>` de `login()` y muestra el mensaje de `errorLogin` (antes: texto fijo "Usuario o contraseña incorrectos").
+- `src/components/layout/Sidebar.tsx`, `SidebarAdmin.tsx`, `TopBar.tsx` *(modificados)* — muestran `nombre` (fallback a `usuario`) en vez del username crudo.
+- `src/components/ui/Input.tsx` *(modificado)* — agrega prop opcional `onBlur` para soportar validación en tiempo real (onBlur + onChange) en los formularios del ABM.
+- `src/pages/admin/AdminUsuarios.tsx` *(reescrito)* — ABM enterprise completo: búsqueda + filtros (rol/estado) + tabla ordenable + paginación de 10; modales de alta, edición, cambio de contraseña y confirmación de eliminación; popover inline de confirmación para activar/desactivar; skeleton loader mientras carga, `EmptyState` para error/sin resultados/sin usuarios; aviso local de éxito/error tras cada operación (no reutiliza el sistema global de toasts). El admin no se puede crear ni editar su rol a admin, y sus acciones de eliminar/desactivar quedan deshabilitadas con tooltip.
+
 ### Fix TypeScript build errors — 2026-07-01
 
 Errores preexistentes identificados en Etapa 6 (dejados fuera de scope en ese commit) que bloqueaban `npm run build`/deploy en Vercel. Se corrigen 5 errores en total: los 4 previstos más uno adicional descubierto al correr el build.

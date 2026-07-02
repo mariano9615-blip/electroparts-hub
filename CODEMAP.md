@@ -1,7 +1,35 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (fix: errores TypeScript preexistentes)
+Última actualización: 2026-07-01 (Etapa 6b — ABM usuarios enterprise)
 Rama: mdemichelis
+
+---
+
+## RESUMEN Etapa 6b — Archivos clave modificados
+
+ABM enterprise de usuarios con persistencia en `db.json`, contraseñas hasheadas con `bcryptjs`, y arquitectura de servicios preparada para migrar a Supabase sin tocar firmas.
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `db.json` | + colección `usuarios` con 3 usuarios fijos, `passwordHash` en vez de contraseña plana | 1–36 |
+| `src/types/index.ts` | + interfaces `Usuario` y `UsuarioFormData` | 81–101 |
+| `src/services/api.ts` | + `usuariosApi` (7 funciones) con comentario de migración a Supabase | 1–2 (imports), 292–361 (`usuariosApi`) |
+| `src/store/useUsuariosStore.ts` (**nuevo**, 121 líneas) | Store del ABM: CRUD + protección del admin | 1–121 (completo) |
+| `src/store/useAuthStore.ts` (reescrito, 76 líneas) | `login()` async contra `usuariosApi.validateCredentials`; + `nombre`, `errorLogin` | 23–29 (interface), 47–72 (`login`) |
+| `src/pages/Login.tsx` (modificado) | `intentarLogin` espera el `Promise<boolean>`; usa `errorLogin` del store | 24 (`error` ahora `string\|null`), 28–47 (`intentarLogin`) |
+| `src/components/ui/Input.tsx` (modificado) | + prop opcional `onBlur` | 6 (interface), 25 (destructuring), 44 (`<input onBlur>`) |
+| `src/components/layout/Sidebar.tsx`, `SidebarAdmin.tsx`, `TopBar.tsx` (modificados) | Muestran `nombre` (fallback `usuario`) en vez del username crudo | Sidebar.tsx 30–31, 96; SidebarAdmin.tsx 26–27, 61; TopBar.tsx 49, 140–145 |
+| `src/pages/admin/AdminUsuarios.tsx` (reescrito, 736 líneas) | ABM enterprise completo: búsqueda, filtros, tabla ordenable, paginación, 4 modales, popover inline, skeleton/EmptyState, aviso local | 1–736 (completo) |
+
+### Lógica condicional clave — Etapa 6b
+
+- `useUsuariosStore.crearUsuario()` (useUsuariosStore.ts:41–61): chequea unicidad de `usuario` (case-insensitive) contra el estado local **antes** de pegarle a la API; hashea con `bcrypt.hash(password, 10)`; devuelve `{ok:false, error}` si el usuario ya existe o si la request falla.
+- `useUsuariosStore.toggleActivo()` / `eliminarUsuario()` (useUsuariosStore.ts:97–121): si `usuario.rol === 'admin'`, no llaman a la API — solo `console.warn` y retornan. Es la segunda capa de protección (la primera es la UI deshabilitando los botones).
+- `usuariosApi.validateCredentials()` (api.ts:353–361): busca por `usuario` con `getByUsuario` (GET `/usuarios?usuario=X`, toma `[0]`), compara con `bcrypt.compare`, y si es válido devuelve el usuario con `passwordHash` destructurado afuera (`const { passwordHash: _passwordHash, ...usuarioSeguro }`).
+- `useAuthStore.login()` (useAuthStore.ts:47–72): si `validateCredentials` devuelve `null` → `errorLogin: 'Usuario o contraseña incorrectos'`; si devuelve un usuario con `activo: false` → `errorLogin: 'Tu cuenta está desactivada. Contactá al administrador.'` y no persiste sesión. Solo si pasa ambos chequeos persiste `{usuario, rol, nombre}` en `localStorage['ep_auth']`.
+- `AdminUsuarios.tsx` `validarAlta()` (líneas 73–88): valida nombre (≥3), usuario (≥4, sin espacios, regex `^[a-zA-Z0-9_]+$`, unicidad contra `usuarios` del store) y contraseñas (≥6, coinciden) — se recalcula en cada render vía `useMemo` para habilitar/deshabilitar el botón "Crear usuario" en tiempo real.
+- `AdminUsuarios.tsx` tabla — filtro + orden + paginación (líneas 152–178): un solo `useMemo` (`filtrados`) aplica búsqueda por texto, filtro de rol y de estado, y ordena; la paginación (`POR_PAGINA = 10`) se calcula sobre el resultado ya filtrado/ordenado. Cambiar cualquier filtro resetea `pagina` a 1 (efecto en líneas 148–150).
+- `AdminUsuarios.tsx` popover de activar/desactivar (líneas 434–459): clic en el `Badge` de estado abre un popover posicionado `absolute` bajo la celda (controlado por `popoverToggle: string|null` con el id de la fila); confirmar llama `toggleActivo(u.id)` y cierra el popover. Deshabilitado (`disabled`) si `u.rol === 'admin'`.
 
 ---
 

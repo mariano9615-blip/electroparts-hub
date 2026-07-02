@@ -78,6 +78,28 @@ export interface MensajePedido {
   leido?: boolean;
 }
 
+export interface Usuario {
+  id: string;
+  usuario: string;
+  passwordHash: string;
+  rol: RolUsuario;
+  nombre: string;
+  empresa?: string;
+  activo: boolean;
+  fechaCreacion: string;
+  ultimaModificacion: string;
+}
+
+export interface UsuarioFormData {
+  usuario: string;
+  password: string;
+  passwordConfirm: string;
+  rol: 'comprador' | 'proveedor';
+  nombre: string;
+  empresa?: string;
+  activo: boolean;
+}
+
 export interface Proveedor {
   id: string;
   nombre: string;

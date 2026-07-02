@@ -24,6 +24,7 @@ export const SidebarAdmin = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const usuario = useAuthStore((s) => s.usuario);
+  const nombre = useAuthStore((s) => s.nombre);
   const ordenes = useOrdenesStore((s) => s.ordenes);
 
   const disputasAbiertasBadge = ordenes.filter((o) => o.estado === 'disputada').length;
@@ -58,7 +59,7 @@ export const SidebarAdmin = () => {
 
       {/* Usuario logueado + badge de rol */}
       <div className="px-5 py-3 border-b border-white/10 flex-shrink-0">
-        <p className="text-sm font-semibold text-white truncate">{usuario}</p>
+        <p className="text-sm font-semibold text-white truncate">{nombre ?? usuario}</p>
         <div className="mt-1.5">
           <Badge color="red">Admin</Badge>
         </div>

@@ -28,6 +28,7 @@ export const Sidebar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const usuario = useAuthStore((s) => s.usuario);
+  const nombre = useAuthStore((s) => s.nombre);
   const rol = useAuthStore((s) => s.rol);
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
@@ -93,7 +94,7 @@ export const Sidebar = () => {
 
       {/* Usuario logueado + badge de rol */}
       <div className="px-5 py-3 border-b border-white/10 flex-shrink-0">
-        <p className="text-sm font-semibold text-white truncate">{usuario}</p>
+        <p className="text-sm font-semibold text-white truncate">{nombre ?? usuario}</p>
         <div className="mt-1.5">
           <Badge color={rol === 'comprador' ? 'green' : 'blue'}>
             {rol === 'comprador' ? 'Comprador' : 'Proveedor'}

@@ -21,23 +21,23 @@ export default function Login() {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const intentarLogin = (usuarioLogin: string, passwordLogin: string) => {
-    setError(false);
+    setError(null);
     setCargando(true);
 
-    setTimeout(() => {
-      const ok = useAuthStore.getState().login(usuarioLogin, passwordLogin);
+    setTimeout(async () => {
+      const ok = await useAuthStore.getState().login(usuarioLogin, passwordLogin);
       if (ok) {
         const rol = useAuthStore.getState().rol!;
         navigate(RUTA_POR_ROL[rol]);
         return;
       }
       setCargando(false);
-      setError(true);
+      setError(useAuthStore.getState().errorLogin ?? 'Usuario o contraseña incorrectos');
       const card = cardRef.current;
       if (card) {
         card.classList.add('shake');
@@ -96,7 +96,7 @@ export default function Login() {
                 <div className="text-ep-red flex-shrink-0">
                   <IconAlertCircle size={16} />
                 </div>
-                <span className="text-sm text-ep-red">Usuario o contraseña incorrectos</span>
+                <span className="text-sm text-ep-red">{error}</span>
               </div>
             )}
 
