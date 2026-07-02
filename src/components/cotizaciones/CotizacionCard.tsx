@@ -86,7 +86,7 @@ export const CotizacionCard = ({
             )}
           </div>
         </div>
-        <Badge color={estadoAColor(cotizacion.estado)}>{estadoALabel(cotizacion.estado)}</Badge>
+        <Badge color={estadoAColor(cotizacion.estado)}>{getLabelEstadoCotizacion(cotizacion.estado, rol)}</Badge>
       </div>
 
       <div className="flex items-center gap-1 mt-2.5">

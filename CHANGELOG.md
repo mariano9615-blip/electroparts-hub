@@ -2,6 +2,15 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### Fix TypeScript build errors — 2026-07-01
+
+Errores preexistentes identificados en Etapa 6 (dejados fuera de scope en ese commit) que bloqueaban `npm run build`/deploy en Vercel. Se corrigen 5 errores en total: los 4 previstos más uno adicional descubierto al correr el build.
+
+- `src/components/cotizaciones/CotizacionCard.tsx` *(fix)* — reemplaza la referencia a `estadoALabel` (nombre inexistente, quedó de un refactor previo) por `getLabelEstadoCotizacion(cotizacion.estado, rol)`, ya usada en el resto del componente.
+- `src/components/layout/NotificacionesPanel.tsx` *(fix)* — agrega los 6 tipos de notificación de órdenes (`orden_en_preparacion`, `orden_enviada`, `orden_entregada`, `orden_pago_confirmado`, `orden_cerrada`, `orden_disputada`) a los mapas `ICONOS_TIPO` y `COLORES_ICONO`, que quedaron desactualizados desde Etapa 5a.
+- `src/data/mockData.ts` *(fix)* — reemplaza el estado obsoleto `'en_transito'` por `'enviado'` en `ORDENES_INICIALES`; agrega el campo requerido `estadoPago: 'pendiente'` faltante en la misma orden de ejemplo (error adicional no listado originalmente).
+- `src/store/useCotizacionesStore.ts` *(fix)* — agrega `estadoPago: 'pendiente'` al objeto `Orden` construido en `aceptarCotizacion`, campo requerido desde Etapa 5a que faltaba en esta construcción.
+
 ### v0.6.0 — 2026-07-01
 #### Added — Etapa 6 — Autenticación por rol, panel de administración, protección de rutas
 

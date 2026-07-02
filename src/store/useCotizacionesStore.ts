@@ -54,6 +54,7 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
       estado: 'confirmada',
       fechaConfirmacion: new Date().toISOString(),
       chatHabilitado: true,
+      estadoPago: 'pendiente',
     };
 
     (async () => {

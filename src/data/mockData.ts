@@ -112,8 +112,9 @@ export const ORDENES_INICIALES: Orden[] = [
     proveedorId: 'prov-4',
     proveedorNombre: 'DistribuidoraElec AR',
     monto: 298000,
-    estado: 'en_transito',
+    estado: 'enviado',
     fechaConfirmacion: ayer,
     chatHabilitado: true,
+    estadoPago: 'pendiente',
   },
 ];

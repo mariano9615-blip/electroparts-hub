@@ -1,7 +1,20 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (v0.6.0 — Etapa 6: auth por rol, panel admin, protección de rutas)
+Última actualización: 2026-07-01 (fix: errores TypeScript preexistentes)
 Rama: mdemichelis
+
+---
+
+## RESUMEN fix TypeScript build — Archivos clave modificados
+
+Corrige 4 errores preexistentes de Etapa 6 (fuera de scope en ese commit) que bloqueaban `npm run build`, más 1 error adicional descubierto al correr el build.
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `src/components/cotizaciones/CotizacionCard.tsx` | Reemplaza `estadoALabel` (nombre inexistente) por `getLabelEstadoCotizacion(cotizacion.estado, rol)` | 89 |
+| `src/components/layout/NotificacionesPanel.tsx` | + 6 tipos de notificación de órdenes en `ICONOS_TIPO` y `COLORES_ICONO`; + imports `IconTruck`, `IconCash`, `IconLock`, `IconAlertTriangle` | 15–18 (imports), 34–39 (`ICONOS_TIPO`), 52–57 (`COLORES_ICONO`) |
+| `src/data/mockData.ts` | `'en_transito'` → `'enviado'` en `ORDENES_INICIALES`; + `estadoPago: 'pendiente'` faltante (error adicional) | 115 (estado), 118 (`estadoPago`) |
+| `src/store/useCotizacionesStore.ts` | + `estadoPago: 'pendiente'` al construir el objeto `Orden` en `aceptarCotizacion` | 57 |
 
 ---
 
