@@ -1,7 +1,37 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (Etapa 7 — sistema de calificaciones)
+Última actualización: 2026-07-01 (Migración Supabase Parte A)
 Rama: mdemichelis
+
+---
+
+## RESUMEN Migración Supabase Parte A — Archivos clave modificados
+
+Infraestructura de código para poder migrar de JSON Server a Supabase cambiando una sola variable de entorno (`VITE_DATA_SOURCE`). Sin claves reales todavía — la app sigue funcionando contra JSON Server. Ningún store fue tocado: el contrato de funciones de `src/services/api.ts` no cambió.
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `package.json` | + dep `@supabase/supabase-js`; + devDeps `dotenv`, `ts-node`; + script `seed:supabase` | 11 (`seed:supabase`), 14 (`@supabase/supabase-js`), 31 (`dotenv`), 37 (`ts-node`) |
+| `.env.local` (**nuevo**, no versionado) | `VITE_API_URL`, `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` en `PENDIENTE`, `VITE_DATA_SOURCE=jsonserver` | 1–8 (completo) |
+| `.env.production` (**nuevo**, no versionado) | `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` en `PENDIENTE`, `VITE_DATA_SOURCE=supabase` | 1–3 (completo) |
+| `.env.example` (modificado) | + variables de Supabase y `VITE_DATA_SOURCE` como referencia sin valores | 1–8 (completo) |
+| `.gitignore` (modificado) | + `.env.production` explícito | 4 |
+| `src/services/supabaseClient.ts` (**nuevo**, 13 líneas) | Cliente Supabase exportado (`supabase`); fallback a URL/key dummy válidas si las env vars son `'PENDIENTE'` | 1–13 (completo) |
+| `src/services/api.ts` (reescrito, 782 líneas) | Patrón `DATA_SOURCE` en las 7 colecciones: cada función pública delega en un objeto privado `*JsonServer` o `*Supabase` | 9 (`DATA_SOURCE`), 24–133 (Pedidos), 135–250 (Cotizaciones), 252–325 (Ordenes), 327–426 (Notificaciones), 428–523 (Mensajes), 526–687 (Usuarios), 689–781 (Calificaciones) |
+| `supabase/schema.sql` (**nuevo**, 118 líneas) | DDL de las 7 tablas, IDs `text` (no UUID), RLS desactivado | 1–118 (completo) |
+| `supabase/seed.ts` (**nuevo**, 41 líneas) | Lee `db.json`, inserta en Supabase tabla por tabla; uso: `npm run seed:supabase` | 1–41 (completo) |
+| `src/services/supabaseRealtime.ts` (**nuevo**, 33 líneas) | `suscribirRealtime()` — reemplazo del polling de 5s vía `postgres_changes`; creado pero no activado | 1–33 (completo) |
+| `src/router/AppRouter.tsx` (modificado) | + comentario `// SUPABASE MIGRATION` sobre el `setInterval` de polling | antes de `cargarTodo` (dentro del `useEffect` de montaje) |
+| `ANTIGRAVITY.md` (modificado) | + Supabase al stack y `VITE_DATA_SOURCE` (sección 1); + patrón `DATA_SOURCE` (sección 8); + estado Parte A/checklist Parte B (sección 10) | sección 1, sección 8, sección 10 |
+
+### Lógica condicional clave — Migración Supabase Parte A
+
+- `src/services/api.ts`: cada colección tiene dos objetos privados no exportados (`pedidosJsonServer`/`pedidosSupabase`, etc.) con los mismos métodos (`getAll`, `update`, `create`...); las funciones exportadas (`getPedidos`, `updatePedido`...) son un simple `DATA_SOURCE === 'supabase' ? xSupabase.metodo() : xJsonServer.metodo()`. `usuariosApi` y `calificacionesApi` siguen el mismo patrón pero ya eran objetos antes de esta migración, así que el branching queda dentro de cada método existente.
+- La implementación JSON Server nunca lanza — atrapa el error en un `try/catch` interno y devuelve `[]`/`null`/`false` (comportamiento sin cambios respecto a antes de la migración). La implementación Supabase sí lanza (`throw new Error(error.message)` cuando `error` no es null) porque todos los call sites en los stores ya envuelven la llamada en `.catch()` (ver `usePedidosStore.ts` como ejemplo del patrón `.then().catch()` usado en los 5 stores que no son `usuariosApi`/`calificacionesApi`).
+- `src/services/supabaseClient.ts`: `createClient()` de `@supabase/supabase-js` valida en el constructor que la URL sea `http(s)://...` real y tira excepción si no — como `api.ts` importa este módulo de forma estática (incluso en modo `jsonserver`, antes de tener claves reales), se usa `https://placeholder.supabase.co` / `placeholder-anon-key` como fallback cuando la env var vale `'PENDIENTE'` o está vacía, para que el arranque de la app no rompa.
+- `usuariosSupabase` (dentro de `api.ts`) nunca hace `select('*')` sobre la tabla `usuarios` — usa la constante `USUARIO_COLUMNAS_SEGURAS` (sin `passwordHash`) en `getAll`/`getById`/`getByUsuario`. La única excepción es `getByUsuarioConHash()`, que sí trae `passwordHash` completo y es de uso exclusivo de `usuariosApi.validateCredentials()` — nunca se expone ese resultado crudo fuera de esa función.
+- `usuariosApi.validateCredentials()`: en modo Supabase llama a `usuariosSupabase.getByUsuarioConHash()`; en modo JSON Server sigue llamando a `usuariosJsonServer.getByUsuario()` (que ya trae el objeto completo, JSON Server no filtra columnas). El resto de la función (bcrypt.compare + destructuring de `passwordHash`) es idéntico en ambos modos.
+- `supabase/seed.ts` inserta las colecciones en un orden fijo (`usuarios, pedidos, cotizaciones, ordenes, mensajes, notificaciones, calificaciones`) que respeta las foreign keys declaradas en `schema.sql` (`cotizaciones.pedidoId → pedidos.id`, `calificaciones.ordenId → ordenes.id`).
 
 ---
 

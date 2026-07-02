@@ -276,6 +276,9 @@ export function AppRouter() {
       );
     });
 
+    // SUPABASE MIGRATION: cuando VITE_DATA_SOURCE === 'supabase',
+    // reemplazar este setInterval por suscribirRealtime() de supabaseRealtime.ts
+    // El polling se mantiene activo para JSON Server mode
     const cargarTodo = () => {
       usePedidosStore.getState().cargarDatos();
       useCotizacionesStore.getState().cargarDatos();

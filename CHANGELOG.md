@@ -2,6 +2,23 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### Migración Supabase Parte A — 2026-07-01
+#### Added — cliente, schema SQL, seed, abstracción api.ts, Realtime preparado
+
+Infraestructura de código para migrar de JSON Server a Supabase, sin claves reales todavía (se completan en Parte B). La app sigue funcionando contra JSON Server (`VITE_DATA_SOURCE=jsonserver`).
+
+- `package.json` *(modificado)* — agrega dependencia `@supabase/supabase-js`; dev dependencies `dotenv` y `ts-node`; script `seed:supabase`.
+- `.env.local`, `.env.production` *(nuevos, no versionados)* — `VITE_API_URL`, `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (`PENDIENTE`), `VITE_DATA_SOURCE` (`jsonserver`/`supabase`).
+- `.env.example` *(modificado)* — agrega las variables de Supabase y `VITE_DATA_SOURCE` como referencia sin valores.
+- `.gitignore` *(modificado)* — agrega `.env.production` explícito (el patrón `*.local` no lo cubría).
+- `src/services/supabaseClient.ts` *(nuevo)* — cliente de Supabase (`supabase`), exportado siempre pero solo usado cuando `VITE_DATA_SOURCE === 'supabase'`. Usa una URL/key dummy válidas de fallback cuando las variables son `'PENDIENTE'`, porque `createClient` valida el formato de URL al construirse.
+- `src/services/api.ts` *(reescrito)* — agrega el patrón `DATA_SOURCE` a las 7 colecciones (`pedidos`, `cotizaciones`, `ordenes`, `mensajes`, `notificaciones`, `usuarios`, `calificaciones`): cada función pública delega en una implementación privada `*JsonServer` o `*Supabase` según `VITE_DATA_SOURCE`. Las firmas exportadas no cambian — ningún store fue modificado.
+- `supabase/schema.sql` *(nuevo)* — DDL de las 7 tablas para correr en el SQL Editor de Supabase. IDs `text` (no UUID) para migrar los IDs de `db.json` tal cual; RLS desactivado (auth propia con bcrypt).
+- `supabase/seed.ts` *(nuevo)* — lee `db.json` e inserta los datos en Supabase, tabla por tabla. Se corre una vez con `npm run seed:supabase`.
+- `src/services/supabaseRealtime.ts` *(nuevo)* — `suscribirRealtime()`, reemplazo del polling de 5s vía `postgres_changes` de Supabase Realtime. Creado pero no activado.
+- `src/router/AppRouter.tsx` *(modificado)* — agrega comentario `// SUPABASE MIGRATION` sobre el `setInterval` de polling, indicando el reemplazo pendiente para Parte B.
+- `ANTIGRAVITY.md` *(modificado)* — agrega Supabase al stack, `VITE_DATA_SOURCE` a la sección 1; patrón `DATA_SOURCE` a la sección 8; estado de Parte A completada y checklist de Parte B a la sección 10.
+
 ### Etapa 7 — 2026-07-01
 #### Added — Sistema de calificaciones, StarRating, promedio por proveedor, panel admin
 

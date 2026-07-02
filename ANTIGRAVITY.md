@@ -5,11 +5,12 @@ Referencia técnica densa. Leer antes de cualquier cambio. Detalles narrativos e
 
 ## 1. PROYECTO
 - **Nombre:** ElectroParts Hub — marketplace B2B de compras de componentes eléctricos
-- **Stack:** React 19.2 · React Router 7.18 · Zustand 5.0 · TypeScript 6.0 · Vite 8.1 · Tailwind CSS 4.3 (config vía `@theme` en CSS, sin `tailwind.config.js`) · `@tailwindcss/postcss` (PostCSS plugin v4) · `@tabler/icons-react` 3.44
-- **Dev deps:** oxlint 1.69 · prettier 3.8 · `@vitejs/plugin-react` 6.0 · autoprefixer 10.5
+- **Stack:** React 19.2 · React Router 7.18 · Zustand 5.0 · TypeScript 6.0 · Vite 8.1 · Tailwind CSS 4.3 (config vía `@theme` en CSS, sin `tailwind.config.js`) · `@tailwindcss/postcss` (PostCSS plugin v4) · `@tabler/icons-react` 3.44 · `@supabase/supabase-js` 2.110 (Migración Parte A — infraestructura lista, claves reales pendientes)
+- **Dev deps:** oxlint 1.69 · prettier 3.8 · `@vitejs/plugin-react` 6.0 · autoprefixer 10.5 · `dotenv` 17.4 · `ts-node` 10.9 (para `npm run seed:supabase`)
 - **Repo/rama activa:** `mdemichelis`
 - **Ruta local:** `c:\Proyectos\electroparts-hub`
-- **Backend:** JSON Server en `db.json` (puerto 3001) · Vite en puerto 5173
+- **Backend:** JSON Server en `db.json` (puerto 3001) · Vite en puerto 5173 — o Supabase (Postgres), según `VITE_DATA_SOURCE`
+- **`VITE_DATA_SOURCE`:** `'jsonserver'` (default) o `'supabase'` — define en runtime qué implementación usa cada función de `src/services/api.ts`. Se completa en `.env.local` (dev) y `.env.production` (build de producción)
 
 ---
 
@@ -324,6 +325,8 @@ Comprador y proveedor comparten el componente `Sidebar.tsx`; ambos muestran arri
 - **Fechas:** ISO 8601 strings. Formatear con `formatters.ts`.
 - **Moneda:** pesos argentinos. `font-mono` para precios e IDs en UI.
 - **API base URL:** `VITE_API_URL` (default `http://localhost:3001`). Definida en `.env.local`.
+- **Patrón `DATA_SOURCE` en `src/services/api.ts`:** cada función pública (named export o método de `usuariosApi`/`calificacionesApi`) chequea `DATA_SOURCE` (`'jsonserver'` por default) y delega en un objeto privado `*JsonServer` o `*Supabase` de la misma colección (p. ej. `pedidosJsonServer`/`pedidosSupabase`). Las firmas exportadas nunca cambian entre modos — los stores llaman siempre a las mismas funciones (`api.getPedidos()`, `usuariosApi.create()`, etc.) sin saber contra qué backend están hablando. La implementación JSON Server nunca lanza (atrapa el error y devuelve `[]`/`null`/`false`); la implementación Supabase sí lanza (`throw new Error(error.message)`) porque todos los call sites en los stores ya envuelven la llamada en `.catch()`.
+- **`supabase.from('usuarios').select(...)` nunca usa `'*'`:** para no exponer `passwordHash` al cliente. `USUARIO_COLUMNAS_SEGURAS` (en `api.ts`) es la proyección estándar; `usuariosSupabase.getByUsuarioConHash()` es la única función que trae el hash completo, uso exclusivo de `usuariosApi.validateCredentials()`.
 - **Componentes:** un archivo por componente. Export nombrado para reutilizables, default para páginas.
 - **Props:** siempre tipadas con `interface NombreComponenteProps`.
 - **Llamar otros stores desde una action:** `useOtroStore.getState().accion()`.
@@ -347,6 +350,27 @@ git push origin mdemichelis   # push a rama de trabajo
 ## 10. MIGRACIÓN SUPABASE
 
 `src/services/api.ts` es la única capa de acceso a datos del proyecto — ningún componente ni store hace `fetch` directo. Esto hace que migrar de JSON Server a Supabase sea un reemplazo de implementación, no un cambio de interfaz.
+
+### Parte A — completada (2026-07-01)
+
+Infraestructura de código lista, sin claves reales todavía. La app sigue funcionando contra JSON Server (`VITE_DATA_SOURCE=jsonserver` en `.env.local`).
+
+- `@supabase/supabase-js` instalado; `dotenv` y `ts-node` como dev deps (para el seed).
+- `src/services/supabaseClient.ts` — cliente exportado (`supabase`). Usa una URL/key dummy válidas (`https://placeholder.supabase.co`) cuando las variables de entorno son `'PENDIENTE'`, porque `createClient` valida el formato de la URL al construirse y `api.ts` importa este módulo siempre (incluso en modo `jsonserver`) — sin el fallback, el arranque de la app rompería antes de configurar Supabase.
+- `src/services/api.ts` reescrito con el patrón `DATA_SOURCE` (ver sección 8) para las 7 colecciones: `pedidos`, `cotizaciones`, `ordenes`, `mensajes`, `notificaciones`, `usuarios`, `calificaciones`. Ningún store fue modificado — todos siguen llamando las mismas funciones/objetos exportados.
+- `supabase/schema.sql` — DDL de las 7 tablas, IDs `text` (no UUID) para poder migrar los IDs de `db.json` tal cual, RLS desactivado (auth propia con bcrypt, no auth nativo de Supabase).
+- `supabase/seed.ts` — lee `db.json` e inserta todo en Supabase; se corre con `npm run seed:supabase` una vez creadas las tablas.
+- `src/services/supabaseRealtime.ts` — `suscribirRealtime()`, reemplazo del polling de 5s de `AppRouter.tsx`. Creado pero no activado — el polling actual sigue siendo el único mecanismo de refresco mientras `DATA_SOURCE === 'jsonserver'`.
+- `.env.local` / `.env.production` con `VITE_SUPABASE_URL=PENDIENTE` y `VITE_SUPABASE_ANON_KEY=PENDIENTE`; `.env.example` actualizado como referencia (sin valores). Ambos `.env.local` y `.env.production` están en `.gitignore`.
+
+### Parte B — pendiente
+
+1. Crear proyecto en Supabase, correr `supabase/schema.sql` en el SQL Editor.
+2. Completar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` reales en `.env.local` y `.env.production`.
+3. Correr `npm run seed:supabase` para migrar los datos de `db.json`.
+4. Cambiar `VITE_DATA_SOURCE=supabase` (en el entorno que corresponda) para activar el switch.
+5. Activar `suscribirRealtime()` en `AppRouter.tsx` en reemplazo del `setInterval` cuando `DATA_SOURCE === 'supabase'` (ver comentario `// SUPABASE MIGRATION` ya dejado en el archivo).
+6. Decidir y resolver `passwordHash`/`validateCredentials` del lado servidor (Edge Function o Supabase Auth) si se quiere sacar `bcryptjs` del cliente — por ahora `validateCredentials` sigue comparando en el navegador contra el hash traído de la tabla `usuarios` vía `usuariosSupabase.getByUsuarioConHash()`.
 
 **Contrato de `usuariosApi`** (firmas estables, no cambian con la migración):
 ```ts
