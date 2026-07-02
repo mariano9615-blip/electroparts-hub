@@ -3,6 +3,7 @@ import { IconBuilding, IconMessage, IconChevronDown, IconChevronUp, IconTruck } 
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { StarRating } from '../ui/StarRating';
 import { OrdenStepper } from './OrdenStepper';
 import {
   formatARS,
@@ -10,7 +11,7 @@ import {
   getLabelEstadoOrden,
   getLabelEstadoPago,
 } from '../../utils/formatters';
-import type { Orden, Rol } from '../../types';
+import type { Calificacion, Orden, Rol } from '../../types';
 
 export interface OrdenCardAccion {
   label: string;
@@ -25,6 +26,8 @@ interface OrdenCardProps {
   nombreContraparteLabel?: string;
   onIrChat?: () => void;
   acciones?: OrdenCardAccion[];
+  calificacion?: Calificacion | null;
+  onCalificar?: () => void;
 }
 
 type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray';
@@ -60,6 +63,8 @@ export function OrdenCard({
   nombreContraparteLabel,
   onIrChat,
   acciones = [],
+  calificacion,
+  onCalificar,
 }: OrdenCardProps) {
   const [expandido, setExpandido] = useState(false);
   const estadoPago = orden.estadoPago ?? 'pendiente';
@@ -107,18 +112,22 @@ export function OrdenCard({
       )}
 
       {/* Banner orden cerrada */}
-      {orden.estado === 'cerrado' && (
+      {orden.estado === 'cerrado' && rol === 'comprador' && (
         <div className="mt-3 bg-ep-green-light border border-ep-green rounded-lg px-3 py-2 flex items-center justify-between gap-3">
-          <p className="text-xs text-ep-green-dark font-medium">
-            Orden completada.{rol === 'comprador' ? ' ¡Podés calificar al proveedor!' : ''}
-          </p>
-          {rol === 'comprador' && (
-            <span
-              className="text-xs text-ep-green-dark/60 cursor-not-allowed"
-              title="Próximamente — Etapa 5b"
-            >
-              Calificar (próximamente)
-            </span>
+          {orden.calificado ? (
+            <>
+              <p className="text-xs text-ep-green-dark font-medium">Calificaste esta compra</p>
+              {calificacion && <StarRating value={calificacion.estrellas} size="sm" />}
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-ep-green-dark font-medium">
+                Orden completada. ¡Podés calificar al proveedor!
+              </p>
+              <Button variant="primary" size="sm" onClick={onCalificar}>
+                Calificar proveedor
+              </Button>
+            </>
           )}
         </div>
       )}

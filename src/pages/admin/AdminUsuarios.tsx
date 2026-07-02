@@ -14,6 +14,7 @@ import {
 } from '@tabler/icons-react';
 import { PageHeader, Badge, Button, Input, Select, Modal, EmptyState } from '../../components/ui';
 import { useUsuariosStore } from '../../store/useUsuariosStore';
+import { useCalificacionesStore } from '../../store/useCalificacionesStore';
 import { formatFecha } from '../../utils/formatters';
 import type { Usuario, UsuarioFormData } from '../../types';
 
@@ -113,10 +114,18 @@ export default function AdminUsuarios() {
   const cambiarPassword = useUsuariosStore((s) => s.cambiarPassword);
   const toggleActivo = useUsuariosStore((s) => s.toggleActivo);
   const eliminarUsuario = useUsuariosStore((s) => s.eliminarUsuario);
+  const calificaciones = useCalificacionesStore((s) => s.calificaciones);
 
   useEffect(() => {
     cargarUsuarios();
   }, [cargarUsuarios]);
+
+  function getCalificacionUsuario(usuarioId: string) {
+    const propias = calificaciones.filter((c) => c.proveedorId === usuarioId);
+    if (propias.length === 0) return null;
+    const promedio = propias.reduce((acc, c) => acc + c.estrellas, 0) / propias.length;
+    return { promedio, cantidad: propias.length };
+  }
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroRol, setFiltroRol] = useState('');
@@ -398,6 +407,9 @@ export default function AdminUsuarios() {
                         Rol
                       </th>
                       <th className="px-4 py-3 text-xs font-semibold text-ep-text-muted uppercase tracking-wide">
+                        Calificación
+                      </th>
+                      <th className="px-4 py-3 text-xs font-semibold text-ep-text-muted uppercase tracking-wide">
                         Estado
                       </th>
                       <th
@@ -429,6 +441,16 @@ export default function AdminUsuarios() {
                           <td className="px-4 py-3 text-ep-text-secondary">{u.empresa ?? '—'}</td>
                           <td className="px-4 py-3">
                             <Badge color={ROL_COLOR[u.rol]}>{ROL_LABEL[u.rol]}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-ep-text-secondary">
+                            {u.rol === 'proveedor'
+                              ? (() => {
+                                  const calif = getCalificacionUsuario(u.id);
+                                  return calif
+                                    ? `⭐ ${calif.promedio.toFixed(1)} · ${calif.cantidad} reseña${calif.cantidad !== 1 ? 's' : ''}`
+                                    : '-';
+                                })()
+                              : '-'}
                           </td>
                           <td className="px-4 py-3 relative">
                             <button

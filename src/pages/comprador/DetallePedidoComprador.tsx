@@ -6,6 +6,7 @@ import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
 import { useNotificacionesStore } from '../../store/useNotificacionesStore';
+import { useCalificacionesStore } from '../../store/useCalificacionesStore';
 import { formatFecha, formatARS } from '../../utils/formatters';
 import type { Cotizacion } from '../../types';
 
@@ -73,6 +74,7 @@ export default function DetallePedidoComprador() {
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
   const ordenes = useOrdenesStore((s) => s.ordenes);
+  const calificaciones = useCalificacionesStore((s) => s.calificaciones);
   const aceptarCotizacion = useCotizacionesStore((s) => s.aceptarCotizacion);
   const rechazarCotizacion = useCotizacionesStore((s) => s.rechazarCotizacion);
   const iniciarNegociacionCotizacion = useCotizacionesStore((s) => s.iniciarNegociacionCotizacion);
@@ -119,6 +121,13 @@ export default function DetallePedidoComprador() {
         : null,
     [todasCotizacionesPedido],
   );
+
+  function getCalificacionProveedor(proveedorId: string) {
+    const propias = calificaciones.filter((c) => c.proveedorId === proveedorId);
+    if (propias.length === 0) return null;
+    const promedio = propias.reduce((acc, c) => acc + c.estrellas, 0) / propias.length;
+    return { promedio, cantidad: propias.length };
+  }
 
   const hayFiltrosCot = filtroEstadoCot || filtroProveedor || ordenPrecio;
 
@@ -405,7 +414,7 @@ export default function DetallePedidoComprador() {
                       ].join(' ')}
                     >
                       <td className="px-3 py-2.5 font-medium text-ep-text-primary">
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 flex-wrap">
                           {cot.proveedorNombre}
                           {esMejorPrecio && !esEnNegociacion && (
                             <span className="bg-ep-green text-white text-[10px] px-2 py-0.5 rounded-full">
@@ -418,6 +427,18 @@ export default function DetallePedidoComprador() {
                             </span>
                           )}
                         </span>
+                        {(() => {
+                          const calif = getCalificacionProveedor(cot.proveedorId);
+                          return calif ? (
+                            <span className="text-[10px] text-ep-text-muted font-normal">
+                              ⭐ {calif.promedio.toFixed(1)} ({calif.cantidad} calificación{calif.cantidad !== 1 ? 'es' : ''})
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-ep-text-disabled font-normal">
+                              Sin calificaciones aún
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono text-ep-text-primary">
                         {formatARS(cot.precio)}

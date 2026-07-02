@@ -16,7 +16,8 @@ export type TipoNotificacion =
   | 'orden_entregada'
   | 'orden_pago_confirmado'
   | 'orden_cerrada'
-  | 'orden_disputada';
+  | 'orden_disputada'
+  | 'calificacion_recibida';
 
 export interface Notificacion {
   id: string;

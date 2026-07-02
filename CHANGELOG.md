@@ -2,6 +2,28 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### Etapa 7 — 2026-07-01
+#### Added — Sistema de calificaciones, StarRating, promedio por proveedor, panel admin
+
+- `db.json` *(modificado)* — agrega colección `calificaciones: []`.
+- `src/types/index.ts` *(modificado)* — agrega interfaz `Calificacion` (`id`, `ordenId`, `pedidoId`, `compradorId`, `proveedorId`, `proveedorNombre`, `estrellas`, `comentario?`, `fechaCreacion`); agrega campos opcionales `calificacionId?` y `calificado?` a `Orden`.
+- `src/services/api.ts` *(modificado)* — agrega `calificacionesApi` (`getAll`, `getByProveedor`, `getByOrden`, `create`) con comentario de migración a Supabase, siguiendo el mismo patrón que `usuariosApi`.
+- `src/store/useCalificacionesStore.ts` *(nuevo)* — store de calificaciones: `calificaciones: Calificacion[]`, `cargarCalificaciones`, `crearCalificacion`, y tres selectores derivados (`getCalificacionesByProveedor`, `getPromedioProveedor`, `getCalificacionByOrden`) que leen sobre el estado actual sin disparar fetch.
+- `src/store/useOrdenesStore.ts` *(modificado)* — agrega acción `marcarCalificada(ordenId, calificacionId)` que hace `PATCH {calificado:true, calificacionId}`.
+- `src/store/useCotizacionesStore.ts` *(modificado)* — agrega acción `actualizarCalificacionProveedor(cotizacionId, promedio)` que hace `PATCH {calificacionProveedor}`; agrega `calificado: false` por defecto al construir la `Orden` en `aceptarCotizacion`.
+- `src/store/useNotificacionesStore.ts` *(modificado)* — agrega tipo `'calificacion_recibida'` a `TipoNotificacion`.
+- `src/components/ui/StarRating.tsx` *(nuevo)* — componente reutilizable de estrellas, modo display (decimales, medias estrellas) y modo interactivo (hover + click), 3 tamaños, color progresivo por cantidad de estrellas seleccionadas/hovereadas. Exportado desde el barrel `src/components/ui/index.ts`.
+- `src/components/ordenes/OrdenCard.tsx` *(modificado)* — reemplaza el placeholder "Calificar (próximamente)" por el flujo real: botón "Calificar proveedor" (`onCalificar`) si `!orden.calificado`, o badge con `StarRating` si ya fue calificada. Solo visible para `rol === 'comprador'` en órdenes `cerrado`.
+- `src/pages/comprador/MisOrdenesComprador.tsx` *(modificado)* — agrega modal de calificación completo: selector de estrellas interactivo, label contextual por cantidad de estrellas, textarea de comentario opcional (máx. 300 chars), envío que crea la calificación, marca la orden como calificada, recalcula y persiste el promedio en la cotización ganadora, notifica al proveedor y dispara un toast de confirmación.
+- `src/pages/proveedor/MisCotizacionesProveedor.tsx` *(modificado)* — para cotizaciones `aceptada`, muestra la calificación específica de esa venta (estrellas + comentario) si existe, o "Sin calificación aún".
+- `src/pages/proveedor/DetallePedidoProveedor.tsx` *(modificado)* — agrega sección "Tu calificación en este pedido" cuando la orden propia está `cerrado` y `calificado`.
+- `src/pages/comprador/DetallePedidoComprador.tsx` *(modificado)* — en la tabla de cotizaciones recibidas, muestra el promedio de calificaciones del proveedor (`⭐ X.X (N calificaciones)`) o "Sin calificaciones aún".
+- `src/pages/admin/DashboardAdmin.tsx` *(modificado)* — agrega StatCard "Calificaciones" con el total recibido en la plataforma y el promedio global como métrica secundaria.
+- `src/pages/admin/AdminUsuarios.tsx` *(modificado)* — agrega columna "Calificación" en la tabla, visible para usuarios con `rol === 'proveedor'` (promedio + cantidad de reseñas, o "-").
+- `src/router/AppRouter.tsx` *(modificado)* — agrega `useCalificacionesStore.getState().cargarCalificaciones()` al polling global de 5s.
+- `src/components/layout/NotificacionesPanel.tsx` *(modificado)* — agrega ícono/color para el nuevo tipo `calificacion_recibida`.
+- `src/components/ui/ToastContainer.tsx` *(modificado)* — agrega el evento `calificacion-enviada-toast` (reutiliza el tipo visual `estado_cambio`) para el toast de confirmación tras calificar.
+
 ### Etapa 6b — 2026-07-01
 #### Added — ABM enterprise de usuarios, bcryptjs, auth desde db.json, preparado para Supabase
 

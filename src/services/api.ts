@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import type { Pedido, Cotizacion, Orden, MensajePedido, Usuario } from '../types';
+import type { Pedido, Cotizacion, Orden, MensajePedido, Usuario, Calificacion } from '../types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
@@ -356,5 +356,56 @@ export const usuariosApi = {
     if (!valido) return null;
     const { passwordHash: _passwordHash, ...usuarioSeguro } = encontrado;
     return usuarioSeguro;
+  },
+};
+
+// ─── Calificaciones ────────────────────────────────────────────────────────
+// SUPABASE MIGRATION: reemplazar el cuerpo de cada función por el cliente de Supabase.
+// Las firmas no cambian. Ver ANTIGRAVITY.md sección "Migración Supabase".
+
+export const calificacionesApi = {
+  async getAll(): Promise<Calificacion[]> {
+    try {
+      const res = await fetch(`${BASE_URL}/calificaciones`);
+      return await res.json();
+    } catch (e) {
+      console.error('api.calificacionesApi.getAll:', e);
+      return [];
+    }
+  },
+
+  async getByProveedor(proveedorId: string): Promise<Calificacion[]> {
+    try {
+      const res = await fetch(`${BASE_URL}/calificaciones?proveedorId=${proveedorId}`);
+      return await res.json();
+    } catch (e) {
+      console.error('api.calificacionesApi.getByProveedor:', e);
+      return [];
+    }
+  },
+
+  async getByOrden(ordenId: string): Promise<Calificacion | null> {
+    try {
+      const res = await fetch(`${BASE_URL}/calificaciones?ordenId=${ordenId}`);
+      const lista: Calificacion[] = await res.json();
+      return lista[0] ?? null;
+    } catch (e) {
+      console.error('api.calificacionesApi.getByOrden:', e);
+      return null;
+    }
+  },
+
+  async create(data: Omit<Calificacion, 'id' | 'fechaCreacion'>): Promise<Calificacion> {
+    const nueva: Calificacion = {
+      ...data,
+      id: crypto.randomUUID(),
+      fechaCreacion: new Date().toISOString(),
+    };
+    const res = await fetch(`${BASE_URL}/calificaciones`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nueva),
+    });
+    return await res.json();
   },
 };

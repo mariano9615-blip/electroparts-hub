@@ -15,6 +15,7 @@ interface OrdenesState {
   abrirDisputa: (ordenId: string, observacion: string) => Promise<void>;
   cerrarOrden: (ordenId: string) => Promise<void>;
   resolverDisputa: (ordenId: string, resolucion: string) => Promise<void>;
+  marcarCalificada: (ordenId: string, calificacionId: string) => Promise<void>;
 }
 
 function getOrden(ordenes: Orden[], id: string): Orden | undefined {
@@ -198,5 +199,13 @@ export const useOrdenesStore = create<OrdenesState>((set, get) => ({
       mensaje: `El administrador resolvió una disputa en una de tus órdenes`,
       entidadId: ordenId,
     });
+  },
+
+  marcarCalificada: async (ordenId, calificacionId) => {
+    const patch: Partial<Orden> = { calificado: true, calificacionId };
+    await api.updateOrden(ordenId, patch);
+    set((state) => ({
+      ordenes: state.ordenes.map((o) => (o.id === ordenId ? { ...o, ...patch } : o)),
+    }));
   },
 }));

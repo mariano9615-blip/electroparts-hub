@@ -16,6 +16,7 @@ interface CotizacionesState {
   cancelarNegociacionCotizacion: (cotizacionId: string) => void;
   eliminarCotizacion: (id: string) => void;
   eliminarCotizacionesByPedidoId: (pedidoId: string) => void;
+  actualizarCalificacionProveedor: (cotizacionId: string, promedio: number) => Promise<void>;
 }
 
 export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
@@ -55,6 +56,7 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
       fechaConfirmacion: new Date().toISOString(),
       chatHabilitado: true,
       estadoPago: 'pendiente',
+      calificado: false,
     };
 
     (async () => {
@@ -150,5 +152,14 @@ export const useCotizacionesStore = create<CotizacionesState>((set, get) => ({
         }));
       })
       .catch((e) => console.error('eliminarCotizacionesByPedidoId:', e));
+  },
+
+  actualizarCalificacionProveedor: async (cotizacionId, promedio) => {
+    await api.updateCotizacion(cotizacionId, { calificacionProveedor: promedio });
+    set((state) => ({
+      cotizaciones: state.cotizaciones.map((c) =>
+        c.id === cotizacionId ? { ...c, calificacionProveedor: promedio } : c,
+      ),
+    }));
   },
 }));

@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { IconArrowLeft, IconAlertCircle, IconClock } from '@tabler/icons-react';
-import { Badge, Chat, EmptyState, PedidoStepper } from '../../components/ui';
+import { Badge, Chat, EmptyState, PedidoStepper, StarRating } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
+import { useOrdenesStore } from '../../store/useOrdenesStore';
+import { useCalificacionesStore } from '../../store/useCalificacionesStore';
 import { formatFecha, formatARS } from '../../utils/formatters';
 import { PROV_IDS } from '../../utils/constants';
 
@@ -31,6 +33,8 @@ export default function DetallePedidoProveedor() {
 
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
+  const ordenes = useOrdenesStore((s) => s.ordenes);
+  const calificaciones = useCalificacionesStore((s) => s.calificaciones);
 
   const pedido = pedidos.find((p) => p.id === id);
 
@@ -75,6 +79,14 @@ export default function DetallePedidoProveedor() {
   const ganadorSoyYo =
     cotizacionAceptada !== null &&
     (PROV_IDS as readonly string[]).includes(cotizacionAceptada.proveedorId);
+
+  const ordenPropia = ganadorSoyYo
+    ? (ordenes.find((o) => o.pedidoId === pedido.id) ?? null)
+    : null;
+  const calificacionRecibida =
+    ordenPropia?.estado === 'cerrado' && ordenPropia.calificado
+      ? (calificaciones.find((c) => c.ordenId === ordenPropia.id) ?? null)
+      : null;
 
   return (
     <div>
@@ -148,6 +160,24 @@ export default function DetallePedidoProveedor() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tu calificación en este pedido */}
+      {calificacionRecibida && (
+        <div className="bg-ep-surface border border-ep-border rounded-lg p-5 mb-6">
+          <p className="text-xs font-bold text-ep-text-muted uppercase tracking-widest border-b border-ep-border pb-2.5 mb-4">
+            Tu calificación en este pedido
+          </p>
+          <StarRating value={calificacionRecibida.estrellas} size="md" showValue />
+          {calificacionRecibida.comentario && (
+            <p className="text-sm text-ep-text-secondary leading-relaxed mt-3">
+              "{calificacionRecibida.comentario}"
+            </p>
+          )}
+          <p className="text-[11px] text-ep-text-muted mt-2">
+            Calificado el {formatFecha(calificacionRecibida.fechaCreacion)}
+          </p>
         </div>
       )}
 

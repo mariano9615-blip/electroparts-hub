@@ -1,7 +1,43 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (Etapa 6b — ABM usuarios enterprise)
+Última actualización: 2026-07-01 (Etapa 7 — sistema de calificaciones)
 Rama: mdemichelis
+
+---
+
+## RESUMEN Etapa 7 — Archivos clave modificados
+
+Sistema de calificaciones: el comprador califica al proveedor cuando una orden queda `cerrado`. Cierra el ciclo de negocio (Pedido → Cotización → Orden → **Calificación**).
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `db.json` | + colección `calificaciones: []` | 1 (raíz del documento) |
+| `src/types/index.ts` | + interfaz `Calificacion`; + `calificacionId?`, `calificado?` en `Orden` | 68 (`calificacionId`/`calificado` en `Orden`), 72–81 (`interface Calificacion`) |
+| `src/services/api.ts` | + `calificacionesApi` (4 funciones) con comentario de migración a Supabase, mismo patrón que `usuariosApi` | 2 (import tipo `Calificacion`), 362–411 (`calificacionesApi` completo) |
+| `src/store/useCalificacionesStore.ts` (**nuevo**, 50 líneas) | Store: `calificaciones[]`, `cargarCalificaciones`, `crearCalificacion`, 3 selectores derivados sin fetch | 1–50 (completo) |
+| `src/store/useOrdenesStore.ts` (modificado) | + acción `marcarCalificada(ordenId, calificacionId)` — `PATCH {calificado:true, calificacionId}` | 18 (firma), 204–210 (implementación) |
+| `src/store/useCotizacionesStore.ts` (modificado) | + acción `actualizarCalificacionProveedor(cotizacionId, promedio)`; + `calificado: false` por defecto al construir `Orden` en `aceptarCotizacion` | 19 (firma), 59 (`calificado: false`), 157–163 (implementación) |
+| `src/store/useNotificacionesStore.ts` (modificado) | + tipo `'calificacion_recibida'` a `TipoNotificacion` | 19 |
+| `src/components/ui/StarRating.tsx` (**nuevo**, 58 líneas) | Estrellas display/interactivo, 3 tamaños, color progresivo, medias estrellas en modo display | 1–58 (completo) |
+| `src/components/ui/index.ts` (modificado) | + export `StarRating` | 16 |
+| `src/components/ordenes/OrdenCard.tsx` (modificado) | Reemplaza placeholder "próximamente" por flujo real: botón "Calificar proveedor" o badge con `StarRating`; + props `calificacion?`, `onCalificar?` | 24–28 (props), 62–63 (destructuring), 110–128 (banner orden cerrada) |
+| `src/pages/comprador/MisOrdenesComprador.tsx` (modificado) | Modal de calificación completo: estrellas + label contextual + textarea 300 chars; `handleEnviarCalificacion` orquesta crear calificación → marcar orden → recalcular promedio → PATCH cotización → notificar → toast | 15–21 (`LABEL_ESTRELLAS`), función `abrirModalCalificar`/`handleEnviarCalificacion`, modal JSX al final del archivo |
+| `src/pages/proveedor/MisCotizacionesProveedor.tsx` (modificado) | Cotizaciones `aceptada` muestran la calificación de esa venta específica (vía `orden.cotizacionId === cot.id` → `getCalificacionByOrden`) o "Sin calificación aún" | función `getCalificacionCotizacion`, bloque condicional bajo la fila de cada cotización |
+| `src/pages/proveedor/DetallePedidoProveedor.tsx` (modificado) | + sección "Tu calificación en este pedido" si `ordenPropia.estado === 'cerrado' && calificado` | `ordenPropia`/`calificacionRecibida`, bloque JSX antes del `<Chat>` |
+| `src/pages/comprador/DetallePedidoComprador.tsx` (modificado) | Tabla de cotizaciones: promedio de calificaciones del proveedor (`⭐ X.X (N calificaciones)`) o "Sin calificaciones aún" | función `getCalificacionProveedor`, celda de proveedor en la tabla |
+| `src/pages/admin/DashboardAdmin.tsx` (modificado) | + StatCard "Calificaciones" (total + promedio global como `sub`) | `promedioGlobal`, 5ta `StatCard` del grid |
+| `src/pages/admin/AdminUsuarios.tsx` (modificado) | + columna "Calificación" en la tabla, solo para `rol === 'proveedor'` | función `getCalificacionUsuario`, `<th>Calificación</th>`, celda correspondiente |
+| `src/router/AppRouter.tsx` (modificado) | + `useCalificacionesStore.getState().cargarCalificaciones()` al polling global de 5s | import, dentro de `cargarTodo()` |
+| `src/components/layout/NotificacionesPanel.tsx` (modificado) | + ícono/color para `calificacion_recibida` en `ICONOS_TIPO`/`COLORES_ICONO` | import `IconStarFilled`, entradas en ambos mapas |
+| `src/components/ui/ToastContainer.tsx` (modificado) | + evento `calificacion-enviada-toast` (reutiliza tipo visual `estado_cambio`) | entrada en `EVENTOS` |
+
+### Lógica condicional clave — Etapa 7
+
+- `useCalificacionesStore` selectores (`getPromedioProveedor`, `getCalificacionByOrden`, `getCalificacionesByProveedor`) son funciones planas que leen `get()` en el momento de la llamada — **no se usan como selector de Zustand** (`useStore((s) => s.getX(id))` crearía un array/objeto nuevo en cada render). El patrón correcto: suscribirse al array `calificaciones` de forma reactiva (`useCalificacionesStore((s) => s.calificaciones)`) para forzar el re-render, y llamar a la función auxiliar de forma imperativa (`useCalificacionesStore.getState().getX(id)`) dentro del render o de un handler.
+- `MisOrdenesComprador.tsx` `handleEnviarCalificacion()`: (1) `crearCalificacion()` — al resolver, la calificación ya está en el store; (2) busca la calificación recién creada vía `getCalificacionByOrden(orden.id)` para obtener su `id` (el store no retorna el objeto creado); (3) `marcarOrdenCalificada()`; (4) recalcula el promedio del proveedor con `getPromedioProveedor()` (ya incluye la nueva calificación) y lo persiste en la cotización ganadora vía `actualizarCalificacionProveedor()`; (5) notifica al proveedor; (6) dispara el toast `calificacion-enviada-toast`.
+- `OrdenCard.tsx`: el banner de orden cerrada solo se renderiza para `rol === 'comprador'`; dentro, alterna entre botón "Calificar proveedor" (si `!orden.calificado`) y badge con `StarRating` (si `orden.calificado`, usando la prop `calificacion` pasada por el padre).
+- `MisCotizacionesProveedor.tsx` `getCalificacionCotizacion()`: solo aplica a `cot.estado === 'aceptada'`; encuentra la `Orden` vía `orden.cotizacionId === cot.id` (no vía `orden.pedidoId`, porque puede haber múltiples cotizaciones/órdenes históricas por pedido) y de ahí la `Calificacion` vía `ordenId`.
+- Regla de negocio: una calificación por orden, solo el comprador. Ver ANTIGRAVITY.md sección 7, regla 18.
 
 ---
 

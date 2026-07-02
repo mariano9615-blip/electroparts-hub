@@ -18,6 +18,7 @@ const EVENTOS: {
   { nombre: 'cotizacion-negociacion-toast', tipo: 'cotizacion_negociacion', sonido: 'cotizacion' },
   { nombre: 'mensaje-nuevo-toast', tipo: 'mensaje_nuevo', sonido: 'mensaje' },
   { nombre: 'estado-pedido-toast', tipo: 'estado_cambio', sonido: null },
+  { nombre: 'calificacion-enviada-toast', tipo: 'estado_cambio', sonido: null },
 ];
 
 export function ToastContainer() {

@@ -65,6 +65,20 @@ export interface Orden {
   observacionDisputa?: string;
   resolucionDisputa?: string;
   resolvedBy?: string;
+  calificacionId?: string;
+  calificado?: boolean;
+}
+
+export interface Calificacion {
+  id: string;
+  ordenId: string;
+  pedidoId: string;
+  compradorId: string;
+  proveedorId: string;
+  proveedorNombre: string;
+  estrellas: number;
+  comentario?: string;
+  fechaCreacion: string;
 }
 
 export interface MensajePedido {

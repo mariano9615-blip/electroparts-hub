@@ -69,7 +69,7 @@ activo: boolean         fechaCreacion: string (ISO)   ultimaModificacion: string
 ```
 `passwordHash` nunca sale de `src/services/api.ts` hacia componentes o el store `useUsuariosStore` (que tipa su array como `Omit<Usuario, 'passwordHash'>[]`). `usuariosApi.validateCredentials()` es la única función que compara el hash (vía `bcrypt.compare`) y también devuelve el usuario sin `passwordHash`, usado directamente por `useAuthStore`.
 
-**db.json collections:** `usuarios` · `pedidos` · `cotizaciones` · `ordenes` · `notificaciones` · `mensajes`
+**db.json collections:** `usuarios` · `pedidos` · `cotizaciones` · `ordenes` · `notificaciones` · `mensajes` · `calificaciones`
 
 **Pedido**
 ```
@@ -103,6 +103,17 @@ fechaPagoConfirmado?: string (ISO)                 // seteado al confirmar pago
 observacionDisputa?: string                        // texto de la disputa abierta por el comprador
 resolucionDisputa?: string                         // texto de resolución cargado por el admin (Etapa 6)
 resolvedBy?: string                                // 'admin' — quién resolvió la disputa (Etapa 6)
+calificacionId?: string                            // referencia a la Calificacion creada (Etapa 7)
+calificado?: boolean                               // true una vez que el comprador calificó (Etapa 7, default false)
+```
+
+**Calificacion (Etapa 7)**
+```
+id: string           ordenId: string        pedidoId: string
+compradorId: string  proveedorId: string    proveedorNombre: string
+estrellas: number    // 1 a 5
+comentario?: string  // opcional, máximo 300 caracteres
+fechaCreacion: string (ISO)
 ```
 
 **MensajePedido**
@@ -123,7 +134,7 @@ fecha: string (ISO)    leida: boolean   rolDestino: 'comprador'|'proveedor'   en
 - `EstadoCotizacion`: `'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada'`
 - `EstadoOrden`: `'confirmada' | 'en_preparacion' | 'enviado' | 'entregado' | 'cerrado' | 'disputada'`
 - `EstadoPago`: `'pendiente' | 'en_proceso' | 'confirmado'`
-- `TipoNotificacion`: `'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada' | 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio' | 'orden_en_preparacion' | 'orden_enviada' | 'orden_entregada' | 'orden_pago_confirmado' | 'orden_cerrada' | 'orden_disputada'`
+- `TipoNotificacion`: `'nueva_cotizacion' | 'pedido_adjudicado' | 'orden_confirmada' | 'nueva_orden' | 'cotizacion_aceptada' | 'cotizacion_en_negociacion' | 'cotizacion_rechazada' | 'mensaje_nuevo' | 'estado_pedido_cambio' | 'orden_en_preparacion' | 'orden_enviada' | 'orden_entregada' | 'orden_pago_confirmado' | 'orden_cerrada' | 'orden_disputada' | 'calificacion_recibida'`
 
 ---
 
@@ -159,6 +170,9 @@ entregado + estadoPago=confirmado → cerrado  (automático)
 | `entregado → cerrado` | automático | `PATCH /ordenes/:id` | `estadoPago === 'confirmado'` al confirmar entrega, o entregado al confirmar pago |
 | `estadoPago: pendiente → confirmado` | proveedor (modal, comprobante opcional) | `PATCH /ordenes/:id` con `{estadoPago, comprobantePago?, fechaPagoConfirmado}` | — |
 | `* → disputada` | comprador (modal, observación ≥20 chars) | `PATCH /ordenes/:id` con `{estado, observacionDisputa}` | estado ∈ {confirmada, en_preparacion, enviado} |
+| `calificado: false → true` | comprador (modal de calificación) | `POST /calificaciones` + `PATCH /ordenes/:id` con `{calificado, calificacionId}` + `PATCH /cotizaciones/:id` con `{calificacionProveedor}` | `estado === 'cerrado'` (Etapa 7) |
+
+Calificación (Etapa 7) — paso final y opcional del ciclo, no bloquea ni transiciona el `estado` de la orden. Solo el comprador puede calificar, una única vez por orden (`orden.calificado !== true`), solo cuando `orden.estado === 'cerrado'`. Ver regla 18 en la sección 7.
 
 ---
 
@@ -173,6 +187,7 @@ entregado + estadoPago=confirmado → cerrado  (automático)
 | useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden`, `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden`, `resolverDisputa` (Etapa 6, uso admin) |
 | useMensajesStore | useMensajesStore.ts | `mensajesPorPedido: Record<pedidoId, MensajePedido[]>` vía API | `cargarMensajes`, `cargarTodosLosMensajes`, `enviarMensaje`, `marcarMensajesLeidos`, `limpiarPedidoActivo` |
 | useNotificacionesStore | useNotificacionesStore.ts | `Notificacion[]` vía API | `cargarDatos`, `agregarNotificacion`, `marcarLeida`, `marcarTodasLeidas`, `eliminarNotificacion`, `limpiarTodas` |
+| useCalificacionesStore | useCalificacionesStore.ts | `Calificacion[]` vía API (Etapa 7) | `cargarCalificaciones`, `crearCalificacion`; selectores derivados `getCalificacionesByProveedor(proveedorId)`, `getPromedioProveedor(proveedorId)` (retorna `null` sin calificaciones), `getCalificacionByOrden(ordenId)` — leen `get()` sobre el estado actual, no hacen fetch |
 
 **Etapa 6 — `useRolStore` fue eliminado.** El rol vive únicamente en `useAuthStore` (`useAuthStore((s) => s.rol)`), determinado por el usuario logueado. Todos los consumidores que antes leían `useRolStore` (Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel, Chat, useMensajesStore, AppRouter) ahora leen `useAuthStore`.
 
@@ -290,6 +305,7 @@ Comprador y proveedor comparten el componente `Sidebar.tsx`; ambos muestran arri
 15. **Admin de solo lectura salvo excepciones** — todas las vistas `/admin/*` muestran datos de todos los compradores/proveedores sin acciones de negocio, excepto `AdminDisputas` (botón "Resolver disputa" → `useOrdenesStore.getState().resolverDisputa()`) y `AdminUsuarios` (ABM completo de usuarios vía `useUsuariosStore`).
 16. **Protección del usuario admin (Etapa 6b)** — el usuario con `rol === 'admin'` no puede ser eliminado ni desactivado bajo ninguna circunstancia. Se valida en dos capas: `useUsuariosStore.eliminarUsuario()` y `toggleActivo()` no-opean con `console.warn` si el target es admin; y en `AdminUsuarios.tsx` los íconos de eliminar y el badge de estado quedan `disabled` con tooltip "El administrador no puede ser eliminado ni desactivado". El admin tampoco se puede crear desde el panel — el `Select` de rol del formulario de alta solo ofrece `comprador`/`proveedor`.
 17. **`passwordHash` nunca sale de la capa de servicios hacia el store** — `src/services/api.ts` (`usuariosApi.getAll/getById/create/update`) puede devolver el objeto `Usuario` completo (incluye `passwordHash`), pero `useUsuariosStore` lo omite siempre al guardar en su estado (`const { passwordHash, ...usuarioSeguro } = usuario`), por lo que ningún componente accede a él. `usuariosApi.validateCredentials()` es la única función que lee `passwordHash` para comparar con `bcrypt.compare()`, y devuelve el usuario ya sin ese campo.
+18. **Calificaciones: una por orden, solo el comprador (Etapa 7)** — el trigger "Calificar proveedor" solo aparece si `rol === 'comprador' && orden.estado === 'cerrado' && orden.calificado !== true`; una vez calificada, `orden.calificado` queda en `true` y el botón se reemplaza por el badge con `StarRating`. Se valida en la UI (`OrdenCard`/`MisOrdenesComprador`) y no hay endpoint ni acción de store para que el proveedor o el admin creen o borren calificaciones — el admin solo las lee (columna en `AdminUsuarios`, StatCard en `DashboardAdmin`).
 
 ---
 
@@ -351,3 +367,14 @@ export const usuariosApi = {
 3. Los timestamps siguen siendo ISO 8601 strings — formato nativo de las columnas `timestamptz` de Supabase.
 4. `passwordHash` deja de calcularse/compararse en el cliente con `bcryptjs` y pasa a resolverse del lado del servidor (Supabase Auth o una Edge Function) — es el único punto donde el cuerpo de `validateCredentials` cambia de forma no trivial; su firma (`Promise<Omit<Usuario, 'passwordHash'> | null>`) se mantiene igual para no tocar `useAuthStore`.
 5. Los stores (`useUsuariosStore`, `useAuthStore`) no requieren cambios: siguen llamando a `usuariosApi.*` con `try/catch` y actualizando su estado local con la respuesta.
+
+**Contrato de `calificacionesApi`** (Etapa 7, firmas estables, no cambian con la migración):
+```ts
+export const calificacionesApi = {
+  getAll: () => Promise<Calificacion[]>
+  getByProveedor: (proveedorId: string) => Promise<Calificacion[]>
+  getByOrden: (ordenId: string) => Promise<Calificacion | null>
+  create: (data: Omit<Calificacion, 'id' | 'fechaCreacion'>) => Promise<Calificacion>
+}
+```
+Sigue el mismo patrón que `usuariosApi`: mismo comentario `// SUPABASE MIGRATION` encima del objeto, mismo reemplazo de cuerpo por `supabase.from('calificaciones').select()...` sin tocar firmas ni el store `useCalificacionesStore`.

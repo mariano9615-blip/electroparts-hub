@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { IconClipboardList, IconFileInvoice, IconAlertTriangle, IconCircleCheck, IconInbox } from '@tabler/icons-react';
+import { IconClipboardList, IconFileInvoice, IconAlertTriangle, IconCircleCheck, IconInbox, IconStarFilled } from '@tabler/icons-react';
 import { StatCard, PageHeader, Badge, EmptyState } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
+import { useCalificacionesStore } from '../../store/useCalificacionesStore';
 import { formatARS, formatFecha, getLabelEstadoOrden } from '../../utils/formatters';
 import { COMPRADOR_ID } from '../../utils/constants';
 import type { Orden } from '../../types';
@@ -28,10 +29,16 @@ export default function DashboardAdmin() {
   const navigate = useNavigate();
   const pedidos = usePedidosStore((s) => s.pedidos);
   const ordenes = useOrdenesStore((s) => s.ordenes);
+  const calificaciones = useCalificacionesStore((s) => s.calificaciones);
 
   const ordenesActivas = ordenes.filter((o) => !['cerrado', 'disputada'].includes(o.estado));
   const disputasAbiertas = ordenes.filter((o) => o.estado === 'disputada');
   const ordenesCerradas = ordenes.filter((o) => o.estado === 'cerrado');
+
+  const promedioGlobal =
+    calificaciones.length > 0
+      ? calificaciones.reduce((acc, c) => acc + c.estrellas, 0) / calificaciones.length
+      : null;
 
   const montoTransaccionado = ordenes
     .filter((o) => o.estado !== 'disputada')
@@ -78,6 +85,13 @@ export default function DashboardAdmin() {
           icono={IconCircleCheck}
           color="amber"
           onClick={() => navigate('/admin/ordenes')}
+        />
+        <StatCard
+          label="Calificaciones"
+          value={calificaciones.length}
+          icono={IconStarFilled}
+          color="amber"
+          sub={promedioGlobal !== null ? `Promedio global: ⭐ ${promedioGlobal.toFixed(1)}` : 'Sin calificaciones aún'}
         />
       </div>
 

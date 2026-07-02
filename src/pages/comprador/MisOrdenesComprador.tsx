@@ -5,12 +5,24 @@ import {
   IconFilter,
   IconAlertTriangle,
 } from '@tabler/icons-react';
-import { PageHeader, EmptyState, Modal, Button, TextArea } from '../../components/ui';
+import { PageHeader, EmptyState, Modal, Button, TextArea, StarRating } from '../../components/ui';
 import { OrdenCard } from '../../components/ordenes/OrdenCard';
 import { useOrdenesStore } from '../../store/useOrdenesStore';
 import { usePedidosStore } from '../../store/usePedidosStore';
+import { useCotizacionesStore } from '../../store/useCotizacionesStore';
+import { useCalificacionesStore } from '../../store/useCalificacionesStore';
+import { useNotificacionesStore } from '../../store/useNotificacionesStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { COMPRADOR_ID } from '../../utils/constants';
 import type { Orden } from '../../types';
+
+const LABEL_ESTRELLAS: Record<number, string> = {
+  1: 'Muy mala experiencia',
+  2: 'Mala experiencia',
+  3: 'Experiencia regular',
+  4: 'Buena experiencia',
+  5: 'Excelente experiencia',
+};
 
 type Tab =
   | 'todas'
@@ -40,10 +52,20 @@ export default function MisOrdenesComprador() {
   const [obsRecepcion, setObsRecepcion] = useState('');
   const [cargando, setCargando] = useState(false);
 
+  const [modalCalificar, setModalCalificar] = useState<Orden | null>(null);
+  const [estrellas, setEstrellas] = useState(0);
+  const [comentario, setComentario] = useState('');
+  const [enviandoCalificacion, setEnviandoCalificacion] = useState(false);
+
   const ordenes = useOrdenesStore((s) => s.ordenes);
   const confirmarEntrega = useOrdenesStore((s) => s.confirmarEntrega);
   const abrirDisputa = useOrdenesStore((s) => s.abrirDisputa);
+  const marcarOrdenCalificada = useOrdenesStore((s) => s.marcarCalificada);
   const pedidos = usePedidosStore((s) => s.pedidos);
+  const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
+  const calificaciones = useCalificacionesStore((s) => s.calificaciones);
+  const crearCalificacion = useCalificacionesStore((s) => s.crearCalificacion);
+  const nombreComprador = useAuthStore((s) => s.nombre);
 
   const misOrdenes = [...ordenes]
     .filter((o) => o.compradorId === COMPRADOR_ID)
@@ -61,6 +83,68 @@ export default function MisOrdenesComprador() {
   function getPedidoTitulo(orden: Orden): string | undefined {
     if (!orden.pedidoId) return undefined;
     return pedidos.find((p) => p.id === orden.pedidoId)?.titulo;
+  }
+
+  function getCalificacionOrden(orden: Orden) {
+    if (!orden.calificado) return null;
+    return calificaciones.find((c) => c.ordenId === orden.id) ?? null;
+  }
+
+  function abrirModalCalificar(orden: Orden) {
+    setEstrellas(0);
+    setComentario('');
+    setModalCalificar(orden);
+  }
+
+  async function handleEnviarCalificacion() {
+    if (!modalCalificar || estrellas === 0) return;
+    setEnviandoCalificacion(true);
+    try {
+      const orden = modalCalificar;
+      const cotizacion = cotizaciones.find((c) => c.id === orden.cotizacionId);
+
+      await crearCalificacion({
+        ordenId: orden.id,
+        pedidoId: orden.pedidoId ?? '',
+        compradorId: orden.compradorId,
+        proveedorId: orden.proveedorId,
+        proveedorNombre: orden.proveedorNombre,
+        estrellas,
+        comentario: comentario.trim() || undefined,
+      });
+
+      const nuevaCalificacion = useCalificacionesStore.getState().getCalificacionByOrden(orden.id);
+      if (nuevaCalificacion) {
+        await marcarOrdenCalificada(orden.id, nuevaCalificacion.id);
+      }
+
+      const promedio = useCalificacionesStore.getState().getPromedioProveedor(orden.proveedorId);
+      if (cotizacion && promedio !== null) {
+        await useCotizacionesStore.getState().actualizarCalificacionProveedor(cotizacion.id, promedio);
+      }
+
+      useNotificacionesStore.getState().agregarNotificacion({
+        tipo: 'calificacion_recibida',
+        rolDestino: 'proveedor',
+        titulo: 'Recibiste una calificación',
+        mensaje: `${nombreComprador ?? 'Un comprador'} calificó tu servicio con ${estrellas} estrella${estrellas > 1 ? 's' : ''}`,
+        entidadId: orden.id,
+      });
+
+      window.dispatchEvent(
+        new CustomEvent('calificacion-enviada-toast', {
+          detail: {
+            id: `calificacion-${orden.id}`,
+            titulo: '¡Calificación enviada!',
+            subtitulo: 'Gracias por tu feedback.',
+          },
+        }),
+      );
+
+      setModalCalificar(null);
+    } finally {
+      setEnviandoCalificacion(false);
+    }
   }
 
   function getAccionesComprador(orden: Orden) {
@@ -180,6 +264,8 @@ export default function MisOrdenesComprador() {
                   : undefined
               }
               acciones={getAccionesComprador(orden)}
+              calificacion={getCalificacionOrden(orden)}
+              onCalificar={() => abrirModalCalificar(orden)}
             />
           ))}
         </div>
@@ -260,6 +346,54 @@ export default function MisOrdenesComprador() {
             error={obsDisputa.length > 0 && obsDisputa.length < 20 ? 'Mínimo 20 caracteres' : undefined}
           />
         </div>
+      </Modal>
+
+      {/* Modal: Calificar proveedor */}
+      <Modal
+        open={modalCalificar !== null}
+        onClose={() => setModalCalificar(null)}
+        title={`Calificá tu experiencia con ${modalCalificar?.proveedorNombre ?? ''}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" size="md" onClick={() => setModalCalificar(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              loading={enviandoCalificacion}
+              disabled={estrellas === 0}
+              onClick={handleEnviarCalificacion}
+            >
+              Enviar calificación
+            </Button>
+          </>
+        }
+      >
+        {modalCalificar && (
+          <div className="space-y-4">
+            <p className="text-sm text-ep-text-muted">
+              Pedido: {getPedidoTitulo(modalCalificar) ?? '—'}
+            </p>
+            <div className="flex flex-col items-center gap-2 py-2">
+              <StarRating value={estrellas} onChange={setEstrellas} size="lg" />
+              {estrellas > 0 && (
+                <p className="text-sm font-medium text-ep-text-primary">
+                  {LABEL_ESTRELLAS[estrellas]}
+                </p>
+              )}
+            </div>
+            <TextArea
+              label="Contanos más sobre tu experiencia (opcional)"
+              placeholder="Ej: Todo llegó a tiempo y en perfecto estado"
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value.slice(0, 300))}
+              rows={3}
+              hint={`${comentario.length}/300`}
+            />
+          </div>
+        )}
       </Modal>
     </div>
   );

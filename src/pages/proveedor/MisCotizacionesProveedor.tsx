@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { IconInbox, IconFilter, IconTrash } from '@tabler/icons-react';
-import { Badge, Button, EmptyState, Modal, PageHeader } from '../../components/ui';
+import { Badge, Button, EmptyState, Modal, PageHeader, StarRating } from '../../components/ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
+import { useOrdenesStore } from '../../store/useOrdenesStore';
+import { useCalificacionesStore } from '../../store/useCalificacionesStore';
 import { formatARS, formatFechaRelativa, getLabelEstadoCotizacion } from '../../utils/formatters';
 import { useState } from 'react';
 import type { Cotizacion } from '../../types';
@@ -35,6 +37,8 @@ export default function MisCotizacionesProveedor() {
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
   const eliminarCotizacion = useCotizacionesStore((s) => s.eliminarCotizacion);
+  const ordenes = useOrdenesStore((s) => s.ordenes);
+  const calificaciones = useCalificacionesStore((s) => s.calificaciones);
 
   const misCotizaciones = [...cotizaciones]
     .filter((c) => PROV_IDS.includes(c.proveedorId))
@@ -58,6 +62,13 @@ export default function MisCotizacionesProveedor() {
   });
 
   const pedidosMap = Object.fromEntries(pedidos.map((p) => [p.id, p]));
+
+  function getCalificacionCotizacion(cot: Cotizacion) {
+    if (cot.estado !== 'aceptada') return null;
+    const orden = ordenes.find((o) => o.cotizacionId === cot.id);
+    if (!orden) return null;
+    return calificaciones.find((c) => c.ordenId === orden.id) ?? null;
+  }
 
   return (
     <div>
@@ -109,6 +120,7 @@ export default function MisCotizacionesProveedor() {
             const pedido = pedidosMap[cot.pedidoId];
             const badgeColor = ESTADO_COLOR[cot.estado] ?? 'gray';
             const label = getLabelEstadoCotizacion(cot.estado, 'proveedor');
+            const calificacionCot = getCalificacionCotizacion(cot);
 
             return (
               <div
@@ -135,6 +147,25 @@ export default function MisCotizacionesProveedor() {
                       Enviada {formatFechaRelativa(cot.fechaCreacion)}
                     </span>
                   </div>
+                  {cot.estado === 'aceptada' && (
+                    <div className="mt-1.5">
+                      {calificacionCot ? (
+                        <div className="flex items-center gap-2">
+                          <StarRating value={calificacionCot.estrellas} size="sm" showValue />
+                          {calificacionCot.comentario && (
+                            <span
+                              className="text-[11px] text-ep-text-muted truncate max-w-[240px]"
+                              title={calificacionCot.comentario}
+                            >
+                              "{calificacionCot.comentario}"
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-ep-text-muted">Sin calificación aún</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Acciones */}

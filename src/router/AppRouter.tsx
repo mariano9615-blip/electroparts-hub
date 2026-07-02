@@ -7,6 +7,7 @@ import { useCotizacionesStore } from '../store/useCotizacionesStore';
 import { useOrdenesStore } from '../store/useOrdenesStore';
 import { useNotificacionesStore } from '../store/useNotificacionesStore';
 import { useMensajesStore } from '../store/useMensajesStore';
+import { useCalificacionesStore } from '../store/useCalificacionesStore';
 import { PROV_IDS } from '../utils/constants';
 import type { RolUsuario } from '../types';
 
@@ -280,6 +281,7 @@ export function AppRouter() {
       useCotizacionesStore.getState().cargarDatos();
       useOrdenesStore.getState().cargarDatos();
       useNotificacionesStore.getState().cargarDatos();
+      useCalificacionesStore.getState().cargarCalificaciones();
       // Agrupa TODOS los mensajes por pedidoId — detecta mensajes nuevos en cualquier
       // pedido (no solo el que está abierto) para poder mostrar toasts y badges en el menú de chats.
       useMensajesStore.getState().cargarTodosLosMensajes();
