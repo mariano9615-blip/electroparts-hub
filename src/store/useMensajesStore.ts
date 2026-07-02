@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { MensajePedido, Rol } from '../types';
-import { useRolStore } from './useRolStore';
+import { useAuthStore } from './useAuthStore';
 import * as api from '../services/api';
 
 // Referencia estable para pedidos sin mensajes todavía. Un `?? []` inline crearía un array
@@ -62,7 +62,7 @@ export const useMensajesStore = create<MensajesState>((set, get) => ({
     api.getMensajesByPedidoId(pedidoId).then((mensajes) => {
       if (get().pedidoActivoId !== pedidoId) return;
 
-      const miRol = useRolStore.getState().rol;
+      const miRol = useAuthStore.getState().rol;
       const tieneNoLeidos = mensajes.some((m) => m.autorRol !== miRol && m.leido === false);
 
       get().setMensajesPorPedido(pedidoId, mensajes);
@@ -87,7 +87,7 @@ export const useMensajesStore = create<MensajesState>((set, get) => ({
       return;
     }
 
-    const miRol = useRolStore.getState().rol;
+    const miRol = useAuthStore.getState().rol;
     const prev = get().mensajesPorPedido;
 
     const agrupados: Record<string, MensajePedido[]> = {};

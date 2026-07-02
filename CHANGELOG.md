@@ -2,6 +2,28 @@
 
 ## [Unreleased] — rama mdemichelis
 
+### v0.6.0 — 2026-07-01
+#### Added — Etapa 6 — Autenticación por rol, panel de administración, protección de rutas
+
+- `src/types/index.ts` *(modificado)* — agrega `RolUsuario = 'admin' | 'comprador' | 'proveedor'`; agrega campos opcionales `resolucionDisputa` y `resolvedBy` a `Orden`.
+- `src/store/useAuthStore.ts` *(refactorizado)* — reemplaza el login hardcodeado de un solo usuario admin por 3 usuarios fijos (`admin`/`comprador`/`proveedor`, contraseña `123456`); el store ahora guarda `{ autenticado, usuario, rol, login, logout }` y persiste `{ usuario, rol }` en `localStorage 'ep_auth'`.
+- `src/store/useRolStore.ts` *(eliminado)* — el rol vive únicamente en `useAuthStore`. Reemplazados todos sus usos por `useAuthStore((s) => s.rol)` en `AppRouter.tsx`, `Sidebar.tsx`, `TopBar.tsx`, `NotificacionesPanel.tsx`, `ChatsActivosPanel.tsx`, `Chat.tsx` y `useMensajesStore.ts`.
+- `src/utils/constants.ts` *(modificado)* — elimina `STORAGE_KEY_ROL` (dead code tras eliminar `useRolStore`).
+- `src/pages/Login.tsx` *(reescrito)* — agrega 3 botones de "Acceso rápido demo" que autocompletan usuario/contraseña y loguean directo; redirige según rol (`admin→/admin`, `comprador→/comprador`, `proveedor→/proveedor`).
+- `src/components/layout/Sidebar.tsx` *(refactorizado)* — elimina el toggle Comprador/Proveedor; agrega usuario logueado + badge de rol arriba, y botón de logout abajo.
+- `src/components/layout/SidebarAdmin.tsx` *(nuevo)* — sidebar exclusivo del admin: Dashboard, Pedidos, Órdenes, Disputas (con badge de cantidad abierta), Usuarios; badge ADMIN en rojo.
+- `src/components/layout/AppShell.tsx` *(modificado)* — elige entre `Sidebar` y `SidebarAdmin` según `useAuthStore((s) => s.rol)`.
+- `src/components/layout/TopBar.tsx` *(modificado)* — muestra el usuario real logueado (antes "Mi Empresa" hardcodeado) y un badge de rol con color por los 3 roles (admin=rojo, comprador=verde, proveedor=azul); oculta notificaciones y chats activos cuando el rol es admin.
+- `src/router/AppRouter.tsx` *(reescrito)* — reemplaza `LayoutProtegido`/`RutaProtegida` únicos por `LayoutPorRol({ rolRequerido })` por sección (`/admin`, `/comprador`, `/proveedor`): sin sesión → `/login`; sesión con rol distinto → redirige al dashboard propio. Agrega rutas `/admin`, `/admin/pedidos`, `/admin/ordenes`, `/admin/disputas`, `/admin/usuarios`. El polling de 5s ahora chequea el rol en cada tick y no vuelve a cargar datos si es `admin` (sí hay una carga inicial única al montar).
+- `src/store/useOrdenesStore.ts` *(modificado)* — agrega acción `resolverDisputa(ordenId, resolucion)`: PATCH `{ estado: 'cerrado', resolucionDisputa, resolvedBy: 'admin' }` y notifica a comprador y proveedor.
+- `src/pages/admin/DashboardAdmin.tsx` *(nuevo)* — StatCards (total pedidos, órdenes activas, disputas abiertas, órdenes cerradas), monto total transaccionado (excluye órdenes disputadas), tabla de actividad reciente (últimas 5 órdenes).
+- `src/pages/admin/AdminPedidos.tsx` *(nuevo)* — tabla de todos los pedidos con filtro por estado; modal de detalle solo lectura.
+- `src/pages/admin/AdminOrdenes.tsx` *(nuevo)* — tabla de todas las órdenes con filtro por estado de orden y de pago; modal de detalle solo lectura.
+- `src/pages/admin/AdminDisputas.tsx` *(nuevo)* — lista de órdenes `disputada` con observación, comprador, proveedor, monto y fecha; modal "Resolver disputa" (favor comprador/proveedor + textarea) que llama `resolverDisputa`.
+- `src/pages/admin/AdminUsuarios.tsx` *(nuevo)* — lista solo lectura de los 3 usuarios fijos con badge "Activo"; botón "Agregar usuario" deshabilitado con tooltip "Próximamente".
+
+---
+
 ### v0.5.1 — 2026-07-01
 #### Added — Etapa 5a — Ciclo de vida de orden: preparación, envío, entrega, pago y disputa
 

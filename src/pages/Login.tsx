@@ -1,33 +1,60 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IconBolt, IconAlertCircle } from '@tabler/icons-react';
 import { Card, Input, Button } from '../components/ui';
 import { useAuthStore } from '../store/useAuthStore';
+import type { RolUsuario } from '../types';
+
+const RUTA_POR_ROL: Record<RolUsuario, string> = {
+  admin: '/admin',
+  comprador: '/comprador',
+  proveedor: '/proveedor',
+};
+
+const ACCESOS_RAPIDOS: { label: string; usuario: string }[] = [
+  { label: 'Entrar como Admin', usuario: 'admin' },
+  { label: 'Entrar como Comprador', usuario: 'comprador' },
+  { label: 'Entrar como Proveedor', usuario: 'proveedor' },
+];
 
 export default function Login() {
+  const navigate = useNavigate();
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [cargando, setCargando] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const intentarLogin = (usuarioLogin: string, passwordLogin: string) => {
     setError(false);
     setCargando(true);
 
     setTimeout(() => {
-      const ok = useAuthStore.getState().login(usuario, password);
-      if (!ok) {
-        setCargando(false);
-        setError(true);
-        // Aplicar shake y removerlo después de 400ms para que pueda repetirse
-        const card = cardRef.current;
-        if (card) {
-          card.classList.add('shake');
-          setTimeout(() => card.classList.remove('shake'), 400);
-        }
+      const ok = useAuthStore.getState().login(usuarioLogin, passwordLogin);
+      if (ok) {
+        const rol = useAuthStore.getState().rol!;
+        navigate(RUTA_POR_ROL[rol]);
+        return;
+      }
+      setCargando(false);
+      setError(true);
+      const card = cardRef.current;
+      if (card) {
+        card.classList.add('shake');
+        setTimeout(() => card.classList.remove('shake'), 400);
       }
     }, 600);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    intentarLogin(usuario, password);
+  };
+
+  const handleAccesoRapido = (usuarioDemo: string) => {
+    setUsuario(usuarioDemo);
+    setPassword('123456');
+    intentarLogin(usuarioDemo, '123456');
   };
 
   return (
@@ -83,6 +110,25 @@ export default function Login() {
               Ingresar
             </Button>
           </form>
+
+          <div className="mt-6 pt-5 border-t border-ep-border">
+            <p className="text-[10px] text-ep-text-muted text-center uppercase tracking-widest mb-2.5">
+              Acceso rápido demo
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {ACCESOS_RAPIDOS.map((acceso) => (
+                <button
+                  key={acceso.usuario}
+                  type="button"
+                  disabled={cargando}
+                  onClick={() => handleAccesoRapido(acceso.usuario)}
+                  className="w-full text-xs font-medium text-ep-text-secondary bg-ep-surface-raised hover:bg-ep-border rounded-lg py-1.5 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {acceso.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <p className="text-xs text-ep-text-muted text-center mt-6">
             ElectroParts Hub v0.1.0

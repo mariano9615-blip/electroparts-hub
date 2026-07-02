@@ -1,6 +1,7 @@
 // Tipos de dominio de ElectroParts Hub
 
 export type Rol = 'comprador' | 'proveedor';
+export type RolUsuario = 'admin' | 'comprador' | 'proveedor';
 
 export type EstadoPedido = 'abierto' | 'en_cotizacion' | 'en_negociacion' | 'adjudicado' | 'cancelado';
 export type EstadoCotizacion = 'pendiente' | 'en_negociacion' | 'aceptada' | 'rechazada';
@@ -62,6 +63,8 @@ export interface Orden {
   comprobantePago?: string;
   fechaPagoConfirmado?: string;
   observacionDisputa?: string;
+  resolucionDisputa?: string;
+  resolvedBy?: string;
 }
 
 export interface MensajePedido {

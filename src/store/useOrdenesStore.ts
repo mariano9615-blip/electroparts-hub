@@ -14,6 +14,7 @@ interface OrdenesState {
   confirmarPago: (ordenId: string, comprobantePago?: string) => Promise<void>;
   abrirDisputa: (ordenId: string, observacion: string) => Promise<void>;
   cerrarOrden: (ordenId: string) => Promise<void>;
+  resolverDisputa: (ordenId: string, resolucion: string) => Promise<void>;
 }
 
 function getOrden(ordenes: Orden[], id: string): Orden | undefined {
@@ -169,6 +170,32 @@ export const useOrdenesStore = create<OrdenesState>((set, get) => ({
       rolDestino: 'proveedor',
       titulo: 'Orden cerrada',
       mensaje: `La orden fue completada exitosamente`,
+      entidadId: ordenId,
+    });
+  },
+
+  resolverDisputa: async (ordenId, resolucion) => {
+    const patch: Partial<Orden> = {
+      estado: 'cerrado' as EstadoOrden,
+      resolucionDisputa: resolucion,
+      resolvedBy: 'admin',
+    };
+    await api.updateOrden(ordenId, patch);
+    set((state) => ({
+      ordenes: state.ordenes.map((o) => (o.id === ordenId ? { ...o, ...patch } : o)),
+    }));
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'orden_cerrada',
+      rolDestino: 'comprador',
+      titulo: 'Disputa resuelta',
+      mensaje: `El administrador resolvió la disputa de tu orden`,
+      entidadId: ordenId,
+    });
+    useNotificacionesStore.getState().agregarNotificacion({
+      tipo: 'orden_cerrada',
+      rolDestino: 'proveedor',
+      titulo: 'Disputa resuelta',
+      mensaje: `El administrador resolvió una disputa en una de tus órdenes`,
       entidadId: ordenId,
     });
   },

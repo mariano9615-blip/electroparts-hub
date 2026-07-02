@@ -21,7 +21,7 @@ src/
     ui/          # Button, Badge, Card, Input, TextArea, Select, Modal,
                  # Spinner, StatCard, EmptyState, PageHeader, Chat, Toast,
                  # ToastContainer, PedidoStepper  (barrel: index.ts)
-    layout/      # AppShell, Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel
+    layout/      # AppShell, Sidebar, SidebarAdmin, TopBar, NotificacionesPanel, ChatsActivosPanel
     pedidos/     # PedidoCard
     cotizaciones/# CotizacionCard, CotizacionForm
     ordenes/     # OrdenCard, OrdenStepper
@@ -31,7 +31,8 @@ src/
                  # DetallePedidoComprador, MisCotizacionesComprador, MisOrdenesComprador
     proveedor/   # DashboardProveedor, PedidosDisponibles, DetallePedidoProveedor,
                  # MisCotizacionesProveedor, MisOrdenesProveedor
-  store/         # useAuthStore, useRolStore, usePedidosStore, useCotizacionesStore,
+    admin/       # DashboardAdmin, AdminPedidos, AdminOrdenes, AdminDisputas, AdminUsuarios
+  store/         # useAuthStore, usePedidosStore, useCotizacionesStore,
                  # useOrdenesStore, useMensajesStore, useNotificacionesStore
   types/         # index.ts — todos los tipos e interfaces del dominio
   data/          # mockData.ts (PEDIDOS_INICIALES, COTIZACIONES_INICIALES, ORDENES_INICIALES)
@@ -45,6 +46,20 @@ db.json          # fuente de verdad de datos (JSON Server)
 ---
 
 ## 3. ENTIDADES Y DB.JSON
+
+**Autenticación y roles (Etapa 6)** — sin backend de auth, usuarios fijos hardcodeados en `useAuthStore.ts`:
+
+```
+type RolUsuario = 'admin' | 'comprador' | 'proveedor'
+```
+
+| Usuario | Contraseña | Rol | Acceso |
+|---|---|---|---|
+| admin | 123456 | admin | Panel de administración completo (`/admin/*`), solo lectura salvo resolución de disputas |
+| comprador | 123456 | comprador | Vistas de comprador (`/comprador/*`) |
+| proveedor | 123456 | proveedor | Vistas de proveedor (`/proveedor/*`) |
+
+El rol queda fijado por el usuario logueado — ya no existe un toggle de rol en la UI.
 
 **db.json collections:** `pedidos` · `cotizaciones` · `ordenes` · `notificaciones` · `mensajes`
 
@@ -78,6 +93,8 @@ fechaEntrega?: string (ISO)                        // seteado al confirmar entre
 comprobantePago?: string                           // texto libre: número de transferencia, CBU, etc.
 fechaPagoConfirmado?: string (ISO)                 // seteado al confirmar pago
 observacionDisputa?: string                        // texto de la disputa abierta por el comprador
+resolucionDisputa?: string                         // texto de resolución cargado por el admin (Etapa 6)
+resolvedBy?: string                                // 'admin' — quién resolvió la disputa (Etapa 6)
 ```
 
 **MensajePedido**
@@ -141,15 +158,16 @@ entregado + estadoPago=confirmado → cerrado  (automático)
 
 | Store | Archivo | Qué maneja | Acciones principales |
 |---|---|---|---|
-| useAuthStore | useAuthStore.ts | sesión (localStorage `ep_auth`) | `login()`, `logout()` |
-| useRolStore | useRolStore.ts | rol activo (localStorage `ep_rol`) | `setRol()` |
+| useAuthStore | useAuthStore.ts | sesión + rol (localStorage `ep_auth`) | `login(usuario, password)`, `logout()` |
 | usePedidosStore | usePedidosStore.ts | `Pedido[]` vía API | `cargarDatos`, `agregarPedido`, `actualizarEstadoPedido`, `incrementarCotizaciones`, `eliminarPedido`, `iniciarNegociacion`, `cancelarNegociacion`, `cancelarPedido` |
 | useCotizacionesStore | useCotizacionesStore.ts | `Cotizacion[]` vía API | `cargarDatos`, `agregarCotizacion`, `aceptarCotizacion`, `rechazarCotizacion`, `iniciarNegociacionCotizacion`, `cancelarNegociacionCotizacion`, `eliminarCotizacion`, `eliminarCotizacionesByPedidoId` |
-| useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden`, `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden` |
+| useOrdenesStore | useOrdenesStore.ts | `Orden[]` vía API | `cargarDatos`, `agregarOrden`, `actualizarEstadoOrden`, `marcarEnPreparacion`, `marcarEnviado`, `confirmarEntrega`, `confirmarPago`, `abrirDisputa`, `cerrarOrden`, `resolverDisputa` (Etapa 6, uso admin) |
 | useMensajesStore | useMensajesStore.ts | `mensajesPorPedido: Record<pedidoId, MensajePedido[]>` vía API | `cargarMensajes`, `cargarTodosLosMensajes`, `enviarMensaje`, `marcarMensajesLeidos`, `limpiarPedidoActivo` |
 | useNotificacionesStore | useNotificacionesStore.ts | `Notificacion[]` vía API | `cargarDatos`, `agregarNotificacion`, `marcarLeida`, `marcarTodasLeidas`, `eliminarNotificacion`, `limpiarTodas` |
 
-Todos los stores (excepto Auth y Rol) arrancan vacíos y se pueblan con `cargarDatos()` desde `AppRouter` al montar. Auth y Rol persisten en `localStorage` sin middleware.
+**Etapa 6 — `useRolStore` fue eliminado.** El rol vive únicamente en `useAuthStore` (`useAuthStore((s) => s.rol)`), determinado por el usuario logueado. Todos los consumidores que antes leían `useRolStore` (Sidebar, TopBar, NotificacionesPanel, ChatsActivosPanel, Chat, useMensajesStore, AppRouter) ahora leen `useAuthStore`.
+
+Todos los stores (excepto Auth) arrancan vacíos y se pueblan con `cargarDatos()` desde `AppRouter` al montar. Auth persiste en `localStorage` sin middleware.
 
 ---
 
@@ -174,9 +192,14 @@ Todos los stores (excepto Auth y Rol) arrancan vacíos y se pueblan con `cargarD
 | `/proveedor/mis-ventas` | MisOrdenesProveedor | proveedor | |
 | `/proveedor/pedidos` | → `/proveedor/explorar` | — | redirect |
 | `/proveedor/ordenes` | → `/proveedor/mis-ventas` | — | redirect |
-| `*` | → Navigate `/comprador` | — | |
+| `/admin` | DashboardAdmin | admin | métricas globales |
+| `/admin/pedidos` | AdminPedidos | admin | todos los pedidos, solo lectura |
+| `/admin/ordenes` | AdminOrdenes | admin | todas las órdenes, solo lectura |
+| `/admin/disputas` | AdminDisputas | admin | órdenes `disputada`; única acción admin: resolver |
+| `/admin/usuarios` | AdminUsuarios | admin | lista solo lectura de los 3 usuarios fijos |
+| `*` | → Navigate según rol (o `/login` si no autenticado) | — | |
 
-Chat vive dentro de `/comprador|proveedor/pedidos/:id` (componente `<Chat>`). Las rutas `/comprador/chat` y `/proveedor/chat` fueron eliminadas en v0.3.1.
+Chat vive dentro de `/comprador|proveedor/pedidos/:id` (componente `<Chat>`). Las rutas `/comprador/chat` y `/proveedor/chat` fueron eliminadas en v0.3.1. El admin no tiene chat ni notificaciones — esos íconos se ocultan en el `TopBar` cuando `rol === 'admin'`.
 
 ## 6b. TERMINOLOGÍA UI vs VALORES INTERNOS
 
@@ -224,6 +247,19 @@ Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol
 - Mis cotizaciones → `/proveedor/cotizaciones` · badge: cotizaciones en_negociacion
 - Mis ventas → `/proveedor/mis-ventas`
 
+Comprador y proveedor comparten el componente `Sidebar.tsx`; ambos muestran arriba el usuario logueado y un badge de rol (verde/azul), y abajo un botón de logout. Ya no existe el toggle de rol.
+
+**Admin (Etapa 6, `SidebarAdmin.tsx` — componente separado):**
+- [badge ADMIN en rojo] + nombre de usuario, arriba
+- Dashboard → `/admin`
+- Pedidos → `/admin/pedidos`
+- Órdenes → `/admin/ordenes`
+- Disputas → `/admin/disputas` · badge: cantidad de disputas abiertas
+- Usuarios → `/admin/usuarios`
+- Logout, abajo
+
+`AppShell.tsx` decide entre `Sidebar` y `SidebarAdmin` según `useAuthStore((s) => s.rol)`.
+
 ---
 
 ## 7. REGLAS DE NEGOCIO CRÍTICAS
@@ -240,6 +276,9 @@ Helper functions en `src/utils/formatters.ts`: `getLabelEstadoPedido(estado, rol
 10. **Polling cada 5s en AppRouter** — llama `cargarDatos()` de los 4 stores + `cargarTodosLosMensajes()`. Suscripciones Zustand despachan CustomEvents para toasts.
 11. **Cierre automático de orden** — `cerrarOrden()` se llama automáticamente desde `confirmarEntrega()` si `estadoPago === 'confirmado'`, y desde `confirmarPago()` si `orden.estado === 'entregado'`.
 12. **`estadoPago` tiene fallback** — órdenes sin el campo usan `?? 'pendiente'` como default para compatibilidad con datos pre-etapa-5a.
+13. **Protección de rutas por rol (Etapa 6)** — `AppRouter.tsx` define un `LayoutPorRol({ rolRequerido })` por cada sección (`/admin`, `/comprador`, `/proveedor`). Si no hay sesión → redirige a `/login`. Si el rol autenticado no coincide con `rolRequerido` de esa sección → redirige a `/${rol}` (el dashboard propio del usuario), nunca deja pasar. `/login` redirige al dashboard del rol si ya hay sesión. `/` y `*` redirigen según rol (o a `/login` si no hay sesión).
+14. **Polling deshabilitado para admin** — el `setInterval` de 5s en `AppRouter` chequea `useAuthStore.getState().rol` en cada tick y no vuelve a llamar `cargarDatos()` si es `'admin'`. Sí hay una carga inicial única al montar, sin importar el rol, para que el admin tenga datos al entrar.
+15. **Admin de solo lectura** — todas las vistas `/admin/*` muestran datos de todos los compradores/proveedores sin acciones de negocio, excepto `AdminDisputas`, cuyo único botón ("Resolver disputa") llama `useOrdenesStore.getState().resolverDisputa(ordenId, resolucion)`, que hace `PATCH /ordenes/:id` con `{ estado: 'cerrado', resolucionDisputa, resolvedBy: 'admin' }`.
 
 ---
 

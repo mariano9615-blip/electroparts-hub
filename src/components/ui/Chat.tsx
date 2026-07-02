@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconSend } from '@tabler/icons-react';
 import { useMensajesStore } from '../../store/useMensajesStore';
-import { useRolStore } from '../../store/useRolStore';
-import type { MensajePedido } from '../../types';
+import { useAuthStore } from '../../store/useAuthStore';
+import type { MensajePedido, Rol } from '../../types';
 
 // Referencia estable: evitar `?? []` inline dentro del selector de Zustand, que crearía
 // un array nuevo en cada render y rompería la igualdad por referencia (getSnapshot loop).
@@ -28,9 +28,9 @@ export function Chat({ pedidoId, otroNombre, cotizacionId }: ChatProps) {
   const enviarMensaje = useMensajesStore((s) => s.enviarMensaje);
   const limpiarPedidoActivo = useMensajesStore((s) => s.limpiarPedidoActivo);
   const marcarMensajesLeidos = useMensajesStore((s) => s.marcarMensajesLeidos);
-  const rol = useRolStore((s) => s.rol);
+  const rol = useAuthStore((s) => s.rol);
 
-  const miRol = rol;
+  const miRol = rol as Rol;
   const miNombre = rol === 'comprador' ? 'Comprador Demo' : 'Mi Empresa (Proveedor)';
 
   useEffect(() => {

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { SidebarAdmin } from './SidebarAdmin';
 import { TopBar } from './TopBar';
 import { ToastContainer } from '../ui/ToastContainer';
+import { useAuthStore } from '../../store/useAuthStore';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -9,6 +11,8 @@ interface AppShellProps {
 
 export const AppShell = ({ children }: AppShellProps) => {
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
+  const rol = useAuthStore((s) => s.rol);
+  const SidebarActivo = rol === 'admin' ? SidebarAdmin : Sidebar;
 
   const toggleSidebar = () => setSidebarAbierto((v) => !v);
   const cerrarSidebar = () => setSidebarAbierto(false);
@@ -17,7 +21,7 @@ export const AppShell = ({ children }: AppShellProps) => {
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar desktop */}
       <div className="hidden md:flex md:w-64 md:flex-shrink-0 h-full">
-        <Sidebar />
+        <SidebarActivo />
       </div>
 
       {/* Drawer mobile */}
@@ -28,7 +32,7 @@ export const AppShell = ({ children }: AppShellProps) => {
             onClick={cerrarSidebar}
           />
           <div className="fixed left-0 top-0 z-50 h-full w-64 md:hidden">
-            <Sidebar />
+            <SidebarActivo />
           </div>
         </>
       )}

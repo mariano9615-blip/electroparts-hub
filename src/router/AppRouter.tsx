@@ -7,8 +7,8 @@ import { useCotizacionesStore } from '../store/useCotizacionesStore';
 import { useOrdenesStore } from '../store/useOrdenesStore';
 import { useNotificacionesStore } from '../store/useNotificacionesStore';
 import { useMensajesStore } from '../store/useMensajesStore';
-import { useRolStore } from '../store/useRolStore';
 import { PROV_IDS } from '../utils/constants';
+import type { RolUsuario } from '../types';
 
 import Login from '../pages/Login';
 
@@ -25,15 +25,24 @@ import MisCotizacionesProveedor from '../pages/proveedor/MisCotizacionesProveedo
 import MisOrdenesProveedor from '../pages/proveedor/MisOrdenesProveedor';
 import DetallePedidoProveedor from '../pages/proveedor/DetallePedidoProveedor';
 
-function RutaProtegida({ children }: { children: React.ReactNode }) {
+import DashboardAdmin from '../pages/admin/DashboardAdmin';
+import AdminPedidos from '../pages/admin/AdminPedidos';
+import AdminOrdenes from '../pages/admin/AdminOrdenes';
+import AdminDisputas from '../pages/admin/AdminDisputas';
+import AdminUsuarios from '../pages/admin/AdminUsuarios';
+
+function RedirigirSegunRol() {
   const autenticado = useAuthStore((s) => s.autenticado);
-  if (!autenticado) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  const rol = useAuthStore((s) => s.rol);
+  if (!autenticado || !rol) return <Navigate to="/login" replace />;
+  return <Navigate to={`/${rol}`} replace />;
 }
 
-function LayoutProtegido() {
+function LayoutPorRol({ rolRequerido }: { rolRequerido: RolUsuario }) {
   const autenticado = useAuthStore((s) => s.autenticado);
-  if (!autenticado) return <Navigate to="/login" replace />;
+  const rol = useAuthStore((s) => s.rol);
+  if (!autenticado || !rol) return <Navigate to="/login" replace />;
+  if (rol !== rolRequerido) return <Navigate to={`/${rol}`} replace />;
   return (
     <AppShell>
       <Outlet />
@@ -43,7 +52,8 @@ function LayoutProtegido() {
 
 function RutaLogin() {
   const autenticado = useAuthStore((s) => s.autenticado);
-  if (autenticado) return <Navigate to="/comprador" replace />;
+  const rol = useAuthStore((s) => s.rol);
+  if (autenticado && rol) return <Navigate to={`/${rol}`} replace />;
   return <Login />;
 }
 
@@ -65,7 +75,7 @@ export function AppRouter() {
         pedidosEstadoRef.current = new Map(state.pedidos.map((p) => [p.id, p.estado]));
       }
 
-      const rol = useRolStore.getState().rol;
+      const rol = useAuthStore.getState().rol;
 
       // Detectar pedidos nuevos (toast para proveedor)
       if (rol === 'proveedor') {
@@ -92,7 +102,7 @@ export function AppRouter() {
       state.pedidos.forEach((p) => {
         const estadoAnterior = pedidosEstadoRef.current!.get(p.id);
         if (estadoAnterior && estadoAnterior !== p.estado) {
-          const rolActual = useRolStore.getState().rol;
+          const rolActual = useAuthStore.getState().rol;
           const titulo =
             p.estado === 'adjudicado' && rolActual === 'comprador'
               ? `Compra confirmada para ${p.titulo}`
@@ -121,7 +131,7 @@ export function AppRouter() {
         return;
       }
 
-      const rol = useRolStore.getState().rol;
+      const rol = useAuthStore.getState().rol;
 
       state.cotizaciones.forEach((c) => {
         const estadoAnterior = cotizacionesEstadoRef.current!.get(c.id);
@@ -199,7 +209,7 @@ export function AppRouter() {
         return;
       }
 
-      const rol = useRolStore.getState().rol;
+      const rol = useAuthStore.getState().rol;
 
       state.ordenes.forEach((o) => {
         const anterior = ordenesEstadoRef.current!.get(o.id);
@@ -275,8 +285,13 @@ export function AppRouter() {
       useMensajesStore.getState().cargarTodosLosMensajes();
     };
 
+    // Carga inicial siempre corre, sin importar el rol (el admin también necesita sus datos).
     cargarTodo();
-    const intervalo = setInterval(cargarTodo, 5000);
+    // El polling recurrente de 5s no corre para admin: solo comprador y proveedor operan en tiempo real.
+    const intervalo = setInterval(() => {
+      if (useAuthStore.getState().rol === 'admin') return;
+      cargarTodo();
+    }, 5000);
 
     return () => {
       clearInterval(intervalo);
@@ -290,10 +305,9 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<RutaLogin />} />
+        <Route path="/" element={<RedirigirSegunRol />} />
 
-        <Route element={<LayoutProtegido />}>
-          <Route path="/" element={<Navigate to="/comprador" replace />} />
-
+        <Route element={<LayoutPorRol rolRequerido="comprador" />}>
           <Route path="/comprador" element={<DashboardComprador />} />
           <Route path="/comprador/publicar" element={<PublicarPedido />} />
           <Route path="/comprador/pedidos" element={<ListaPedidosComprador />} />
@@ -304,7 +318,9 @@ export function AppRouter() {
           {/* Redirects desde rutas viejas */}
           <Route path="/comprador/cotizaciones" element={<Navigate to="/comprador/cotizaciones-recibidas" replace />} />
           <Route path="/comprador/ordenes" element={<Navigate to="/comprador/mis-compras" replace />} />
+        </Route>
 
+        <Route element={<LayoutPorRol rolRequerido="proveedor" />}>
           <Route path="/proveedor" element={<DashboardProveedor />} />
           <Route path="/proveedor/explorar" element={<PedidosDisponibles />} />
           <Route path="/proveedor/pedidos/:id" element={<DetallePedidoProveedor />} />
@@ -315,14 +331,15 @@ export function AppRouter() {
           <Route path="/proveedor/ordenes" element={<Navigate to="/proveedor/mis-ventas" replace />} />
         </Route>
 
-        <Route
-          path="*"
-          element={
-            <RutaProtegida>
-              <Navigate to="/comprador" replace />
-            </RutaProtegida>
-          }
-        />
+        <Route element={<LayoutPorRol rolRequerido="admin" />}>
+          <Route path="/admin" element={<DashboardAdmin />} />
+          <Route path="/admin/pedidos" element={<AdminPedidos />} />
+          <Route path="/admin/ordenes" element={<AdminOrdenes />} />
+          <Route path="/admin/disputas" element={<AdminDisputas />} />
+          <Route path="/admin/usuarios" element={<AdminUsuarios />} />
+        </Route>
+
+        <Route path="*" element={<RedirigirSegunRol />} />
       </Routes>
     </BrowserRouter>
   );

@@ -8,12 +8,13 @@ import {
   IconShoppingCart,
   IconClipboardList,
   IconSearch,
+  IconLogout,
 } from '@tabler/icons-react';
-import { useRolStore } from '../../store/useRolStore';
+import { Badge } from '../ui';
+import { useAuthStore } from '../../store/useAuthStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { COMPRADOR_ID, PROV_IDS } from '../../utils/constants';
-import type { Rol } from '../../types';
 
 interface NavItem {
   label: string;
@@ -26,8 +27,8 @@ interface NavItem {
 export const Sidebar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const rol = useRolStore((s) => s.rol);
-  const setRol = useRolStore((s) => s.setRol);
+  const usuario = useAuthStore((s) => s.usuario);
+  const rol = useAuthStore((s) => s.rol);
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
 
@@ -66,14 +67,14 @@ export const Sidebar = () => {
 
   const navItems = rol === 'comprador' ? navItemsComprador : navItemsProveedor;
 
-  const handleSetRol = (nuevoRol: Rol) => {
-    setRol(nuevoRol);
-    navigate(nuevoRol === 'comprador' ? '/comprador' : '/proveedor');
-  };
-
   const isActive = (item: NavItem) =>
     pathname === item.ruta ||
     (item.matchPrefix != null && pathname.startsWith(item.matchPrefix));
+
+  const handleLogout = () => {
+    useAuthStore.getState().logout();
+    navigate('/login');
+  };
 
   return (
     <aside className="flex flex-col h-full bg-ep-blue-dark overflow-hidden">
@@ -90,29 +91,13 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      {/* Toggle de rol */}
-      <div className="px-4 py-3 border-b border-white/10 flex-shrink-0">
-        <div className="bg-white/10 rounded-lg p-1 flex">
-          <button
-            className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ${
-              rol === 'comprador'
-                ? 'bg-white/20 shadow-sm text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            onClick={() => handleSetRol('comprador')}
-          >
-            Comprador
-          </button>
-          <button
-            className={`flex-1 text-xs font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ${
-              rol === 'proveedor'
-                ? 'bg-white/20 shadow-sm text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            onClick={() => handleSetRol('proveedor')}
-          >
-            Proveedor
-          </button>
+      {/* Usuario logueado + badge de rol */}
+      <div className="px-5 py-3 border-b border-white/10 flex-shrink-0">
+        <p className="text-sm font-semibold text-white truncate">{usuario}</p>
+        <div className="mt-1.5">
+          <Badge color={rol === 'comprador' ? 'green' : 'blue'}>
+            {rol === 'comprador' ? 'Comprador' : 'Proveedor'}
+          </Badge>
         </div>
       </div>
 
@@ -201,9 +186,15 @@ export const Sidebar = () => {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-white/10 px-5 py-3 flex-shrink-0">
-        <span className="text-xs text-slate-500">v0.1.0</span>
+      {/* Footer: logout */}
+      <div className="border-t border-white/10 px-3 py-3 flex-shrink-0">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/10 hover:text-white rounded-lg transition-colors duration-150 cursor-pointer"
+        >
+          <IconLogout size={17} stroke={1.75} />
+          <span>Cerrar sesión</span>
+        </button>
       </div>
     </aside>
   );

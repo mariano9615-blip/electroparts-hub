@@ -1,7 +1,39 @@
 # CODEMAP — ElectroParts Hub
 
-Última actualización: 2026-07-01 (v0.5.1 — Etapa 5a: ciclo de vida de orden)
+Última actualización: 2026-07-01 (v0.6.0 — Etapa 6: auth por rol, panel admin, protección de rutas)
 Rama: mdemichelis
+
+---
+
+## RESUMEN v0.6.0 — Archivos clave modificados
+
+| Archivo | Cambio principal | Líneas clave |
+|---|---|---|
+| `src/types/index.ts` (88 líneas) | + `RolUsuario = 'admin' \| 'comprador' \| 'proveedor'`; + `resolucionDisputa?`, `resolvedBy?` en `Orden` | 4 (`RolUsuario`), 63–64 (campos `Orden`) |
+| `src/store/useAuthStore.ts` (66 líneas, reescrito) | Reemplaza login de 1 usuario admin por 3 usuarios fijos con rol; persiste `{usuario, rol}` en `ep_auth` | 13–17 (`USUARIOS`), 24–63 (store) |
+| `src/store/useRolStore.ts` | **Eliminado** — el rol vive en `useAuthStore` | n/a |
+| `src/utils/constants.ts` (38 líneas) | Elimina `STORAGE_KEY_ROL` (dead code) | n/a |
+| `src/pages/Login.tsx` (140 líneas, reescrito) | + 3 botones de acceso rápido demo; redirect por rol tras login | 12–16 (`ACCESOS_RAPIDOS`), 26–43 (`intentarLogin`), 121–137 (JSX accesos rápidos) |
+| `src/components/layout/Sidebar.tsx` (201 líneas, refactorizado) | Elimina el toggle Comprador/Proveedor; agrega usuario+badge de rol arriba y logout abajo | 92–99 (bloque usuario/badge), 189–199 (botón logout) |
+| `src/components/layout/SidebarAdmin.tsx` (110 líneas, **nuevo**) | Sidebar exclusivo del admin: Dashboard/Pedidos/Órdenes/Disputas/Usuarios, badge ADMIN rojo, logout | 1–110 (completo) |
+| `src/components/layout/AppShell.tsx` (50 líneas) | Elige `Sidebar` o `SidebarAdmin` según `rol` | 13 (`SidebarActivo`) |
+| `src/components/layout/TopBar.tsx` (163 líneas, modificado) | Usuario real en vez de "Mi Empresa"; badge de 3 roles; oculta notificaciones/chat si `rol === 'admin'` | 39–43 (`BADGE_COLOR_ROL`/`LABEL_ROL`), 78–110 (bloque oculto para admin), 125–137 (badge + usuario) |
+| `src/router/AppRouter.tsx` (346 líneas, reescrito) | `LayoutPorRol({rolRequerido})` reemplaza `LayoutProtegido`/`RutaProtegida`; rutas `/admin/*`; polling desactivado para admin | 34–58 (`RedirigirSegunRol`, `LayoutPorRol`, `RutaLogin`), 289–294 (polling condicional), 308–342 (rutas por rol) |
+| `src/store/useOrdenesStore.ts` (202 líneas, modificado) | + acción `resolverDisputa(ordenId, resolucion)` | 17 (firma), 177–199 (implementación) |
+| `src/pages/admin/DashboardAdmin.tsx` (152 líneas, **nuevo**) | StatCards + monto transaccionado + tabla actividad reciente | 1–152 (completo) |
+| `src/pages/admin/AdminPedidos.tsx` (158 líneas, **nuevo**) | Tabla todos los pedidos + filtro estado + modal detalle solo lectura | 1–158 (completo) |
+| `src/pages/admin/AdminOrdenes.tsx` (208 líneas, **nuevo**) | Tabla todas las órdenes + filtros estado/pago + modal detalle solo lectura | 1–208 (completo) |
+| `src/pages/admin/AdminDisputas.tsx` (151 líneas, **nuevo**) | Lista de órdenes disputadas + modal "Resolver disputa" | 1–151 (completo) |
+| `src/pages/admin/AdminUsuarios.tsx` (42 líneas, **nuevo**) | Lista solo lectura de 3 usuarios fijos + botón deshabilitado | 1–42 (completo) |
+
+### Lógica condicional clave — Etapa 6
+
+- `useAuthStore.login()` (useAuthStore.ts:38–46): busca en el diccionario fijo `USUARIOS`; si coincide usuario+password, persiste `{usuario, rol}` en `localStorage['ep_auth']` y actualiza el store; si no, retorna `false` sin mutar estado.
+- `AppRouter.tsx` `LayoutPorRol` (41–51): sin sesión → `Navigate to="/login"`; con sesión pero `rol !== rolRequerido` → `Navigate to={'/'+rol}` (nunca deja pasar entre secciones); si coincide, monta `AppShell` con `Outlet`.
+- `AppRouter.tsx` polling (289–294): `cargarTodo()` se llama una vez al montar sin importar el rol (carga inicial para admin también); el `setInterval` de 5s vuelve a chequear `useAuthStore.getState().rol` en cada tick y no ejecuta `cargarTodo()` si es `'admin'`.
+- `AppShell.tsx` (13): `const SidebarActivo = rol === 'admin' ? SidebarAdmin : Sidebar` — selección de sidebar por rol, sin lógica adicional en los componentes hijos.
+- `useOrdenesStore.resolverDisputa()` (177–199): PATCH `{estado: 'cerrado', resolucionDisputa, resolvedBy: 'admin'}`; notifica a comprador y proveedor con tipo `orden_cerrada`.
+- `AdminDisputas.tsx` `handleResolver()`: prefija el texto de resolución con `"Favor del comprador: "` o `"Favor del proveedor: "` según el botón elegido antes de llamar `resolverDisputa`.
 
 ---
 

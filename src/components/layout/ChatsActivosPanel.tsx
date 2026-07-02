@@ -5,7 +5,7 @@ import { EmptyState } from '../ui';
 import { usePedidosStore } from '../../store/usePedidosStore';
 import { useCotizacionesStore } from '../../store/useCotizacionesStore';
 import { useMensajesStore } from '../../store/useMensajesStore';
-import { useRolStore } from '../../store/useRolStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { formatFechaRelativa } from '../../utils/formatters';
 import { COMPRADOR_ID, PROV_IDS } from '../../utils/constants';
 import type { MensajePedido, Pedido } from '../../types';
@@ -24,7 +24,7 @@ interface ChatActivo {
 
 export const ChatsActivosPanel = ({ abierto, onCerrar }: ChatsActivosPanelProps) => {
   const navigate = useNavigate();
-  const rol = useRolStore((s) => s.rol);
+  const rol = useAuthStore((s) => s.rol);
   const pedidos = usePedidosStore((s) => s.pedidos);
   const cotizaciones = useCotizacionesStore((s) => s.cotizaciones);
   const mensajesPorPedido = useMensajesStore((s) => s.mensajesPorPedido);

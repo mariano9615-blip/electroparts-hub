@@ -14,7 +14,7 @@ import {
 } from '@tabler/icons-react';
 import { EmptyState } from '../ui';
 import { useNotificacionesStore, type TipoNotificacion, type Notificacion } from '../../store/useNotificacionesStore';
-import { useRolStore } from '../../store/useRolStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { formatFechaRelativa } from '../../utils/formatters';
 
 const ICONOS_TIPO: Record<TipoNotificacion, ComponentType<{ size?: number; stroke?: number }>> = {
@@ -105,7 +105,7 @@ function ItemNotificacion({
 }
 
 export const NotificacionesPanel = ({ abierto, onCerrar }: NotificacionesPanelProps) => {
-  const rol = useRolStore((s) => s.rol);
+  const rol = useAuthStore((s) => s.rol);
   const todas = useNotificacionesStore((s) => s.notificaciones);
   const notificaciones = useMemo(() => todas.filter((n) => n.rolDestino === rol), [todas, rol]);
   const { marcarLeida, marcarTodasLeidas, eliminarNotificacion } = useNotificacionesStore.getState();
